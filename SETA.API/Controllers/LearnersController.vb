@@ -7,6 +7,7 @@ Imports System.Security.Cryptography
 Imports System.Text
 Imports SETA.API.Models
 Imports SETA.API.Security
+Imports SETA.API.Services
 
 Namespace SETA.API.Controllers
 
@@ -149,6 +150,223 @@ Namespace SETA.API.Controllers
             End If
 
             Return Ok(ApiResponse(Of Object).SuccessResponse(learners))
+        End Function
+
+        ''' <summary>
+        ''' Update a learner's information
+        ''' </summary>
+        <Route("{learnerId:int}")>
+        <HttpPut>
+        Public Function UpdateLearner(learnerId As Integer, request As LearnerUpdateRequest) As IHttpActionResult
+            If request Is Nothing Then
+                Return Content(HttpStatusCode.BadRequest,
+                    ApiResponse(Of Object).ErrorResponse("INVALID_REQUEST", "Request body is required"))
+            End If
+
+            Dim apiKeySetaId = CInt(Me.Request.Properties("SetaId"))
+            Dim setaCode = Me.Request.Properties("SetaCode").ToString()
+
+            ' Verify the learner belongs to this SETA
+            Dim connectionString As String = ConfigurationManager.ConnectionStrings("SETAConnection").ConnectionString
+
+            Using conn As New SqlConnection(connectionString)
+                conn.Open()
+
+                ' Check if learner exists and belongs to this SETA
+                Dim checkSql As String = "SELECT RegisteredSETAID FROM LearnerRegistry WHERE LearnerID = @LearnerID"
+                Using checkCmd As New SqlCommand(checkSql, conn)
+                    checkCmd.Parameters.AddWithValue("@LearnerID", learnerId)
+                    Dim result = checkCmd.ExecuteScalar()
+
+                    If result Is Nothing Then
+                        Return Content(HttpStatusCode.NotFound,
+                            ApiResponse(Of Object).ErrorResponse("NOT_FOUND", "Learner not found"))
+                    End If
+
+                    If CInt(result) <> apiKeySetaId Then
+                        Return Content(HttpStatusCode.Forbidden,
+                            ApiResponse(Of Object).ErrorResponse("ACCESS_DENIED", "Cannot update learners from other SETAs"))
+                    End If
+                End Using
+
+                ' Build update SQL dynamically based on provided fields
+                Dim updates As New List(Of String)
+                Dim cmd As New SqlCommand()
+                cmd.Connection = conn
+
+                If Not String.IsNullOrEmpty(request.FirstName) Then
+                    updates.Add("FirstName = @FirstName")
+                    cmd.Parameters.AddWithValue("@FirstName", request.FirstName)
+                End If
+
+                If Not String.IsNullOrEmpty(request.Surname) Then
+                    updates.Add("Surname = @Surname")
+                    cmd.Parameters.AddWithValue("@Surname", request.Surname)
+                End If
+
+                If Not String.IsNullOrEmpty(request.LearnershipCode) Then
+                    updates.Add("LearnershipCode = @LearnershipCode")
+                    cmd.Parameters.AddWithValue("@LearnershipCode", request.LearnershipCode)
+                End If
+
+                If Not String.IsNullOrEmpty(request.LearnershipName) Then
+                    updates.Add("LearnershipName = @LearnershipName")
+                    cmd.Parameters.AddWithValue("@LearnershipName", request.LearnershipName)
+                End If
+
+                If Not String.IsNullOrEmpty(request.Province) Then
+                    updates.Add("ProvinceCode = @Province")
+                    cmd.Parameters.AddWithValue("@Province", request.Province)
+                End If
+
+                If Not String.IsNullOrEmpty(request.Status) Then
+                    updates.Add("Status = @Status")
+                    cmd.Parameters.AddWithValue("@Status", request.Status)
+                End If
+
+                If updates.Count = 0 Then
+                    Return Content(HttpStatusCode.BadRequest,
+                        ApiResponse(Of Object).ErrorResponse("NO_UPDATES", "No fields to update"))
+                End If
+
+                ' Execute update
+                Dim updateSql As String = $"UPDATE LearnerRegistry SET {String.Join(", ", updates)} WHERE LearnerID = @LearnerID"
+                cmd.CommandText = updateSql
+                cmd.Parameters.AddWithValue("@LearnerID", learnerId)
+                cmd.ExecuteNonQuery()
+
+                ' Log audit
+                AuditLogService.LogAsync(apiKeySetaId, AuditLogService.ACTION_UPDATE, "LearnerRegistry",
+                                         recordId:=learnerId, details:=$"Updated fields: {String.Join(", ", updates)}",
+                                         userId:=setaCode)
+            End Using
+
+            Return Ok(ApiResponse(Of Object).SuccessResponse(New With {
+                .message = "Learner updated successfully",
+                .learnerId = learnerId
+            }))
+        End Function
+
+        ''' <summary>
+        ''' Deactivate/withdraw a learner
+        ''' </summary>
+        <Route("{learnerId:int}/deactivate")>
+        <HttpPost>
+        Public Function DeactivateLearner(learnerId As Integer, request As LearnerDeactivateRequest) As IHttpActionResult
+            If request Is Nothing OrElse String.IsNullOrWhiteSpace(request.Reason) Then
+                Return Content(HttpStatusCode.BadRequest,
+                    ApiResponse(Of Object).ErrorResponse("INVALID_REQUEST", "Withdrawal reason is required"))
+            End If
+
+            Dim apiKeySetaId = CInt(Me.Request.Properties("SetaId"))
+            Dim setaCode = Me.Request.Properties("SetaCode").ToString()
+
+            Dim connectionString As String = ConfigurationManager.ConnectionStrings("SETAConnection").ConnectionString
+
+            Using conn As New SqlConnection(connectionString)
+                conn.Open()
+
+                ' Check if learner exists and belongs to this SETA
+                Dim checkSql As String = "SELECT RegisteredSETAID, Status FROM LearnerRegistry WHERE LearnerID = @LearnerID"
+                Using checkCmd As New SqlCommand(checkSql, conn)
+                    checkCmd.Parameters.AddWithValue("@LearnerID", learnerId)
+                    Using reader = checkCmd.ExecuteReader()
+                        If Not reader.Read() Then
+                            Return Content(HttpStatusCode.NotFound,
+                                ApiResponse(Of Object).ErrorResponse("NOT_FOUND", "Learner not found"))
+                        End If
+
+                        If reader.GetInt32(0) <> apiKeySetaId Then
+                            Return Content(HttpStatusCode.Forbidden,
+                                ApiResponse(Of Object).ErrorResponse("ACCESS_DENIED", "Cannot deactivate learners from other SETAs"))
+                        End If
+
+                        If reader.GetString(1) = "Withdrawn" Then
+                            Return Content(HttpStatusCode.Conflict,
+                                ApiResponse(Of Object).ErrorResponse("ALREADY_WITHDRAWN", "Learner is already withdrawn"))
+                        End If
+                    End Using
+                End Using
+
+                ' Update learner status to Withdrawn
+                Dim updateSql As String = "UPDATE LearnerRegistry SET Status = 'Withdrawn' WHERE LearnerID = @LearnerID"
+                Using updateCmd As New SqlCommand(updateSql, conn)
+                    updateCmd.Parameters.AddWithValue("@LearnerID", learnerId)
+                    updateCmd.ExecuteNonQuery()
+                End Using
+
+                ' Update enrollment index to mark as inactive
+                Dim indexSql As String = "
+                    UPDATE LearnerEnrollmentIndex
+                    SET IsActive = 0
+                    WHERE IDNumberHash = (SELECT IDNumberHash FROM LearnerRegistry WHERE LearnerID = @LearnerID)
+                      AND RegisteredSETAID = @SETAID"
+                Using indexCmd As New SqlCommand(indexSql, conn)
+                    indexCmd.Parameters.AddWithValue("@LearnerID", learnerId)
+                    indexCmd.Parameters.AddWithValue("@SETAID", apiKeySetaId)
+                    indexCmd.ExecuteNonQuery()
+                End Using
+
+                ' Log audit
+                AuditLogService.LogAsync(apiKeySetaId, AuditLogService.ACTION_DELETE, "LearnerRegistry",
+                                         recordId:=learnerId, details:=$"Withdrawal reason: {request.Reason}",
+                                         userId:=setaCode)
+            End Using
+
+            Return Ok(ApiResponse(Of Object).SuccessResponse(New With {
+                .message = "Learner withdrawn successfully",
+                .learnerId = learnerId,
+                .status = "Withdrawn"
+            }))
+        End Function
+
+        ''' <summary>
+        ''' Get a single learner by ID
+        ''' </summary>
+        <Route("detail/{learnerId:int}")>
+        <HttpGet>
+        Public Function GetLearnerById(learnerId As Integer) As IHttpActionResult
+            Dim apiKeySetaId = CInt(Me.Request.Properties("SetaId"))
+
+            Dim connectionString As String = ConfigurationManager.ConnectionStrings("SETAConnection").ConnectionString
+
+            Using conn As New SqlConnection(connectionString)
+                conn.Open()
+
+                Dim sql As String = "
+                    SELECT LearnerID, IDNumber, FirstName, Surname, DateOfBirth, Gender,
+                           LearnershipCode, LearnershipName, ProvinceCode, RegistrationDate, Status, EnrollmentYear
+                    FROM LearnerRegistry
+                    WHERE LearnerID = @LearnerID AND RegisteredSETAID = @SETAID"
+
+                Using cmd As New SqlCommand(sql, conn)
+                    cmd.Parameters.AddWithValue("@LearnerID", learnerId)
+                    cmd.Parameters.AddWithValue("@SETAID", apiKeySetaId)
+
+                    Using reader = cmd.ExecuteReader()
+                        If Not reader.Read() Then
+                            Return Content(HttpStatusCode.NotFound,
+                                ApiResponse(Of Object).ErrorResponse("NOT_FOUND", "Learner not found or access denied"))
+                        End If
+
+                        Dim learner As New LearnerInfo With {
+                            .LearnerId = reader.GetInt32(0),
+                            .IdNumberMasked = MaskIdNumber(reader.GetString(1)),
+                            .FirstName = reader.GetString(2),
+                            .Surname = reader.GetString(3),
+                            .DateOfBirth = If(reader.IsDBNull(4), Nothing, reader.GetDateTime(4)),
+                            .Gender = If(reader.IsDBNull(5), Nothing, reader.GetString(5)),
+                            .LearnershipCode = If(reader.IsDBNull(6), Nothing, reader.GetString(6)),
+                            .ProgrammeName = If(reader.IsDBNull(7), Nothing, reader.GetString(7)),
+                            .Province = If(reader.IsDBNull(8), Nothing, reader.GetString(8)),
+                            .RegistrationDate = reader.GetDateTime(9),
+                            .Status = reader.GetString(10)
+                        }
+
+                        Return Ok(ApiResponse(Of LearnerInfo).SuccessResponse(learner))
+                    End Using
+                End Using
+            End Using
         End Function
 
         ''' <summary>

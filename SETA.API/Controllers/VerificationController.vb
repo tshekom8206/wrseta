@@ -7,6 +7,7 @@ Imports System.Security.Cryptography
 Imports System.Text
 Imports SETA.API.Models
 Imports SETA.API.Security
+Imports SETA.API.Services
 
 Namespace SETA.API.Controllers
 
@@ -18,6 +19,29 @@ Namespace SETA.API.Controllers
     <ApiKeyAuth>
     Public Class VerificationController
         Inherits ApiController
+
+        ''' <summary>
+        ''' Get the client IP address from the request
+        ''' </summary>
+        Private Function GetClientIp() As String
+            If Me.Request.Properties.ContainsKey("MS_HttpContext") Then
+                Dim ctx = Me.Request.Properties("MS_HttpContext")
+                If ctx IsNot Nothing Then
+                    Return "127.0.0.1"
+                End If
+            End If
+            Return "unknown"
+        End Function
+
+        ''' <summary>
+        ''' Get the request correlation ID
+        ''' </summary>
+        Private Function GetRequestId() As String
+            If Me.Request.Properties.ContainsKey("RequestId") Then
+                Return Me.Request.Properties("RequestId").ToString()
+            End If
+            Return Guid.NewGuid().ToString("N").Substring(0, 8)
+        End Function
 
         ''' <summary>
         ''' Verify a South African ID number
@@ -35,6 +59,10 @@ Namespace SETA.API.Controllers
             ' Get SETA context from API Key
             Dim setaId = CInt(Me.Request.Properties("SetaId"))
             Dim setaCode = Me.Request.Properties("SetaCode").ToString()
+
+            ' Log audit entry
+            AuditLogService.LogAsync(setaId, AuditLogService.ACTION_VERIFY, "VerificationLog",
+                                     idNumber:=request.IdNumber, userId:=setaCode, ipAddress:=GetClientIp())
 
             ' Clean ID number
             Dim idNumber = request.IdNumber.Replace(" ", "").Replace("-", "")
@@ -272,12 +300,147 @@ Namespace SETA.API.Controllers
         End Function
 
         ''' <summary>
+        ''' DHA verification using circuit breaker
+        ''' </summary>
+        Private Function VerifyWithDHA(idNumber As String) As DHAVerificationService.DHAVerificationResult
+            Return DHAVerificationService.VerifyIdNumber(idNumber)
+        End Function
+
+        ''' <summary>
         ''' Simulate DHA verification (would call real API in production)
+        ''' Uses circuit breaker for resilience
         ''' </summary>
         Private Function SimulateDHAVerification(idNumber As String) As Boolean
-            ' In production, this would call the actual DHA API
-            ' For now, simulate with 90% success rate
-            Return New Random().Next(1, 11) <= 9
+            Dim dhaResult = VerifyWithDHA(idNumber)
+
+            ' If circuit breaker is open, return false but allow YELLOW status
+            If dhaResult.CircuitBreakerOpen Then
+                Return False
+            End If
+
+            Return dhaResult.Success AndAlso dhaResult.Verified AndAlso Not dhaResult.IsDeceased
+        End Function
+
+        ''' <summary>
+        ''' Bulk verify multiple ID numbers
+        ''' Maximum 500 IDs per request
+        ''' </summary>
+        <Route("verify-batch")>
+        <HttpPost>
+        Public Function VerifyBatch(request As BulkVerificationRequest) As IHttpActionResult
+            ' Validate request
+            If request Is Nothing OrElse request.IdNumbers Is Nothing OrElse request.IdNumbers.Count = 0 Then
+                Return Content(HttpStatusCode.BadRequest,
+                    ApiResponse(Of BulkVerificationResponse).ErrorResponse("INVALID_REQUEST", "At least one ID number is required"))
+            End If
+
+            ' Enforce maximum batch size
+            Const MAX_BATCH_SIZE As Integer = 500
+            If request.IdNumbers.Count > MAX_BATCH_SIZE Then
+                Return Content(HttpStatusCode.BadRequest,
+                    ApiResponse(Of BulkVerificationResponse).ErrorResponse("BATCH_TOO_LARGE",
+                        $"Maximum {MAX_BATCH_SIZE} IDs per batch. You sent {request.IdNumbers.Count}."))
+            End If
+
+            ' Get SETA context
+            Dim setaId = CInt(Me.Request.Properties("SetaId"))
+            Dim setaCode = Me.Request.Properties("SetaCode").ToString()
+
+            ' Log audit entry
+            AuditLogService.LogAsync(setaId, AuditLogService.ACTION_VERIFY, "VerificationLog",
+                                     details:=$"Bulk verification: {request.IdNumbers.Count} IDs",
+                                     userId:=setaCode, ipAddress:=GetClientIp())
+
+            Dim sw = System.Diagnostics.Stopwatch.StartNew()
+            Dim results As New List(Of BulkVerificationResult)
+            Dim successCount As Integer = 0
+            Dim failedCount As Integer = 0
+
+            For Each item As BulkVerificationItem In request.IdNumbers
+                Dim result As New BulkVerificationResult With {
+                    .IdNumber = MaskIdForResponse(item.IdNumber),
+                    .Reference = item.Reference
+                }
+
+                Try
+                    ' Clean ID number
+                    Dim idNumber = item.IdNumber.Replace(" ", "").Replace("-", "")
+
+                    ' Format validation
+                    If idNumber.Length <> 13 OrElse Not IsAllDigits(idNumber) Then
+                        result.Status = "RED"
+                        result.Message = "Invalid ID format"
+                        result.IsValid = False
+                        failedCount += 1
+                    ElseIf Not ValidateLuhn(idNumber) Then
+                        result.Status = "RED"
+                        result.Message = "Luhn check failed"
+                        result.IsValid = False
+                        failedCount += 1
+                    Else
+                        ' Check for duplicates
+                        Dim duplicateInfo = CheckCrossSETADuplicate(idNumber, setaId)
+
+                        If duplicateInfo IsNot Nothing Then
+                            result.Status = "RED"
+                            result.Message = "Duplicate found"
+                            result.IsValid = True
+                            result.DuplicateFound = True
+                            result.ConflictingSeta = duplicateInfo.SetaCode
+                            failedCount += 1
+                        Else
+                            ' DHA verification (skip for bulk to improve performance)
+                            result.Status = "YELLOW"
+                            result.Message = "Format valid, DHA verification pending"
+                            result.IsValid = True
+                            result.DuplicateFound = False
+                            successCount += 1
+                        End If
+                    End If
+
+                    ' Log individual verification
+                    LogVerification(setaId, item.IdNumber, result.Status, result.Message)
+
+                Catch ex As Exception
+                    result.Status = "RED"
+                    result.Message = "Verification error"
+                    result.IsValid = False
+                    failedCount += 1
+                End Try
+
+                results.Add(result)
+            Next
+
+            sw.Stop()
+
+            Dim response As New BulkVerificationResponse With {
+                .TotalProcessed = request.IdNumbers.Count,
+                .SuccessCount = successCount,
+                .FailedCount = failedCount,
+                .Results = results,
+                .ProcessingTimeMs = sw.ElapsedMilliseconds
+            }
+
+            Return Ok(ApiResponse(Of BulkVerificationResponse).SuccessResponse(response))
+        End Function
+
+        ''' <summary>
+        ''' Get DHA service status including circuit breaker state
+        ''' </summary>
+        <Route("dha-status")>
+        <HttpGet>
+        Public Function GetDHAStatus() As IHttpActionResult
+            Return Ok(ApiResponse(Of Object).SuccessResponse(DHAVerificationService.GetServiceStatus()))
+        End Function
+
+        ''' <summary>
+        ''' Mask ID number for response (privacy)
+        ''' </summary>
+        Private Function MaskIdForResponse(idNumber As String) As String
+            If String.IsNullOrEmpty(idNumber) OrElse idNumber.Length < 6 Then
+                Return "******"
+            End If
+            Return idNumber.Substring(0, 4) & "****" & idNumber.Substring(idNumber.Length - 3)
         End Function
 
         ''' <summary>

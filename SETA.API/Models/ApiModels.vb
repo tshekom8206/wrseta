@@ -80,6 +80,14 @@ Namespace Models
         Public Property RefreshToken As String
     End Class
 
+    ''' <summary>
+    ''' Request model for revoking a specific token
+    ''' </summary>
+    Public Class RevokeTokenRequest
+        <Required>
+        Public Property RefreshToken As String
+    End Class
+
 #End Region
 
 #Region "Verification Models"
@@ -267,6 +275,116 @@ Namespace Models
     Public Class ProvinceInfo
         Public Property ProvinceCode As String
         Public Property ProvinceName As String
+    End Class
+
+#End Region
+
+#Region "Bulk Verification Models"
+
+    ''' <summary>
+    ''' Request model for bulk ID verification
+    ''' </summary>
+    Public Class BulkVerificationRequest
+        <Required>
+        Public Property IdNumbers As List(Of BulkVerificationItem)
+
+        ''' <summary>
+        ''' Maximum number of IDs per batch (default 100, max 500)
+        ''' </summary>
+        Public Property BatchSize As Integer = 100
+    End Class
+
+    ''' <summary>
+    ''' Individual item in bulk verification
+    ''' </summary>
+    Public Class BulkVerificationItem
+        <Required>
+        Public Property IdNumber As String
+        Public Property FirstName As String
+        Public Property Surname As String
+        Public Property Reference As String  ' Client reference for tracking
+    End Class
+
+    ''' <summary>
+    ''' Response model for bulk verification
+    ''' </summary>
+    Public Class BulkVerificationResponse
+        Public Property TotalProcessed As Integer
+        Public Property SuccessCount As Integer
+        Public Property FailedCount As Integer
+        Public Property Results As List(Of BulkVerificationResult)
+        Public Property ProcessingTimeMs As Long
+    End Class
+
+    ''' <summary>
+    ''' Individual result in bulk verification
+    ''' </summary>
+    Public Class BulkVerificationResult
+        Public Property IdNumber As String
+        Public Property Reference As String
+        Public Property Status As String          ' GREEN, YELLOW, RED
+        Public Property Message As String
+        Public Property IsValid As Boolean
+        Public Property DuplicateFound As Boolean
+        Public Property ConflictingSeta As String
+    End Class
+
+#End Region
+
+#Region "Learner Update Models"
+
+    ''' <summary>
+    ''' Request model for updating a learner
+    ''' </summary>
+    Public Class LearnerUpdateRequest
+        Public Property FirstName As String
+        Public Property Surname As String
+        Public Property LearnershipCode As String
+        Public Property LearnershipName As String
+        Public Property Province As String
+        Public Property Status As String          ' Active, Completed, Withdrawn
+    End Class
+
+    ''' <summary>
+    ''' Request model for deactivating/withdrawing a learner
+    ''' </summary>
+    Public Class LearnerDeactivateRequest
+        <Required>
+        Public Property Reason As String          ' Withdrawal reason
+        Public Property EffectiveDate As DateTime?
+    End Class
+
+#End Region
+
+#Region "Error Models"
+
+    ''' <summary>
+    ''' Detailed error response with correlation ID
+    ''' </summary>
+    Public Class ErrorResponse
+        Public Property Success As Boolean = False
+        Public Property [Error] As ErrorDetail
+        Public Property Timestamp As DateTime = DateTime.UtcNow
+        Public Property RequestId As String
+        Public Property Path As String
+    End Class
+
+    ''' <summary>
+    ''' Error detail with code and message
+    ''' </summary>
+    Public Class ErrorDetail
+        Public Property Code As String
+        Public Property Message As String
+        Public Property Details As Object
+        Public Property ValidationErrors As List(Of ValidationError)
+    End Class
+
+    ''' <summary>
+    ''' Validation error for a specific field
+    ''' </summary>
+    Public Class ValidationError
+        Public Property Field As String
+        Public Property Message As String
     End Class
 
 #End Region

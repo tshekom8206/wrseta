@@ -120,6 +120,156 @@ Namespace SETA.API.Controllers
         End Function
 
         ''' <summary>
+        ''' Logout - revoke all tokens for the current user
+        ''' </summary>
+        ''' <remarks>
+        ''' Revokes all refresh tokens for the authenticated user's SETA.
+        ''' The JWT token will remain valid until expiration but no refresh is possible.
+        ''' </remarks>
+        <Route("logout")>
+        <HttpPost>
+        Public Function Logout() As IHttpActionResult
+            ' Get SETA info from API Key (set by ApiKeyAuthAttribute)
+            Dim setaId = CInt(Me.Request.Properties("SetaId"))
+
+            ' Get username from request body or JWT if available
+            Dim username As String = Nothing
+
+            ' Try to get username from Authorization header (JWT)
+            If Request.Headers.Authorization IsNot Nothing AndAlso
+               Request.Headers.Authorization.Scheme = "Bearer" Then
+                Try
+                    Dim token = Request.Headers.Authorization.Parameter
+                    Dim principal = _tokenService.ValidateToken(token)
+                    If principal IsNot Nothing Then
+                        username = principal.Identity.Name
+                    End If
+                Catch
+                    ' Token might be expired, that's ok for logout
+                End Try
+            End If
+
+            ' Revoke tokens
+            Dim revokedCount = RevokeAllTokensForUser(setaId, username)
+
+            ' Log the logout action
+            Services.AuditLogService.LogAsync(
+                setaId,
+                Services.AuditLogService.ACTION_LOGOUT,
+                "RefreshTokens",
+                details:=$"User logged out. {revokedCount} refresh tokens revoked.",
+                success:=True)
+
+            Return Ok(ApiResponse(Of Object).SuccessResponse(New With {
+                .message = "Successfully logged out",
+                .tokensRevoked = revokedCount
+            }))
+        End Function
+
+        ''' <summary>
+        ''' Revoke a specific refresh token
+        ''' </summary>
+        <Route("revoke")>
+        <HttpPost>
+        Public Function RevokeToken(request As RevokeTokenRequest) As IHttpActionResult
+            If request Is Nothing OrElse String.IsNullOrWhiteSpace(request.RefreshToken) Then
+                Return Content(HttpStatusCode.BadRequest,
+                    ApiResponse(Of Object).ErrorResponse("INVALID_REQUEST", "Refresh token is required"))
+            End If
+
+            Dim setaId = CInt(Me.Request.Properties("SetaId"))
+
+            ' Revoke the specific token
+            Dim revoked = RevokeSpecificToken(request.RefreshToken, setaId)
+
+            If Not revoked Then
+                Return Content(HttpStatusCode.NotFound,
+                    ApiResponse(Of Object).ErrorResponse("TOKEN_NOT_FOUND", "Refresh token not found or already revoked"))
+            End If
+
+            ' Log the action
+            Services.AuditLogService.LogAsync(
+                setaId,
+                Services.AuditLogService.ACTION_LOGOUT,
+                "RefreshTokens",
+                details:="Refresh token manually revoked",
+                success:=True)
+
+            Return Ok(ApiResponse(Of Object).SuccessResponse(New With {
+                .message = "Token successfully revoked"
+            }))
+        End Function
+
+        ''' <summary>
+        ''' Revoke all tokens for a user (admin endpoint)
+        ''' </summary>
+        <Route("revoke-all/{username}")>
+        <HttpPost>
+        Public Function RevokeAllUserTokens(username As String) As IHttpActionResult
+            If String.IsNullOrWhiteSpace(username) Then
+                Return Content(HttpStatusCode.BadRequest,
+                    ApiResponse(Of Object).ErrorResponse("INVALID_REQUEST", "Username is required"))
+            End If
+
+            Dim setaId = CInt(Me.Request.Properties("SetaId"))
+
+            ' Revoke all tokens for this user
+            Dim revokedCount = RevokeAllTokensForUser(setaId, username)
+
+            ' Log the action
+            Services.AuditLogService.LogAsync(
+                setaId,
+                Services.AuditLogService.ACTION_LOGOUT,
+                "RefreshTokens",
+                details:=$"Admin revoked all tokens for user {username}. {revokedCount} tokens revoked.",
+                success:=True)
+
+            Return Ok(ApiResponse(Of Object).SuccessResponse(New With {
+                .message = $"All tokens revoked for user {username}",
+                .tokensRevoked = revokedCount
+            }))
+        End Function
+
+        ''' <summary>
+        ''' Get current session info
+        ''' </summary>
+        <Route("session")>
+        <HttpGet>
+        Public Function GetSessionInfo() As IHttpActionResult
+            Dim setaId = CInt(Me.Request.Properties("SetaId"))
+            Dim setaCode = Me.Request.Properties("SetaCode").ToString()
+            Dim setaName = If(Me.Request.Properties.ContainsKey("SetaName"),
+                              Me.Request.Properties("SetaName").ToString(), "")
+
+            Dim tokenInfo As Object = Nothing
+
+            ' Try to extract info from JWT if present
+            If Request.Headers.Authorization IsNot Nothing AndAlso
+               Request.Headers.Authorization.Scheme = "Bearer" Then
+                Try
+                    Dim token = Request.Headers.Authorization.Parameter
+                    Dim principal = _tokenService.ValidateToken(token)
+                    If principal IsNot Nothing Then
+                        tokenInfo = New With {
+                            .username = principal.Identity.Name,
+                            .isAuthenticated = principal.Identity.IsAuthenticated
+                        }
+                    End If
+                Catch
+                    ' Token might be invalid
+                End Try
+            End If
+
+            Return Ok(ApiResponse(Of Object).SuccessResponse(New With {
+                .setaId = setaId,
+                .setaCode = setaCode,
+                .setaName = setaName,
+                .tokenInfo = tokenInfo,
+                .timestamp = DateTime.UtcNow
+            }))
+        End Function
+
+        ''' <summary>
         ''' Validate user credentials against database
         ''' </summary>
         Private Function ValidateUserCredentials(username As String, password As String, setaId As Integer) As UserInfo
@@ -245,6 +395,66 @@ Namespace SETA.API.Controllers
                 Next
                 Return builder.ToString()
             End Using
+        End Function
+
+        ''' <summary>
+        ''' Revoke all refresh tokens for a user
+        ''' </summary>
+        Private Function RevokeAllTokensForUser(setaId As Integer, username As String) As Integer
+            Dim connectionString As String = ConfigurationManager.ConnectionStrings("SETAConnection").ConnectionString
+            Dim revokedCount As Integer = 0
+
+            Try
+                Using conn As New SqlConnection(connectionString)
+                    conn.Open()
+
+                    Dim sql As String
+                    If String.IsNullOrEmpty(username) Then
+                        ' Revoke all tokens for this SETA (if no username provided)
+                        sql = "UPDATE RefreshTokens SET IsRevoked = 1, RevokedAt = GETDATE() WHERE SETAID = @SETAID AND IsRevoked = 0"
+                        Using cmd As New SqlCommand(sql, conn)
+                            cmd.Parameters.AddWithValue("@SETAID", setaId)
+                            revokedCount = cmd.ExecuteNonQuery()
+                        End Using
+                    Else
+                        ' Revoke all tokens for this specific user
+                        sql = "UPDATE RefreshTokens SET IsRevoked = 1, RevokedAt = GETDATE() WHERE SETAID = @SETAID AND Username = @Username AND IsRevoked = 0"
+                        Using cmd As New SqlCommand(sql, conn)
+                            cmd.Parameters.AddWithValue("@SETAID", setaId)
+                            cmd.Parameters.AddWithValue("@Username", username)
+                            revokedCount = cmd.ExecuteNonQuery()
+                        End Using
+                    End If
+                End Using
+            Catch ex As Exception
+                System.Diagnostics.Debug.WriteLine("Failed to revoke tokens: " & ex.Message)
+            End Try
+
+            Return revokedCount
+        End Function
+
+        ''' <summary>
+        ''' Revoke a specific refresh token
+        ''' </summary>
+        Private Function RevokeSpecificToken(refreshToken As String, setaId As Integer) As Boolean
+            Dim connectionString As String = ConfigurationManager.ConnectionStrings("SETAConnection").ConnectionString
+
+            Try
+                Using conn As New SqlConnection(connectionString)
+                    conn.Open()
+
+                    Dim sql As String = "UPDATE RefreshTokens SET IsRevoked = 1, RevokedAt = GETDATE() WHERE RefreshToken = @RefreshToken AND SETAID = @SETAID AND IsRevoked = 0"
+                    Using cmd As New SqlCommand(sql, conn)
+                        cmd.Parameters.AddWithValue("@RefreshToken", refreshToken)
+                        cmd.Parameters.AddWithValue("@SETAID", setaId)
+                        Return cmd.ExecuteNonQuery() > 0
+                    End Using
+                End Using
+            Catch ex As Exception
+                System.Diagnostics.Debug.WriteLine("Failed to revoke token: " & ex.Message)
+            End Try
+
+            Return False
         End Function
 
         ''' <summary>

@@ -82,6 +82,12 @@
     <Reference Include="System.Web.Http.Owin">
       <HintPath>..\packages\Microsoft.AspNet.WebApi.Owin.5.2.9\lib\net45\System.Web.Http.Owin.dll</HintPath>
     </Reference>
+    <Reference Include="System.Web.Http.Cors">
+      <HintPath>..\packages\Microsoft.AspNet.WebApi.Cors.5.2.9\lib\net45\System.Web.Http.Cors.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Web.Cors">
+      <HintPath>..\packages\Microsoft.AspNet.Cors.5.2.9\lib\net45\System.Web.Cors.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Import Include="Microsoft.VisualBasic" />
@@ -104,18 +110,29 @@
     <Compile Include="App_Start\WebApiConfig.vb" />
     <Compile Include="Controllers\AuthController.vb" />
     <Compile Include="Controllers\DashboardController.vb" />
+    <Compile Include="Controllers\HealthController.vb" />
     <Compile Include="Controllers\LearnersController.vb" />
     <Compile Include="Controllers\SETAsController.vb" />
     <Compile Include="Controllers\VerificationController.vb" />
+    <Compile Include="Filters\GlobalExceptionFilter.vb" />
+    <Compile Include="Handlers\ApiLoggingHandler.vb" />
+    <Compile Include="Handlers\CorrelationIdHandler.vb" />
     <Compile Include="Models\ApiModels.vb" />
     <Compile Include="Program.vb" />
     <Compile Include="Security\ApiKeyAuthAttribute.vb" />
     <Compile Include="Security\JwtAuthHandler.vb" />
     <Compile Include="Security\JwtTokenService.vb" />
+    <Compile Include="Services\ApiRequestLogService.vb" />
+    <Compile Include="Services\AuditLogService.vb" />
+    <Compile Include="Services\DHACircuitBreaker.vb" />
+    <Compile Include="Services\DHAVerificationService.vb" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="App_Data\" />
     <Folder Include="Documentation\" />
+    <Folder Include="Filters\" />
+    <Folder Include="Handlers\" />
+    <Folder Include="Services\" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Documentation\API_Reference.md" />
