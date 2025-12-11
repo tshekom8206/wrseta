@@ -53,6 +53,13 @@ Namespace Handlers
                     requestBody)
             End If
 
+            ' Record telemetry metrics for ALL requests
+            TelemetryService.Instance.RecordRequest(
+                request.RequestUri.PathAndQuery,
+                request.Method.Method,
+                CInt(response.StatusCode),
+                responseTimeMs)
+
             Return response
         End Function
 

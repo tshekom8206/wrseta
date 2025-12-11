@@ -446,7 +446,11 @@ Namespace SETA.API.Controllers
         ''' <summary>
         ''' Log verification attempt
         ''' </summary>
-        Private Sub LogVerification(setaId As Integer, idNumber As String, status As String, message As String)
+        Private Sub LogVerification(setaId As Integer, idNumber As String, status As String, message As String, Optional durationMs As Double = 0)
+            ' Record telemetry metrics
+            Dim setaCode = If(Me.Request.Properties.ContainsKey("SetaCode"), Me.Request.Properties("SetaCode").ToString(), "UNKNOWN")
+            TelemetryService.Instance.RecordVerification(status, setaCode, durationMs)
+
             Dim connectionString As String = ConfigurationManager.ConnectionStrings("SETAConnection").ConnectionString
             Dim idHash = ComputeSha256Hash(idNumber)
 
