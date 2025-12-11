@@ -57,6 +57,25 @@ This API provides South African ID number verification and cross-SETA duplicate 
 7. **Correlation IDs** - `X-Request-ID` header for request tracing
 8. **Global Error Handling** - Consistent error responses with proper HTTP status codes
 
+### What's New in v1.2.0
+
+| Category | Endpoint | Method | Description |
+|----------|----------|--------|-------------|
+| Swagger | `/swagger` | GET | Interactive API documentation (Swagger UI) |
+| Swagger | `/swagger/json` | GET | OpenAPI 3.0 JSON specification |
+| Telemetry | `/api/telemetry/metrics` | GET | Application metrics |
+| Telemetry | `/api/telemetry/status` | GET | Telemetry configuration status |
+| Telemetry | `/api/telemetry/prometheus` | GET | Prometheus-format metrics |
+
+### New Features in v1.2.0
+
+1. **Swagger UI** - Interactive API documentation at `/swagger`
+2. **OpenTelemetry Support** - Distributed tracing with OTLP export
+3. **Docker Support** - Containerized deployment with docker-compose
+4. **All 21 SETA API Keys** - Pre-configured API keys for all SETAs
+5. **Prometheus Metrics** - `/api/telemetry/prometheus` endpoint
+6. **Telemetry Dashboard** - Track requests, errors, verifications
+
 ---
 
 ## Prerequisites
@@ -562,13 +581,33 @@ Leave empty or omit for development (allows all origins).
 
 ## Testing API Keys
 
-The database includes test API keys:
+The database includes test API keys for all 21 SETAs:
 
 | SETA | API Key | Rate Limit |
 |------|---------|------------|
-| WRSETA | `wrseta-lms-key-2025` | 1000/hour |
-| MICT | `mict-lms-key-2025` | 500/hour |
-| MERSETA | `merseta-lms-key-2025` | 500/hour |
+| WRSETA | `wrseta-lms-key-2025` | 5000/hour |
+| MICT | `mict-lms-key-2025` | 3000/hour |
+| MERSETA | `merseta-lms-key-2025` | 3000/hour |
+| SERVICES | `services-lms-key-2025` | 2000/hour |
+| CETA | `ceta-lms-key-2025` | 2000/hour |
+| CHIETA | `chieta-lms-key-2025` | 2000/hour |
+| ETDP | `etdp-lms-key-2025` | 2000/hour |
+| EWSETA | `ewseta-lms-key-2025` | 2000/hour |
+| FASSET | `fasset-lms-key-2025` | 2000/hour |
+| FOODBEV | `foodbev-lms-key-2025` | 2000/hour |
+| FPM | `fpm-lms-key-2025` | 1500/hour |
+| HWSETA | `hwseta-lms-key-2025` | 3000/hour |
+| INSETA | `inseta-lms-key-2025` | 2000/hour |
+| LGSETA | `lgseta-lms-key-2025` | 2500/hour |
+| MQA | `mqa-lms-key-2025` | 3000/hour |
+| PSETA | `pseta-lms-key-2025` | 2500/hour |
+| SASSETA | `sasseta-lms-key-2025` | 2500/hour |
+| AgriSETA | `agriseta-lms-key-2025` | 2000/hour |
+| CATHSSETA | `cathsseta-lms-key-2025` | 2000/hour |
+| TETA | `teta-lms-key-2025` | 2500/hour |
+| BANKSETA | `bankseta-lms-key-2025` | 3000/hour |
+
+Run `SETA.Core/Data/Seed_Additional_ApiKeys.sql` to create all API keys.
 
 ---
 
@@ -586,10 +625,151 @@ All API responses include:
 
 ## Swagger Documentation
 
-The API includes OpenAPI 3.0 documentation:
+The API includes interactive Swagger UI documentation:
 
-- **Swagger JSON**: `SETA_IDVerification/swagger.json`
+- **Swagger UI**: http://localhost:5000/swagger
+- **Swagger JSON**: http://localhost:5000/swagger/json
+- **Swagger JSON File**: `SETA_IDVerification/swagger.json`
 - View in Swagger Editor: https://editor.swagger.io/
+
+---
+
+## OpenTelemetry (OTEL) Setup
+
+The API supports OpenTelemetry for distributed tracing and metrics.
+
+### Enable OpenTelemetry
+
+Edit `SETA.API/App.config`:
+
+```xml
+<appSettings>
+  <!-- Enable OpenTelemetry -->
+  <add key="TelemetryEnabled" value="true" />
+  <add key="OtlpEndpoint" value="http://localhost:4318/v1/traces" />
+  <add key="ServiceName" value="SETA.API" />
+  <add key="ServiceVersion" value="1.2.0" />
+</appSettings>
+```
+
+### Run Jaeger (Trace Collector)
+
+```bash
+# Using Docker
+docker run -d --name jaeger \
+  -p 6831:6831/udp \
+  -p 16686:16686 \
+  -p 4317:4317 \
+  -p 4318:4318 \
+  -e COLLECTOR_OTLP_ENABLED=true \
+  jaegertracing/all-in-one:latest
+
+# View traces at: http://localhost:16686
+```
+
+### Telemetry Endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /api/telemetry/metrics` | Application metrics (JSON) |
+| `GET /api/telemetry/status` | Telemetry configuration |
+| `GET /api/telemetry/prometheus` | Prometheus-format metrics |
+| `POST /api/telemetry/trace` | Create test trace span |
+
+### View Metrics
+
+```bash
+# Get application metrics
+curl http://localhost:5000/api/telemetry/metrics \
+  -H "X-API-Key: wrseta-lms-key-2025"
+
+# Get Prometheus metrics
+curl http://localhost:5000/api/telemetry/prometheus \
+  -H "X-API-Key: wrseta-lms-key-2025"
+```
+
+### Response Example
+
+```json
+{
+  "success": true,
+  "data": {
+    "metrics": {
+      "totalRequests": 150,
+      "totalErrors": 3,
+      "totalVerifications": 45,
+      "totalDuplicatesBlocked": 5,
+      "errorRate": 2.0,
+      "duplicateRate": 11.11
+    },
+    "tracing": {
+      "activeSpans": 0,
+      "enabled": true,
+      "endpoint": "http://localhost:4318/v1/traces"
+    },
+    "service": {
+      "name": "SETA.API",
+      "version": "1.2.0"
+    }
+  }
+}
+```
+
+---
+
+## Docker Deployment
+
+### Quick Start with Docker Compose
+
+```bash
+# Start all services (API + SQL Server)
+docker-compose up -d
+
+# With monitoring (Jaeger + Seq)
+docker-compose --profile monitoring up -d
+
+# View logs
+docker-compose logs -f seta-api
+
+# Stop services
+docker-compose down
+```
+
+### Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `SQL_SA_PASSWORD` | SQL Server SA password | `YourStrong@Passw0rd` |
+| `JWT_SECRET` | JWT signing key | (32+ chars required) |
+| `SETA_DB_SERVER` | Database server | `sqlserver` |
+| `SETA_DB_NAME` | Database name | `SETA_IDVerification` |
+| `CORS_ORIGINS` | Allowed CORS origins | `*` |
+
+### Build and Run Manually
+
+```bash
+# Build the Docker image
+docker build -t seta-api:latest .
+
+# Run the container
+docker run -d -p 5000:5000 \
+  -e SETA_DB_SERVER=host.docker.internal\\SQLEXPRESS \
+  -e SETA_DB_NAME=SETA_IDVerification \
+  --name seta-api \
+  seta-api:latest
+
+# Check health
+curl http://localhost:5000/api/health
+```
+
+### Docker Compose Services
+
+| Service | Port | Description |
+|---------|------|-------------|
+| `seta-api` | 5000 | SETA ID Verification API |
+| `sqlserver` | 1433 | SQL Server 2019 |
+| `seq` | 5341 | Centralized logging (optional) |
+| `jaeger` | 16686, 4317, 4318 | Distributed tracing (optional) |
 
 ---
 

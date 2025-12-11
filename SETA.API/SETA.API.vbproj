@@ -113,6 +113,8 @@
     <Compile Include="Controllers\HealthController.vb" />
     <Compile Include="Controllers\LearnersController.vb" />
     <Compile Include="Controllers\SETAsController.vb" />
+    <Compile Include="Controllers\SwaggerController.vb" />
+    <Compile Include="Controllers\TelemetryController.vb" />
     <Compile Include="Controllers\VerificationController.vb" />
     <Compile Include="Filters\GlobalExceptionFilter.vb" />
     <Compile Include="Handlers\ApiLoggingHandler.vb" />
@@ -126,6 +128,7 @@
     <Compile Include="Services\AuditLogService.vb" />
     <Compile Include="Services\DHACircuitBreaker.vb" />
     <Compile Include="Services\DHAVerificationService.vb" />
+    <Compile Include="Services\TelemetryService.vb" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="App_Data\" />

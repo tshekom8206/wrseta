@@ -41,7 +41,14 @@ Module Program
             Console.WriteLine("  POST /api/verification/verify - Verify ID")
             Console.WriteLine("  GET  /api/setas            - List all SETAs")
             Console.WriteLine("  GET  /api/dashboard/stats/1 - SETA stats")
-            Console.WriteLine("  POST /api/learners/register - Register learner")
+            Console.WriteLine("  POST /api/learners/enroll  - Enroll learner")
+            Console.WriteLine("  GET  /api/health           - Health check")
+            Console.WriteLine("--------------------------------------------")
+            Console.WriteLine()
+            Console.ForegroundColor = ConsoleColor.Magenta
+            Console.WriteLine("API Documentation:")
+            Console.WriteLine("  " & BaseUrl & "/swagger")
+            Console.ResetColor()
             Console.WriteLine("--------------------------------------------")
             Console.WriteLine()
             Console.ForegroundColor = ConsoleColor.Yellow
