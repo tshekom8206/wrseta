@@ -1,0 +1,1117 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "SETA ID Verification API",
+    "description": "Multi-SETA ID Verification & Duplicate Detection System for W&RSETA Hackathon 2025.\n\nThis API provides ID verification services for all 21 South African Sector Education and Training Authorities (SETAs). It validates SA ID numbers, detects cross-SETA duplicate registrations, and manages learner enrollments.\n\n## Authentication\nAll endpoints require API Key authentication via the `X-API-Key` header.\n\n## Traffic Light Status\n- **GREEN**: ID verified successfully, no duplicates found\n- **YELLOW**: ID format valid but DHA verification pending\n- **RED**: Invalid ID or duplicate found at another SETA",
+    "version": "1.0.0",
+    "contact": {
+      "name": "W&RSETA Hackathon Team",
+      "email": "support@wrseta.org.za"
+    },
+    "license": {
+      "name": "MIT",
+      "url": "https://opensource.org/licenses/MIT"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:5000",
+      "description": "Local Development Server"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Authentication",
+      "description": "JWT token generation and refresh"
+    },
+    {
+      "name": "Verification",
+      "description": "SA ID number verification endpoints"
+    },
+    {
+      "name": "Learners",
+      "description": "Learner registration and management"
+    },
+    {
+      "name": "Dashboard",
+      "description": "Statistics and reporting"
+    },
+    {
+      "name": "SETAs",
+      "description": "SETA lookup and information"
+    }
+  ],
+  "paths": {
+    "/api/auth/token": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Get JWT Token",
+        "description": "Authenticate with username/password to receive a JWT token for subsequent API calls.",
+        "operationId": "getToken",
+        "security": [{"ApiKeyAuth": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthTokenRequest"
+              },
+              "example": {
+                "username": "lms_wrseta",
+                "password": "LmsPassword2025!",
+                "setaId": 1
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Token generated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseAuthToken"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/verification/verify": {
+      "post": {
+        "tags": ["Verification"],
+        "summary": "Verify SA ID Number",
+        "description": "Performs full verification of a South African ID number including:\n- Format validation (13 digits)\n- Luhn checksum validation\n- Demographics extraction (DOB, gender, citizenship)\n- Cross-SETA duplicate detection\n- DHA verification (simulated)\n\nReturns a traffic light status: GREEN, YELLOW, or RED.",
+        "operationId": "verifyId",
+        "security": [{"ApiKeyAuth": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerificationRequest"
+              },
+              "example": {
+                "idNumber": "8506155012089",
+                "firstName": "Thabo",
+                "surname": "Mokoena"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Verification completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseVerification"
+                },
+                "examples": {
+                  "green": {
+                    "summary": "GREEN - Verified Successfully",
+                    "value": {
+                      "success": true,
+                      "data": {
+                        "status": "GREEN",
+                        "message": "Identity verified successfully",
+                        "isValid": true,
+                        "formatValid": true,
+                        "luhnValid": true,
+                        "dhaVerified": true,
+                        "duplicateFound": false,
+                        "demographics": {
+                          "dateOfBirth": "1985-06-15",
+                          "gender": "Male",
+                          "citizenship": "SA Citizen",
+                          "age": 40
+                        }
+                      },
+                      "timestamp": "2025-12-11T16:22:22Z",
+                      "requestId": "abc123"
+                    }
+                  },
+                  "red_duplicate": {
+                    "summary": "RED - Duplicate Found",
+                    "value": {
+                      "success": true,
+                      "data": {
+                        "status": "RED",
+                        "message": "Learner already registered at another SETA",
+                        "isValid": true,
+                        "formatValid": true,
+                        "luhnValid": true,
+                        "dhaVerified": false,
+                        "duplicateFound": true,
+                        "demographics": {
+                          "dateOfBirth": "1985-06-15",
+                          "gender": "Male",
+                          "citizenship": "SA Citizen",
+                          "age": 40
+                        },
+                        "conflictingSeta": {
+                          "setaId": 2,
+                          "setaCode": "MICT",
+                          "setaName": "Media, ICT and Electronics SETA"
+                        }
+                      },
+                      "timestamp": "2025-12-11T16:22:22Z",
+                      "requestId": "abc124"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Invalid or missing API key"
+          }
+        }
+      }
+    },
+    "/api/verification/validate-format": {
+      "post": {
+        "tags": ["Verification"],
+        "summary": "Quick Format Validation",
+        "description": "Performs quick format and Luhn checksum validation only (no DHA or duplicate checks). Useful for real-time form validation.",
+        "operationId": "validateFormat",
+        "security": [{"ApiKeyAuth": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerificationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Format validation result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseVerification"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/verification/recent/{setaId}": {
+      "get": {
+        "tags": ["Verification"],
+        "summary": "Get Recent Verifications",
+        "description": "Returns the most recent verification attempts for a specific SETA. Limited to own SETA data only.",
+        "operationId": "getRecentVerifications",
+        "security": [{"ApiKeyAuth": []}],
+        "parameters": [
+          {
+            "name": "setaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "SETA ID (must match API key's SETA)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of recent verifications",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseArray"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Cannot access other SETA's data"
+          }
+        }
+      }
+    },
+    "/api/learners/register": {
+      "post": {
+        "tags": ["Learners"],
+        "summary": "Register New Learner",
+        "description": "Register a new learner after successful ID verification. Performs enrollment duplicate detection based on:\n- Same learnership + Same SETA + Same province + Same year = BLOCKED\n- Same learnership + Different SETA + Same year = BLOCKED\n- Same learnership + Same SETA + Different province = ALLOWED",
+        "operationId": "registerLearner",
+        "security": [{"ApiKeyAuth": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnrollmentRequest"
+              },
+              "example": {
+                "idNumber": "8506155012089",
+                "firstName": "Thabo",
+                "surname": "Mokoena",
+                "learnershipCode": "SAQA-12345",
+                "learnershipName": "NQF5 Wholesale Management",
+                "enrollmentYear": 2025,
+                "province": "GP",
+                "setaId": 1
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Enrollment result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseEnrollment"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request or duplicate enrollment"
+          }
+        }
+      }
+    },
+    "/api/learners/{setaId}": {
+      "get": {
+        "tags": ["Learners"],
+        "summary": "List Learners by SETA",
+        "description": "Returns all learners registered under a specific SETA. ID numbers are masked for POPIA compliance.",
+        "operationId": "getLearnersBySeta",
+        "security": [{"ApiKeyAuth": []}],
+        "parameters": [
+          {
+            "name": "setaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of learners",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseLearnerList"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/learners/search": {
+      "post": {
+        "tags": ["Learners"],
+        "summary": "Search Learners",
+        "description": "Search for learners by ID number, name, or SETA. Results are limited to the requesting SETA's data.",
+        "operationId": "searchLearners",
+        "security": [{"ApiKeyAuth": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LearnerSearchRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Search results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseLearnerList"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/dashboard/stats/{setaId}": {
+      "get": {
+        "tags": ["Dashboard"],
+        "summary": "Get SETA Statistics",
+        "description": "Returns verification and enrollment statistics for a specific SETA.",
+        "operationId": "getSetaStats",
+        "security": [{"ApiKeyAuth": []}],
+        "parameters": [
+          {
+            "name": "setaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "SETA statistics",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseDashboard"
+                },
+                "example": {
+                  "success": true,
+                  "data": {
+                    "setaId": 1,
+                    "setaCode": "WRSETA",
+                    "setaName": "Wholesale & Retail SETA",
+                    "totalLearners": 7,
+                    "verifiedGreen": 5,
+                    "verifiedYellow": 1,
+                    "verifiedRed": 1,
+                    "blockedAttempts": 2,
+                    "todayVerifications": 10,
+                    "thisMonthEnrollments": 3
+                  },
+                  "timestamp": "2025-12-11T16:22:36Z",
+                  "requestId": "9552aeac"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/dashboard/summary": {
+      "get": {
+        "tags": ["Dashboard"],
+        "summary": "Get Cross-SETA Summary",
+        "description": "Returns aggregated statistics across all SETAs. Admin access required.",
+        "operationId": "getCrossSETASummary",
+        "security": [{"ApiKeyAuth": []}],
+        "responses": {
+          "200": {
+            "description": "Cross-SETA summary statistics",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseArray"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/setas": {
+      "get": {
+        "tags": ["SETAs"],
+        "summary": "List All SETAs",
+        "description": "Returns a list of all 21 active South African SETAs.",
+        "operationId": "getAllSetas",
+        "security": [{"ApiKeyAuth": []}],
+        "responses": {
+          "200": {
+            "description": "List of SETAs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseSetaList"
+                },
+                "example": {
+                  "success": true,
+                  "data": [
+                    {
+                      "setaId": 1,
+                      "setaCode": "WRSETA",
+                      "setaName": "Wholesale & Retail SETA",
+                      "sector": "Wholesale and Retail",
+                      "isActive": true
+                    },
+                    {
+                      "setaId": 2,
+                      "setaCode": "MICT",
+                      "setaName": "Media, ICT and Electronics SETA",
+                      "sector": "ICT and Electronics",
+                      "isActive": true
+                    }
+                  ],
+                  "timestamp": "2025-12-11T16:14:20Z",
+                  "requestId": "ff49b72d"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/setas/{code}": {
+      "get": {
+        "tags": ["SETAs"],
+        "summary": "Get SETA by Code",
+        "description": "Returns details for a specific SETA by its code (e.g., WRSETA, MICT).",
+        "operationId": "getSetaByCode",
+        "security": [{"ApiKeyAuth": []}],
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "WRSETA"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "SETA details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseSeta"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "SETA not found"
+          }
+        }
+      }
+    },
+    "/api/setas/provinces": {
+      "get": {
+        "tags": ["SETAs"],
+        "summary": "List SA Provinces",
+        "description": "Returns a list of South African provinces with their codes.",
+        "operationId": "getProvinces",
+        "security": [{"ApiKeyAuth": []}],
+        "responses": {
+          "200": {
+            "description": "List of provinces",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseProvinces"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key",
+        "description": "API Key for authentication. Contact your SETA administrator to obtain a key."
+      },
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT token obtained from /api/auth/token endpoint"
+      }
+    },
+    "schemas": {
+      "AuthTokenRequest": {
+        "type": "object",
+        "required": ["username", "password", "setaId"],
+        "properties": {
+          "username": {
+            "type": "string",
+            "description": "API user username"
+          },
+          "password": {
+            "type": "string",
+            "description": "API user password"
+          },
+          "setaId": {
+            "type": "integer",
+            "description": "SETA ID to authenticate for"
+          }
+        }
+      },
+      "AuthTokenResponse": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "JWT access token"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Token expiration timestamp"
+          },
+          "refreshToken": {
+            "type": "string",
+            "description": "Refresh token for obtaining new access tokens"
+          },
+          "setaId": {
+            "type": "integer"
+          },
+          "setaCode": {
+            "type": "string"
+          },
+          "setaName": {
+            "type": "string"
+          }
+        }
+      },
+      "VerificationRequest": {
+        "type": "object",
+        "required": ["idNumber"],
+        "properties": {
+          "idNumber": {
+            "type": "string",
+            "minLength": 13,
+            "maxLength": 13,
+            "pattern": "^[0-9]{13}$",
+            "description": "South African ID number (13 digits)",
+            "example": "8506155012089"
+          },
+          "firstName": {
+            "type": "string",
+            "description": "Learner's first name (optional, for logging)"
+          },
+          "surname": {
+            "type": "string",
+            "description": "Learner's surname (optional, for logging)"
+          }
+        }
+      },
+      "VerificationResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["GREEN", "YELLOW", "RED"],
+            "description": "Traffic light verification status"
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable status message"
+          },
+          "isValid": {
+            "type": "boolean",
+            "description": "Overall ID validity"
+          },
+          "formatValid": {
+            "type": "boolean",
+            "description": "ID format is valid (13 digits)"
+          },
+          "luhnValid": {
+            "type": "boolean",
+            "description": "Luhn checksum passed"
+          },
+          "dhaVerified": {
+            "type": "boolean",
+            "description": "DHA verification completed"
+          },
+          "duplicateFound": {
+            "type": "boolean",
+            "description": "Duplicate registration found at another SETA"
+          },
+          "demographics": {
+            "$ref": "#/components/schemas/Demographics"
+          },
+          "conflictingSeta": {
+            "$ref": "#/components/schemas/ConflictInfo"
+          }
+        }
+      },
+      "Demographics": {
+        "type": "object",
+        "properties": {
+          "dateOfBirth": {
+            "type": "string",
+            "format": "date",
+            "description": "Date of birth extracted from ID"
+          },
+          "gender": {
+            "type": "string",
+            "enum": ["Male", "Female"],
+            "description": "Gender extracted from ID"
+          },
+          "citizenship": {
+            "type": "string",
+            "enum": ["SA Citizen", "Permanent Resident"],
+            "description": "Citizenship status from ID"
+          },
+          "age": {
+            "type": "integer",
+            "description": "Calculated age in years"
+          }
+        }
+      },
+      "ConflictInfo": {
+        "type": "object",
+        "properties": {
+          "setaId": {
+            "type": "integer"
+          },
+          "setaCode": {
+            "type": "string"
+          },
+          "setaName": {
+            "type": "string"
+          },
+          "registrationDate": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "EnrollmentRequest": {
+        "type": "object",
+        "required": ["idNumber", "firstName", "surname", "learnershipCode", "enrollmentYear", "province", "setaId"],
+        "properties": {
+          "idNumber": {
+            "type": "string",
+            "minLength": 13,
+            "maxLength": 13
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "surname": {
+            "type": "string"
+          },
+          "learnershipCode": {
+            "type": "string",
+            "maxLength": 20,
+            "description": "SAQA learnership code"
+          },
+          "learnershipName": {
+            "type": "string",
+            "description": "Name of the learnership program"
+          },
+          "enrollmentYear": {
+            "type": "integer",
+            "minimum": 2020,
+            "maximum": 2100
+          },
+          "province": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 3,
+            "description": "Province code (GP, WC, KZN, etc.)"
+          },
+          "setaId": {
+            "type": "integer"
+          }
+        }
+      },
+      "EnrollmentResponse": {
+        "type": "object",
+        "properties": {
+          "decision": {
+            "type": "string",
+            "enum": ["ALLOWED", "BLOCKED"]
+          },
+          "duplicateType": {
+            "type": "string",
+            "enum": ["NEW_ENROLLMENT", "SAME_SETA_SAME_PROVINCE", "DIFFERENT_SETA_SAME_YEAR", "DIFFERENT_PROVINCE"]
+          },
+          "message": {
+            "type": "string"
+          },
+          "enrollmentId": {
+            "type": "string"
+          },
+          "existingEnrollment": {
+            "$ref": "#/components/schemas/ExistingEnrollment"
+          }
+        }
+      },
+      "ExistingEnrollment": {
+        "type": "object",
+        "properties": {
+          "setaId": {
+            "type": "integer"
+          },
+          "setaCode": {
+            "type": "string"
+          },
+          "setaName": {
+            "type": "string"
+          },
+          "learnershipCode": {
+            "type": "string"
+          },
+          "province": {
+            "type": "string"
+          },
+          "enrollmentYear": {
+            "type": "integer"
+          },
+          "enrollmentDate": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "LearnerSearchRequest": {
+        "type": "object",
+        "properties": {
+          "idNumber": {
+            "type": "string"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "surname": {
+            "type": "string"
+          },
+          "setaId": {
+            "type": "integer"
+          }
+        }
+      },
+      "LearnerInfo": {
+        "type": "object",
+        "properties": {
+          "learnerId": {
+            "type": "integer"
+          },
+          "idNumberMasked": {
+            "type": "string",
+            "description": "Masked ID number for POPIA compliance (e.g., 850615****089)"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "surname": {
+            "type": "string"
+          },
+          "dateOfBirth": {
+            "type": "string",
+            "format": "date"
+          },
+          "gender": {
+            "type": "string"
+          },
+          "learnershipCode": {
+            "type": "string"
+          },
+          "programmeName": {
+            "type": "string"
+          },
+          "province": {
+            "type": "string"
+          },
+          "registrationDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "DashboardStats": {
+        "type": "object",
+        "properties": {
+          "setaId": {
+            "type": "integer"
+          },
+          "setaCode": {
+            "type": "string"
+          },
+          "setaName": {
+            "type": "string"
+          },
+          "totalLearners": {
+            "type": "integer"
+          },
+          "verifiedGreen": {
+            "type": "integer"
+          },
+          "verifiedYellow": {
+            "type": "integer"
+          },
+          "verifiedRed": {
+            "type": "integer"
+          },
+          "blockedAttempts": {
+            "type": "integer"
+          },
+          "todayVerifications": {
+            "type": "integer"
+          },
+          "thisMonthEnrollments": {
+            "type": "integer"
+          }
+        }
+      },
+      "SetaInfo": {
+        "type": "object",
+        "properties": {
+          "setaId": {
+            "type": "integer"
+          },
+          "setaCode": {
+            "type": "string"
+          },
+          "setaName": {
+            "type": "string"
+          },
+          "sector": {
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ProvinceInfo": {
+        "type": "object",
+        "properties": {
+          "provinceCode": {
+            "type": "string"
+          },
+          "provinceName": {
+            "type": "string"
+          }
+        }
+      },
+      "ApiError": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": false
+          },
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "details": {
+                "type": "object"
+              }
+            }
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "requestId": {
+            "type": "string"
+          }
+        }
+      },
+      "ApiResponseAuthToken": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "data": {
+            "$ref": "#/components/schemas/AuthTokenResponse"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "requestId": {
+            "type": "string"
+          }
+        }
+      },
+      "ApiResponseVerification": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "data": {
+            "$ref": "#/components/schemas/VerificationResponse"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "requestId": {
+            "type": "string"
+          }
+        }
+      },
+      "ApiResponseEnrollment": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "data": {
+            "$ref": "#/components/schemas/EnrollmentResponse"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "requestId": {
+            "type": "string"
+          }
+        }
+      },
+      "ApiResponseDashboard": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "data": {
+            "$ref": "#/components/schemas/DashboardStats"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "requestId": {
+            "type": "string"
+          }
+        }
+      },
+      "ApiResponseSetaList": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SetaInfo"
+            }
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "requestId": {
+            "type": "string"
+          }
+        }
+      },
+      "ApiResponseSeta": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "data": {
+            "$ref": "#/components/schemas/SetaInfo"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "requestId": {
+            "type": "string"
+          }
+        }
+      },
+      "ApiResponseLearnerList": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LearnerInfo"
+            }
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "requestId": {
+            "type": "string"
+          }
+        }
+      },
+      "ApiResponseProvinces": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProvinceInfo"
+            }
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "requestId": {
+            "type": "string"
+          }
+        }
+      },
+      "ApiResponseArray": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "requestId": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

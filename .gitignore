@@ -1,0 +1,44 @@
+# Build results
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+
+# Visual Studio files
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.csproj.user
+*.vbproj.user
+
+# NuGet packages
+packages/
+*.nupkg
+.nuget/
+
+# SQL Server files
+*.mdf
+*.ldf
+
+# Windows files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Logs
+*.log
+logs/
+
+# Backup files
+*.bak
+*.tmp
+*~
+
+# IDE specific
+.idea/
+*.swp
+*.swo
