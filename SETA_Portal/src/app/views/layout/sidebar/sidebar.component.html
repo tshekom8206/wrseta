@@ -1,0 +1,146 @@
+<aside
+  class="sidebar"
+  [class.collapsed]="collapsed"
+  role="navigation"
+  aria-label="Main navigation"
+>
+  <!-- Brand/Logo -->
+  <div class="sidebar-brand">
+    @if (!collapsed) {
+      @if (theme?.logo) {
+        <img [src]="theme!.logo" [alt]="theme!.name + ' Logo'" class="brand-logo" />
+      } @else {
+        <span class="brand-text">SETA Portal</span>
+      }
+    } @else {
+      <span class="brand-icon">S</span>
+    }
+  </div>
+
+  <!-- Navigation -->
+  <nav class="sidebar-nav">
+    <ul class="nav flex-column" role="menubar">
+      @for (item of navItems; track item.route) {
+        @if (canAccess(item)) {
+          <li class="nav-item" role="none">
+            @if (item.children && item.children.length > 0) {
+              <!-- Parent with children -->
+              <button
+                class="nav-link nav-parent"
+                [class.expanded]="isExpanded(item.route)"
+                (click)="toggleExpanded(item.route)"
+                [attr.aria-expanded]="isExpanded(item.route)"
+                role="menuitem"
+                type="button"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  class="nav-icon"
+                  [innerHTML]="getIcon(item.icon)"
+                ></svg>
+                @if (!collapsed) {
+                  <span class="nav-text">{{ item.label | translate }}</span>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    class="nav-arrow"
+                    [class.rotated]="isExpanded(item.route)"
+                  >
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
+                }
+              </button>
+
+              <!-- Children -->
+              @if (!collapsed && isExpanded(item.route)) {
+                <ul class="nav-children" role="menu">
+                  @for (child of item.children; track child.route) {
+                    @if (canAccess(child)) {
+                      <li class="nav-item" role="none">
+                        <a
+                          class="nav-link nav-child"
+                          [routerLink]="child.route"
+                          routerLinkActive="active"
+                          role="menuitem"
+                        >
+                          <span class="nav-text">{{ child.label | translate }}</span>
+                        </a>
+                      </li>
+                    }
+                  }
+                </ul>
+              }
+            } @else {
+              <!-- Single item -->
+              <a
+                class="nav-link"
+                [routerLink]="item.route"
+                routerLinkActive="active"
+                role="menuitem"
+                [attr.title]="collapsed ? (item.label | translate) : null"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  class="nav-icon"
+                  [innerHTML]="getIcon(item.icon)"
+                ></svg>
+                @if (!collapsed) {
+                  <span class="nav-text">{{ item.label | translate }}</span>
+                }
+              </a>
+            }
+          </li>
+        }
+      }
+    </ul>
+  </nav>
+
+  <!-- Collapse Toggle -->
+  <div class="sidebar-footer">
+    <button
+      class="btn-toggle"
+      (click)="toggle.emit()"
+      [attr.aria-label]="collapsed ? 'Expand sidebar' : 'Collapse sidebar'"
+      [attr.aria-pressed]="collapsed"
+      type="button"
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        [class.rotated]="collapsed"
+      >
+        <polyline points="15 18 9 12 15 6"></polyline>
+      </svg>
+    </button>
+  </div>
+</aside>

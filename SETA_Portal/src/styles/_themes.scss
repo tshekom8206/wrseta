@@ -1,0 +1,283 @@
+// =============================================
+// SETA Multi-Tenant Theme Configurations
+// Each SETA has unique branding colors
+// =============================================
+
+// WRSETA - Wholesale & Retail SETA (Navy Blue - Government Style)
+.theme-wrseta {
+  --seta-primary: #003366;
+  --seta-primary-dark: #002244;
+  --seta-primary-light: #004488;
+  --seta-secondary: #666666;
+  --seta-secondary-dark: #444444;
+  --seta-accent: #00a651;
+}
+
+// MICT SETA - Media, ICT and Electronics (Modern Blue)
+.theme-mict {
+  --seta-primary: #2ea3f2;
+  --seta-primary-dark: #1a8ad4;
+  --seta-primary-light: #5bb8f5;
+  --seta-secondary: #1e3a5f;
+  --seta-secondary-dark: #0f1e32;
+  --seta-accent: #ff6b00;
+}
+
+// AgriSETA - Agriculture Sector
+.theme-agriseta {
+  --seta-primary: #4a7c23;
+  --seta-primary-dark: #385e1a;
+  --seta-primary-light: #5c9a2c;
+  --seta-secondary: #8b4513;
+  --seta-secondary-dark: #6b350f;
+  --seta-accent: #ffd700;
+}
+
+// BankSETA - Banking Sector
+.theme-bankseta {
+  --seta-primary: #003087;
+  --seta-primary-dark: #002266;
+  --seta-primary-light: #0044aa;
+  --seta-secondary: #c4a000;
+  --seta-secondary-dark: #998000;
+  --seta-accent: #00a651;
+}
+
+// CATHSSETA - Culture, Arts, Tourism, Hospitality, Sport
+.theme-cathsseta {
+  --seta-primary: #8b2332;
+  --seta-primary-dark: #6e1c28;
+  --seta-primary-light: #a82a3d;
+  --seta-secondary: #d4af37;
+  --seta-secondary-dark: #b8960f;
+  --seta-accent: #4a90d9;
+}
+
+// CETA - Construction Education & Training
+.theme-ceta {
+  --seta-primary: #e65100;
+  --seta-primary-dark: #bf4400;
+  --seta-primary-light: #ff6d00;
+  --seta-secondary: #37474f;
+  --seta-secondary-dark: #263238;
+  --seta-accent: #ffc107;
+}
+
+// CHIETA - Chemical Industries
+.theme-chieta {
+  --seta-primary: #1565c0;
+  --seta-primary-dark: #0d47a1;
+  --seta-primary-light: #1976d2;
+  --seta-secondary: #00897b;
+  --seta-secondary-dark: #00695c;
+  --seta-accent: #ff5722;
+}
+
+// ETDP SETA - Education, Training & Development
+.theme-etdpseta {
+  --seta-primary: #6a1b9a;
+  --seta-primary-dark: #4a148c;
+  --seta-primary-light: #7b1fa2;
+  --seta-secondary: #00897b;
+  --seta-secondary-dark: #00695c;
+  --seta-accent: #ffc107;
+}
+
+// EWSETA - Energy & Water
+.theme-ewseta {
+  --seta-primary: #0277bd;
+  --seta-primary-dark: #01579b;
+  --seta-primary-light: #0288d1;
+  --seta-secondary: #558b2f;
+  --seta-secondary-dark: #33691e;
+  --seta-accent: #ffb300;
+}
+
+// FASSET - Finance, Accounting, Management Consulting
+.theme-fasset {
+  --seta-primary: #1a237e;
+  --seta-primary-dark: #0d1642;
+  --seta-primary-light: #283593;
+  --seta-secondary: #c62828;
+  --seta-secondary-dark: #b71c1c;
+  --seta-accent: #ffd600;
+}
+
+// FoodBev SETA - Food & Beverages Manufacturing
+.theme-foodbev {
+  --seta-primary: #bf360c;
+  --seta-primary-dark: #8f2a09;
+  --seta-primary-light: #e64a19;
+  --seta-secondary: #2e7d32;
+  --seta-secondary-dark: #1b5e20;
+  --seta-accent: #ffc107;
+}
+
+// FP&M SETA - Fibre Processing & Manufacturing
+.theme-fpmseta {
+  --seta-primary: #5d4037;
+  --seta-primary-dark: #4e342e;
+  --seta-primary-light: #6d4c41;
+  --seta-secondary: #00695c;
+  --seta-secondary-dark: #004d40;
+  --seta-accent: #ffb300;
+}
+
+// HWSETA - Health & Welfare
+.theme-hwseta {
+  --seta-primary: #00838f;
+  --seta-primary-dark: #006064;
+  --seta-primary-light: #0097a7;
+  --seta-secondary: #c62828;
+  --seta-secondary-dark: #b71c1c;
+  --seta-accent: #7cb342;
+}
+
+// INSETA - Insurance
+.theme-inseta {
+  --seta-primary: #004d40;
+  --seta-primary-dark: #00332a;
+  --seta-primary-light: #00695c;
+  --seta-secondary: #bf360c;
+  --seta-secondary-dark: #8f2a09;
+  --seta-accent: #ffd600;
+}
+
+// LGSETA - Local Government
+.theme-lgseta {
+  --seta-primary: #1565c0;
+  --seta-primary-dark: #0d47a1;
+  --seta-primary-light: #1976d2;
+  --seta-secondary: #00838f;
+  --seta-secondary-dark: #006064;
+  --seta-accent: #ffab00;
+}
+
+// MerSETA - Manufacturing, Engineering & Related Services
+.theme-merseta {
+  --seta-primary: #263238;
+  --seta-primary-dark: #1a2327;
+  --seta-primary-light: #37474f;
+  --seta-secondary: #e65100;
+  --seta-secondary-dark: #bf4400;
+  --seta-accent: #ffc107;
+}
+
+// MQA - Mining Qualifications Authority
+.theme-mqa {
+  --seta-primary: #37474f;
+  --seta-primary-dark: #263238;
+  --seta-primary-light: #455a64;
+  --seta-secondary: #ffc107;
+  --seta-secondary-dark: #ffa000;
+  --seta-accent: #2196f3;
+}
+
+// PSETA - Public Service
+.theme-pseta {
+  --seta-primary: #1a237e;
+  --seta-primary-dark: #0d1642;
+  --seta-primary-light: #283593;
+  --seta-secondary: #00695c;
+  --seta-secondary-dark: #004d40;
+  --seta-accent: #ffc107;
+}
+
+// SASSETA - Safety & Security
+.theme-sasseta {
+  --seta-primary: #1b5e20;
+  --seta-primary-dark: #124116;
+  --seta-primary-light: #2e7d32;
+  --seta-secondary: #37474f;
+  --seta-secondary-dark: #263238;
+  --seta-accent: #ffc107;
+}
+
+// Services SETA - Services Sector
+.theme-services {
+  --seta-primary: #4527a0;
+  --seta-primary-dark: #311b92;
+  --seta-primary-light: #512da8;
+  --seta-secondary: #00897b;
+  --seta-secondary-dark: #00695c;
+  --seta-accent: #ff6f00;
+}
+
+// TETA - Transport
+.theme-teta {
+  --seta-primary: #0d47a1;
+  --seta-primary-dark: #082f6a;
+  --seta-primary-light: #1565c0;
+  --seta-secondary: #e65100;
+  --seta-secondary-dark: #bf4400;
+  --seta-accent: #ffc107;
+}
+
+// =============================================
+// Theme Application Utilities
+// =============================================
+
+// Apply primary color to Bootstrap primary
+[class*="theme-"] {
+  --bs-primary: var(--seta-primary);
+  --bs-primary-rgb: var(--seta-primary);
+
+  .btn-primary {
+    background-color: var(--seta-primary);
+    border-color: var(--seta-primary);
+
+    &:hover, &:focus {
+      background-color: var(--seta-primary-dark);
+      border-color: var(--seta-primary-dark);
+    }
+  }
+
+  .btn-outline-primary {
+    color: var(--seta-primary);
+    border-color: var(--seta-primary);
+
+    &:hover, &:focus {
+      background-color: var(--seta-primary);
+      border-color: var(--seta-primary);
+      color: #fff;
+    }
+  }
+
+  .text-primary {
+    color: var(--seta-primary) !important;
+  }
+
+  .bg-primary {
+    background-color: var(--seta-primary) !important;
+  }
+
+  .border-primary {
+    border-color: var(--seta-primary) !important;
+  }
+
+  a {
+    color: var(--seta-primary);
+
+    &:hover {
+      color: var(--seta-primary-dark);
+    }
+  }
+
+  // Form controls
+  .form-control:focus,
+  .form-select:focus {
+    border-color: var(--seta-primary);
+    box-shadow: 0 0 0 0.2rem rgba(var(--seta-primary), 0.25);
+  }
+
+  // Nav links
+  .nav-link.active,
+  .nav-pills .nav-link.active {
+    background-color: var(--seta-primary);
+  }
+
+  // Progress bars
+  .progress-bar {
+    background-color: var(--seta-primary);
+  }
+}

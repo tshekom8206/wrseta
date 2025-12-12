@@ -1,0 +1,29 @@
+# Build results
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+
+# Visual Studio files
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# NuGet Packages
+packages/
+*.nupkg
+project.lock.json
+
+# Windows files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Build logs
+*.log
+msbuild.log
+
+# Test Results
+TestResults/

@@ -1,0 +1,32 @@
+<!-- Skip Link for Accessibility -->
+<a href="#main-content" class="skip-link">
+  {{ 'accessibility.skipToContent' | translate }}
+</a>
+
+<div class="app-wrapper">
+  <!-- Sidebar -->
+  <app-sidebar
+    [collapsed]="sidebarCollapsed"
+    [currentUser]="currentUser"
+    [theme]="currentTheme"
+    (toggle)="toggleSidebar()"
+  ></app-sidebar>
+
+  <!-- Main Content Area -->
+  <div class="main-content" [class.sidebar-collapsed]="sidebarCollapsed">
+    <!-- Navbar -->
+    <app-navbar
+      [currentUser]="currentUser"
+      [theme]="currentTheme"
+      (toggleSidebar)="toggleSidebar()"
+    ></app-navbar>
+
+    <!-- Page Content -->
+    <main id="main-content" class="page-content" role="main" tabindex="-1">
+      <router-outlet></router-outlet>
+    </main>
+
+    <!-- Footer -->
+    <app-footer [theme]="currentTheme"></app-footer>
+  </div>
+</div>
