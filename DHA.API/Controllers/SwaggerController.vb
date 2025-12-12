@@ -228,94 +228,6 @@ Namespace DHA.API.Controllers
         }
       }
     },
-    ""/api/dha/verify"": {
-      ""post"": {
-        ""tags"": [""DHA Verification""],
-        ""summary"": ""Simulate DHA ID verification"",
-        ""description"": ""Verifies a South African ID number against the mock DHA database. Only requires ID number - no name validation."",
-        ""requestBody"": {
-          ""required"": true,
-          ""content"": {
-            ""application/json"": {
-              ""schema"": {
-                ""type"": ""object"",
-                ""required"": [""idNumber""],
-                ""properties"": {
-                  ""idNumber"": {
-                    ""type"": ""string"",
-                    ""description"": ""13-digit South African ID number"",
-                    ""example"": ""9001015801085""
-                  },
-                  ""firstName"": {
-                    ""type"": ""string"",
-                    ""description"": ""First name (ignored in verification)""
-                  },
-                  ""surname"": {
-                    ""type"": ""string"",
-                    ""description"": ""Surname (ignored in verification)""
-                  }
-                }
-              }
-            }
-          }
-        },
-        ""responses"": {
-          ""200"": {
-            ""description"": ""Verification result"",
-            ""content"": {
-              ""application/json"": {
-                ""schema"": {
-                  ""$ref"": ""#/components/schemas/DHAVerificationResponse""
-                }
-              }
-            }
-          },
-          ""400"": { ""description"": ""Invalid request or ID format"" }
-        }
-      }
-    },
-    ""/api/dha/status"": {
-      ""get"": {
-        ""tags"": [""DHA Verification""],
-        ""summary"": ""Get DHA service status"",
-        ""description"": ""Returns DHA service status and circuit breaker information"",
-        ""responses"": {
-          ""200"": { ""description"": ""Service status information"" }
-        }
-      }
-    },
-    ""/api/dha/verify-batch"": {
-      ""post"": {
-        ""tags"": [""DHA Verification""],
-        ""summary"": ""Bulk DHA verification"",
-        ""description"": ""Verify multiple ID numbers in a single request (up to 100 IDs)"",
-        ""requestBody"": {
-          ""required"": true,
-          ""content"": {
-            ""application/json"": {
-              ""schema"": {
-                ""type"": ""object"",
-                ""required"": [""idNumbers""],
-                ""properties"": {
-                  ""idNumbers"": {
-                    ""type"": ""array"",
-                    ""items"": {
-                      ""type"": ""string""
-                    },
-                    ""maxItems"": 100,
-                    ""description"": ""Array of ID numbers to verify""
-                  }
-                }
-              }
-            }
-          }
-        },
-        ""responses"": {
-          ""200"": { ""description"": ""Bulk verification results"" },
-          ""400"": { ""description"": ""Invalid request or batch too large"" }
-        }
-      }
-    },
     ""/api/dha/data/add-person"": {
       ""post"": {
         ""tags"": [""DHA Data Management""],
@@ -335,31 +247,6 @@ Namespace DHA.API.Controllers
           ""200"": { ""description"": ""Person added successfully"" },
           ""400"": { ""description"": ""Invalid request or validation error"" },
           ""409"": { ""description"": ""Person with this ID number already exists"" }
-        }
-      }
-    },
-    ""/api/dha/data/add-sample-data"": {
-      ""post"": {
-        ""tags"": [""DHA Data Management""],
-        ""summary"": ""Add sample data to database"",
-        ""description"": ""Generates and adds sample people to the DHA mock database"",
-        ""parameters"": [
-          {
-            ""name"": ""count"",
-            ""in"": ""query"",
-            ""description"": ""Number of sample records to generate (1-100)"",
-            ""required"": false,
-            ""schema"": {
-              ""type"": ""integer"",
-              ""minimum"": 1,
-              ""maximum"": 100,
-              ""default"": 10
-            }
-          }
-        ],
-        ""responses"": {
-          ""200"": { ""description"": ""Sample data added successfully"" },
-          ""400"": { ""description"": ""Invalid count parameter"" }
         }
       }
     },
@@ -399,34 +286,6 @@ Namespace DHA.API.Controllers
   },
   ""components"": {
     ""schemas"": {
-      ""DHAVerificationResponse"": {
-        ""type"": ""object"",
-        ""properties"": {
-          ""success"": { ""type"": ""boolean"", ""description"": ""Whether the verification request was successful"" },
-          ""verified"": { ""type"": ""boolean"", ""description"": ""Whether the ID was verified"" },
-          ""status"": {
-            ""type"": ""string"",
-            ""enum"": [""VERIFIED"", ""NOT_FOUND"", ""SERVICE_ERROR"", ""PENDING_REVIEW"", ""SUSPENDED"", ""VERIFIED_DECEASED"", ""INVALID_FORMAT""],
-            ""description"": ""Verification status""
-          },
-          ""message"": { ""type"": ""string"", ""description"": ""Human-readable message"" },
-          ""firstName"": { ""type"": ""string"", ""description"": ""First name from DHA records"" },
-          ""surname"": { ""type"": ""string"", ""description"": ""Surname from DHA records"" },
-          ""dateOfBirth"": { ""type"": ""string"", ""format"": ""date"", ""description"": ""Date of birth"" },
-          ""gender"": { ""type"": ""string"", ""enum"": [""Male"", ""Female""], ""description"": ""Gender"" },
-          ""citizenship"": { ""type"": ""string"", ""enum"": [""SA Citizen"", ""Permanent Resident""], ""description"": ""Citizenship status"" },
-          ""isDeceased"": { ""type"": ""boolean"", ""description"": ""Whether the person is deceased"" },
-          ""dateOfDeath"": { ""type"": ""string"", ""format"": ""date-time"", ""nullable"": true, ""description"": ""Date of death if deceased"" },
-          ""errorCode"": { ""type"": ""string"", ""nullable"": true, ""description"": ""Error code if verification failed"" },
-          ""errorMessage"": { ""type"": ""string"", ""nullable"": true, ""description"": ""Error message if verification failed"" },
-          ""needsManualReview"": { ""type"": ""boolean"", ""description"": ""Whether manual review is required"" },
-          ""verificationDate"": { ""type"": ""string"", ""format"": ""date-time"", ""nullable"": true, ""description"": ""Date and time of verification"" },
-          ""verificationReference"": { ""type"": ""string"", ""nullable"": true, ""description"": ""Verification reference number"" },
-          ""processingTimeMs"": { ""type"": ""integer"", ""description"": ""Processing time in milliseconds"" },
-          ""timestamp"": { ""type"": ""string"", ""format"": ""date-time"", ""description"": ""Response timestamp"" },
-          ""requestId"": { ""type"": ""string"", ""description"": ""Request correlation ID"" }
-        }
-      },
       ""AddPersonRequest"": {
         ""type"": ""object"",
         ""required"": [""idNumber"", ""firstName"", ""surname"", ""dateOfBirth"", ""gender"", ""citizenship""],

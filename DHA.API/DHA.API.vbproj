@@ -112,7 +112,6 @@
     <Compile Include="Controllers\SwaggerController.vb" />
     <Compile Include="Controllers\HealthController.vb" />
     <Compile Include="Controllers\TelemetryController.vb" />
-    <Compile Include="Controllers\DHASimulationController.vb" />
     <Compile Include="Controllers\DHADataController.vb" />
     <Compile Include="Filters\GlobalExceptionFilter.vb" />
     <Compile Include="Handlers\CorrelationIdHandler.vb" />
