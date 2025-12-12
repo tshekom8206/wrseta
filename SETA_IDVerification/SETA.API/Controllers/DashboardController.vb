@@ -326,12 +326,23 @@ Namespace SETA.API.Controllers
             Using conn As New SqlConnection(connectionString)
                 conn.Open()
 
+                ' Get blocked attempts with IDNumber and try to find conflicting SETA for duplicates
                 Dim sql As String = "
-                    SELECT VerificationID, Status, ISNULL(Message, StatusReason) AS Message, VerifiedAt
-                    FROM VerificationLog
-                    WHERE RequestingSETAID = @SETAID
-                      AND Status = 'RED'
-                    ORDER BY VerifiedAt DESC
+                    SELECT
+                        vl.VerificationID,
+                        vl.Status,
+                        ISNULL(vl.Message, vl.StatusReason) AS Message,
+                        vl.VerifiedAt,
+                        vl.IDNumber,
+                        ISNULL(vl.FirstName, lr.FirstName) AS FirstName,
+                        ISNULL(vl.Surname, lr.Surname) AS Surname,
+                        cs.SETACode AS ConflictingSeta
+                    FROM VerificationLog vl
+                    LEFT JOIN LearnerRegistry lr ON vl.IDNumberHash = lr.IDNumberHash
+                    LEFT JOIN SETAs cs ON lr.RegisteredSETAID = cs.SETAID AND cs.SETAID <> @SETAID
+                    WHERE vl.RequestingSETAID = @SETAID
+                      AND vl.Status = 'RED'
+                    ORDER BY vl.VerifiedAt DESC
                     OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY"
 
                 Using cmd As New SqlCommand(sql, conn)
@@ -341,11 +352,37 @@ Namespace SETA.API.Controllers
 
                     Using reader As SqlDataReader = cmd.ExecuteReader()
                         While reader.Read()
+                            Dim idNumber As String = If(reader.IsDBNull(4), "", reader.GetString(4))
+                            Dim firstName As String = If(reader.IsDBNull(5), "", reader.GetString(5))
+                            Dim surname As String = If(reader.IsDBNull(6), "", reader.GetString(6))
+                            Dim conflictingSeta As String = If(reader.IsDBNull(7), "", reader.GetString(7))
+                            Dim message As String = If(reader.IsDBNull(2), "", reader.GetString(2))
+
+                            ' Determine learner name - use from DB or extract from message
+                            Dim learnerName As String = ""
+                            If Not String.IsNullOrEmpty(firstName) OrElse Not String.IsNullOrEmpty(surname) Then
+                                learnerName = (firstName & " " & surname).Trim()
+                            End If
+
+                            ' Determine failure reason for display
+                            Dim failureReason As String = "Verification Failed"
+                            If message.ToLower().Contains("duplicate") Then
+                                failureReason = If(String.IsNullOrEmpty(conflictingSeta), "Duplicate Enrollment", "Enrolled at " & conflictingSeta)
+                            ElseIf message.ToLower().Contains("luhn") Then
+                                failureReason = "Invalid ID (Luhn check failed)"
+                            ElseIf message.ToLower().Contains("format") OrElse message.ToLower().Contains("invalid") Then
+                                failureReason = "Invalid ID Format"
+                            End If
+
                             blocked.Add(New With {
                                 .logId = reader.GetInt32(0),
                                 .status = reader.GetString(1),
-                                .message = If(reader.IsDBNull(2), "", reader.GetString(2)),
-                                .verifiedAt = reader.GetDateTime(3)
+                                .message = message,
+                                .verifiedAt = reader.GetDateTime(3),
+                                .idNumber = idNumber,
+                                .learnerName = learnerName,
+                                .conflictingSeta = conflictingSeta,
+                                .failureReason = failureReason
                             })
                         End While
                     End Using

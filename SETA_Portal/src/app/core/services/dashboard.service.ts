@@ -152,7 +152,7 @@ export class DashboardService {
   }
 
   /**
-   * Get blocked learners (duplicate enrollment attempts)
+   * Get blocked learners (failed verification attempts)
    */
   getBlockedLearners(limit: number = 10): Observable<BlockedLearner[]> {
     return this.http.get<any>(`${this.baseUrl}/dashboard/blocked/${this.setaId}?page=1&pageSize=${limit}`, {
@@ -164,8 +164,8 @@ export class DashboardService {
         return blocked.map((b: any, index: number) => ({
           idNumber: b.idNumber || '',
           maskedIdNumber: b.idNumber ? this.maskIdNumber(b.idNumber) : '******',
-          learnerName: b.learnerName || `Blocked Attempt ${index + 1}`,
-          enrolledSetas: [b.conflictingSeta || 'Unknown SETA'],
+          learnerName: b.learnerName || `Failed Verification ${index + 1}`,
+          enrolledSetas: [b.failureReason || this.getFailureReason(b.message)],
           lastAttemptedAt: new Date(b.verifiedAt),
           attemptCount: 1
         }));
@@ -175,6 +175,18 @@ export class DashboardService {
         return of([]);
       })
     );
+  }
+
+  /**
+   * Extract failure reason from message
+   */
+  private getFailureReason(message: string): string {
+    if (!message) return 'Verification Failed';
+    const lowerMsg = message.toLowerCase();
+    if (lowerMsg.includes('duplicate')) return 'Duplicate Enrollment';
+    if (lowerMsg.includes('luhn')) return 'Invalid ID (Luhn check)';
+    if (lowerMsg.includes('format') || lowerMsg.includes('invalid')) return 'Invalid ID Format';
+    return 'Verification Failed';
   }
 
   /**
