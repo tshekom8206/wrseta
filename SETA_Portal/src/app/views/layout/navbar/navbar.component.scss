@@ -1,0 +1,183 @@
+.navbar {
+  height: var(--navbar-height);
+  background-color: var(--navbar-bg);
+  border-bottom: 1px solid var(--navbar-border);
+  padding: 0 1.5rem;
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.navbar-start {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.navbar-end {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-menu {
+  background: transparent;
+  border: none;
+  padding: 0.5rem;
+  color: var(--seta-text-secondary);
+  cursor: pointer;
+  border-radius: var(--border-radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    background-color: var(--seta-bg-secondary);
+    color: var(--seta-text-primary);
+  }
+}
+
+.navbar-brand {
+  .seta-name {
+    font-weight: 500;
+    color: var(--seta-text-secondary);
+    font-size: 0.875rem;
+  }
+}
+
+.btn-nav {
+  background: transparent;
+  border: none;
+  padding: 0.5rem 0.75rem;
+  color: var(--seta-text-secondary);
+  cursor: pointer;
+  border-radius: var(--border-radius-sm);
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.875rem;
+  transition: all var(--transition-fast);
+
+  &:hover {
+    background-color: var(--seta-bg-secondary);
+    color: var(--seta-text-primary);
+  }
+
+  &::after {
+    display: none; // Remove Bootstrap dropdown caret
+  }
+}
+
+.btn-user {
+  background: transparent;
+  border: none;
+  padding: 0.375rem 0.75rem;
+  color: var(--seta-text-primary);
+  cursor: pointer;
+  border-radius: var(--border-radius);
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  transition: all var(--transition-fast);
+
+  &:hover {
+    background-color: var(--seta-bg-secondary);
+  }
+
+  &::after {
+    display: none;
+  }
+}
+
+.user-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.user-name {
+  font-weight: 500;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// Dropdown Styling
+.dropdown-menu {
+  border: none;
+  box-shadow: var(--shadow-lg);
+  border-radius: var(--border-radius);
+  padding: 0.5rem;
+  min-width: 200px;
+}
+
+.dropdown-header {
+  padding: 0.75rem;
+
+  .user-info {
+    strong {
+      display: block;
+      color: var(--seta-text-primary);
+    }
+
+    small {
+      font-size: 0.8125rem;
+    }
+
+    .badge {
+      font-size: 0.6875rem;
+      font-weight: 500;
+    }
+  }
+}
+
+.dropdown-item {
+  padding: 0.625rem 0.75rem;
+  border-radius: var(--border-radius-sm);
+  display: flex;
+  align-items: center;
+  font-size: 0.875rem;
+  transition: all var(--transition-fast);
+
+  &:hover {
+    background-color: var(--seta-bg-secondary);
+  }
+
+  &.active {
+    background-color: var(--seta-primary);
+    color: #fff;
+  }
+
+  &.text-danger:hover {
+    background-color: #f8d7da;
+    color: var(--seta-danger);
+  }
+}
+
+.dropdown-divider {
+  margin: 0.5rem 0;
+  border-color: var(--seta-bg-tertiary);
+}
+
+// Mobile
+@media (max-width: 767.98px) {
+  .navbar {
+    padding: 0 1rem;
+  }
+
+  .user-dropdown {
+    .dropdown-menu {
+      right: -0.5rem !important;
+    }
+  }
+}

@@ -1,0 +1,122 @@
+// =============================================
+// SETA Portal - SCSS Variables
+// =============================================
+
+// Default Theme Colors (Will be overridden by SETA themes)
+:root {
+  // Primary Colors
+  --seta-primary: #003366;
+  --seta-primary-dark: #002244;
+  --seta-primary-light: #004488;
+  --seta-secondary: #666666;
+  --seta-secondary-dark: #444444;
+  --seta-accent: #00a651;
+
+  // Status Colors
+  --seta-success: #28a745;
+  --seta-warning: #ffc107;
+  --seta-danger: #dc3545;
+  --seta-info: #17a2b8;
+
+  // Verification Status Colors
+  --status-green: #28a745;
+  --status-amber: #ffc107;
+  --status-red: #dc3545;
+
+  // Text Colors
+  --seta-text-primary: #212529;
+  --seta-text-secondary: #6c757d;
+  --seta-text-muted: #adb5bd;
+
+  // Background Colors
+  --seta-bg-primary: #ffffff;
+  --seta-bg-secondary: #f8f9fa;
+  --seta-bg-tertiary: #e9ecef;
+
+  // Sidebar
+  --sidebar-width: 260px;
+  --sidebar-collapsed-width: 70px;
+  --sidebar-bg: #212529;
+  --sidebar-text: #adb5bd;
+  --sidebar-hover: rgba(255, 255, 255, 0.1);
+  --sidebar-active: var(--seta-primary);
+
+  // Navbar
+  --navbar-height: 60px;
+  --navbar-bg: #ffffff;
+  --navbar-border: #dee2e6;
+
+  // Border Radius
+  --border-radius-sm: 4px;
+  --border-radius: 8px;
+  --border-radius-lg: 12px;
+  --border-radius-xl: 16px;
+
+  // Shadows
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.15);
+
+  // Transitions
+  --transition-fast: 150ms ease;
+  --transition-normal: 250ms ease;
+  --transition-slow: 350ms ease;
+
+  // Z-Index
+  --z-dropdown: 1000;
+  --z-sticky: 1020;
+  --z-fixed: 1030;
+  --z-modal-backdrop: 1040;
+  --z-modal: 1050;
+  --z-popover: 1060;
+  --z-tooltip: 1070;
+}
+
+// Spacing
+$spacer: 1rem;
+$spacers: (
+  0: 0,
+  1: $spacer * 0.25,
+  2: $spacer * 0.5,
+  3: $spacer,
+  4: $spacer * 1.5,
+  5: $spacer * 3,
+);
+
+// Typography
+$font-family-sans-serif: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+$font-family-monospace: 'Fira Code', 'Consolas', 'Monaco', monospace;
+
+$font-size-base: 0.9375rem;
+$font-size-sm: 0.8125rem;
+$font-size-lg: 1.125rem;
+
+$font-weight-light: 300;
+$font-weight-normal: 400;
+$font-weight-medium: 500;
+$font-weight-semibold: 600;
+$font-weight-bold: 700;
+
+$line-height-base: 1.5;
+$line-height-sm: 1.25;
+$line-height-lg: 1.75;
+
+// Breakpoints
+$grid-breakpoints: (
+  xs: 0,
+  sm: 576px,
+  md: 768px,
+  lg: 992px,
+  xl: 1200px,
+  xxl: 1400px,
+);
+
+// Container widths
+$container-max-widths: (
+  sm: 540px,
+  md: 720px,
+  lg: 960px,
+  xl: 1140px,
+  xxl: 1320px,
+);

@@ -1,0 +1,118 @@
+# =============================================
+# SETA ID Verification API - Docker Compose
+# W&RSETA Hackathon 2025
+# =============================================
+# Run: docker-compose up -d
+# =============================================
+
+version: '3.8'
+
+services:
+  # =============================================
+  # SETA API Service
+  # =============================================
+  seta-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: seta-api
+    ports:
+      - "5000:5000"
+    environment:
+      - SETA_API_PORT=5000
+      - SETA_DB_SERVER=sqlserver
+      - SETA_DB_NAME=SETA_IDVerification
+      - SETA_DB_USER=sa
+      - SETA_DB_PASSWORD=${SQL_SA_PASSWORD:-YourStrong@Passw0rd}
+      - JWT_SECRET=${JWT_SECRET:-your-256-bit-secret-key-here-minimum-32-chars}
+      - JWT_ISSUER=SETA.API
+      - JWT_AUDIENCE=SETA.LMS
+      - CORS_ORIGINS=*
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    networks:
+      - seta-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "powershell", "-Command", "try { Invoke-WebRequest -Uri http://localhost:5000/api/health -UseBasicParsing | Out-Null; exit 0 } catch { exit 1 }"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # =============================================
+  # SQL Server Database
+  # =============================================
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2019-latest
+    container_name: seta-sqlserver
+    ports:
+      - "1433:1433"
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=${SQL_SA_PASSWORD:-YourStrong@Passw0rd}
+      - MSSQL_PID=Developer
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+      - ./SETA.Core/Data:/docker-entrypoint-initdb.d:ro
+    networks:
+      - seta-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "/opt/mssql-tools/bin/sqlcmd", "-S", "localhost", "-U", "sa", "-P", "${SQL_SA_PASSWORD:-YourStrong@Passw0rd}", "-Q", "SELECT 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # =============================================
+  # Seq - Centralized Logging (Optional)
+  # =============================================
+  seq:
+    image: datalust/seq:latest
+    container_name: seta-seq
+    ports:
+      - "5341:80"
+      - "5342:5341"
+    environment:
+      - ACCEPT_EULA=Y
+    volumes:
+      - seq-data:/data
+    networks:
+      - seta-network
+    restart: unless-stopped
+    profiles:
+      - monitoring
+
+  # =============================================
+  # Jaeger - Distributed Tracing (Optional)
+  # For OpenTelemetry traces
+  # =============================================
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: seta-jaeger
+    ports:
+      - "6831:6831/udp"   # Jaeger Thrift compact
+      - "6832:6832/udp"   # Jaeger Thrift binary
+      - "16686:16686"     # Jaeger UI
+      - "14268:14268"     # Jaeger HTTP collector
+      - "4317:4317"       # OTLP gRPC
+      - "4318:4318"       # OTLP HTTP
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    networks:
+      - seta-network
+    restart: unless-stopped
+    profiles:
+      - monitoring
+
+networks:
+  seta-network:
+    driver: bridge
+
+volumes:
+  sqlserver-data:
+    driver: local
+  seq-data:
+    driver: local

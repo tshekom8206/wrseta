@@ -1,0 +1,1374 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "SETA ID Verification API",
+    "description": "Multi-SETA ID Verification & Duplicate Detection System for W&RSETA Hackathon 2025. This API provides South African ID number verification and cross-SETA duplicate detection for 21 Sector Education and Training Authorities (SETAs).",
+    "version": "1.1.0",
+    "contact": {
+      "name": "W&RSETA Development Team",
+      "url": "https://github.com/tshekom8206/wrseta"
+    },
+    "license": {
+      "name": "MIT",
+      "url": "https://opensource.org/licenses/MIT"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:5000",
+      "description": "Development server"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Health",
+      "description": "Health check and monitoring endpoints"
+    },
+    {
+      "name": "Authentication",
+      "description": "JWT token generation and management"
+    },
+    {
+      "name": "Verification",
+      "description": "ID verification and duplicate detection"
+    },
+    {
+      "name": "Learners",
+      "description": "Learner enrollment and management"
+    },
+    {
+      "name": "Dashboard",
+      "description": "Statistics and reporting"
+    },
+    {
+      "name": "SETAs",
+      "description": "SETA lookup and reference data"
+    }
+  ],
+  "paths": {
+    "/api/health": {
+      "get": {
+        "tags": ["Health"],
+        "summary": "Basic health check",
+        "description": "Returns basic health status for load balancer probes",
+        "operationId": "getHealth",
+        "security": [{"ApiKeyAuth": []}],
+        "responses": {
+          "200": {
+            "description": "Service is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                },
+                "example": {
+                  "status": "healthy",
+                  "timestamp": "2025-12-11T16:57:38Z",
+                  "version": "1.0.0",
+                  "service": "SETA.API"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/health/detailed": {
+      "get": {
+        "tags": ["Health"],
+        "summary": "Detailed health check",
+        "description": "Returns detailed health status including database connectivity",
+        "operationId": "getDetailedHealth",
+        "security": [{"ApiKeyAuth": []}],
+        "responses": {
+          "200": {
+            "description": "Detailed health status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailedHealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/health/ready": {
+      "get": {
+        "tags": ["Health"],
+        "summary": "Kubernetes readiness probe",
+        "description": "Returns 200 if the service is ready to accept traffic",
+        "operationId": "getReadiness",
+        "security": [{"ApiKeyAuth": []}],
+        "responses": {
+          "200": {
+            "description": "Service is ready"
+          },
+          "503": {
+            "description": "Service is not ready"
+          }
+        }
+      }
+    },
+    "/api/health/live": {
+      "get": {
+        "tags": ["Health"],
+        "summary": "Kubernetes liveness probe",
+        "description": "Returns 200 if the service is alive",
+        "operationId": "getLiveness",
+        "security": [{"ApiKeyAuth": []}],
+        "responses": {
+          "200": {
+            "description": "Service is alive"
+          }
+        }
+      }
+    },
+    "/api/auth/token": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Get JWT token",
+        "description": "Authenticate with username/password to get a JWT token",
+        "operationId": "getToken",
+        "security": [{"ApiKeyAuth": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthTokenRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Authentication successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_AuthTokenResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials"
+          }
+        }
+      }
+    },
+    "/api/auth/refresh": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Refresh JWT token",
+        "description": "Get a new JWT token using a refresh token",
+        "operationId": "refreshToken",
+        "security": [{"ApiKeyAuth": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshTokenRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Token refreshed successfully"
+          },
+          "401": {
+            "description": "Invalid or expired refresh token"
+          }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Logout and revoke tokens",
+        "description": "Revokes all refresh tokens for the current user",
+        "operationId": "logout",
+        "security": [{"ApiKeyAuth": []}, {"BearerAuth": []}],
+        "responses": {
+          "200": {
+            "description": "Logout successful",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": true,
+                  "data": {
+                    "message": "Successfully logged out",
+                    "tokensRevoked": 1
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/revoke": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Revoke a specific refresh token",
+        "description": "Revokes a specific refresh token",
+        "operationId": "revokeToken",
+        "security": [{"ApiKeyAuth": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RevokeTokenRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Token revoked successfully"
+          },
+          "404": {
+            "description": "Token not found or already revoked"
+          }
+        }
+      }
+    },
+    "/api/auth/revoke-all/{username}": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Revoke all tokens for a user (admin)",
+        "description": "Revokes all refresh tokens for a specific user",
+        "operationId": "revokeAllUserTokens",
+        "security": [{"ApiKeyAuth": []}],
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "All tokens revoked"
+          }
+        }
+      }
+    },
+    "/api/auth/session": {
+      "get": {
+        "tags": ["Authentication"],
+        "summary": "Get current session info",
+        "description": "Returns information about the current authenticated session",
+        "operationId": "getSession",
+        "security": [{"ApiKeyAuth": []}],
+        "responses": {
+          "200": {
+            "description": "Session information",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": true,
+                  "data": {
+                    "setaId": 1,
+                    "setaCode": "WRSETA",
+                    "setaName": "Wholesale and Retail SETA",
+                    "timestamp": "2025-12-11T16:58:10Z"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/verification/verify": {
+      "post": {
+        "tags": ["Verification"],
+        "summary": "Verify SA ID number",
+        "description": "Full verification including format, Luhn, DHA, and cross-SETA duplicate check",
+        "operationId": "verifyId",
+        "security": [{"ApiKeyAuth": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerificationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Verification completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_VerificationResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/verification/verify-batch": {
+      "post": {
+        "tags": ["Verification"],
+        "summary": "Bulk verify multiple ID numbers",
+        "description": "Verify up to 500 ID numbers in a single request for LMS batch processing",
+        "operationId": "verifyBatch",
+        "security": [{"ApiKeyAuth": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkVerificationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Bulk verification completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_BulkVerificationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request exceeds maximum batch size (500)"
+          }
+        }
+      }
+    },
+    "/api/verification/validate-format": {
+      "post": {
+        "tags": ["Verification"],
+        "summary": "Quick format validation",
+        "description": "Validates ID number format and Luhn checksum only (no DHA or duplicate check)",
+        "operationId": "validateFormat",
+        "security": [{"ApiKeyAuth": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerificationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Format validation result"
+          }
+        }
+      }
+    },
+    "/api/verification/recent/{setaId}": {
+      "get": {
+        "tags": ["Verification"],
+        "summary": "Get recent verifications",
+        "description": "Returns recent verification attempts for a SETA",
+        "operationId": "getRecentVerifications",
+        "security": [{"ApiKeyAuth": []}],
+        "parameters": [
+          {
+            "name": "setaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "count",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Recent verifications list"
+          }
+        }
+      }
+    },
+    "/api/verification/dha-status": {
+      "get": {
+        "tags": ["Verification"],
+        "summary": "Get DHA service status",
+        "description": "Returns the current status of the DHA verification service and circuit breaker state",
+        "operationId": "getDHAStatus",
+        "security": [{"ApiKeyAuth": []}],
+        "responses": {
+          "200": {
+            "description": "DHA service status",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": true,
+                  "data": {
+                    "circuitBreaker": {
+                      "state": "Closed",
+                      "failureCount": 0,
+                      "failureThreshold": 5,
+                      "openTimeoutSeconds": 300
+                    },
+                    "configured": false,
+                    "timeoutMs": 5000
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/learners/enroll": {
+      "post": {
+        "tags": ["Learners"],
+        "summary": "Enroll a learner",
+        "description": "Enroll a learner with automatic duplicate detection",
+        "operationId": "enrollLearner",
+        "security": [{"ApiKeyAuth": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnrollmentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Enrollment result"
+          },
+          "409": {
+            "description": "Duplicate enrollment detected"
+          }
+        }
+      }
+    },
+    "/api/learners/{setaId}": {
+      "get": {
+        "tags": ["Learners"],
+        "summary": "Get learners by SETA",
+        "description": "Returns a paginated list of learners for a SETA",
+        "operationId": "getLearnersBySeta",
+        "security": [{"ApiKeyAuth": []}],
+        "parameters": [
+          {
+            "name": "setaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of learners"
+          }
+        }
+      }
+    },
+    "/api/learners/{learnerId}": {
+      "put": {
+        "tags": ["Learners"],
+        "summary": "Update learner details",
+        "description": "Update an existing learner's information",
+        "operationId": "updateLearner",
+        "security": [{"ApiKeyAuth": []}],
+        "parameters": [
+          {
+            "name": "learnerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LearnerUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Learner updated successfully"
+          },
+          "404": {
+            "description": "Learner not found"
+          },
+          "403": {
+            "description": "Not authorized to update this learner"
+          }
+        }
+      }
+    },
+    "/api/learners/{learnerId}/deactivate": {
+      "post": {
+        "tags": ["Learners"],
+        "summary": "Deactivate/withdraw a learner",
+        "description": "Deactivate a learner and remove from duplicate detection index",
+        "operationId": "deactivateLearner",
+        "security": [{"ApiKeyAuth": []}],
+        "parameters": [
+          {
+            "name": "learnerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LearnerDeactivateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Learner deactivated successfully"
+          },
+          "404": {
+            "description": "Learner not found"
+          }
+        }
+      }
+    },
+    "/api/learners/detail/{learnerId}": {
+      "get": {
+        "tags": ["Learners"],
+        "summary": "Get learner by ID",
+        "description": "Returns detailed information for a specific learner",
+        "operationId": "getLearnerById",
+        "security": [{"ApiKeyAuth": []}],
+        "parameters": [
+          {
+            "name": "learnerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Learner details"
+          },
+          "404": {
+            "description": "Learner not found"
+          }
+        }
+      }
+    },
+    "/api/learners/search": {
+      "post": {
+        "tags": ["Learners"],
+        "summary": "Search learners",
+        "description": "Search learners by ID number, name, or other criteria",
+        "operationId": "searchLearners",
+        "security": [{"ApiKeyAuth": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LearnerSearchRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Search results"
+          }
+        }
+      }
+    },
+    "/api/dashboard/stats/{setaId}": {
+      "get": {
+        "tags": ["Dashboard"],
+        "summary": "Get SETA statistics",
+        "description": "Returns verification and enrollment statistics for a SETA",
+        "operationId": "getStats",
+        "security": [{"ApiKeyAuth": []}],
+        "parameters": [
+          {
+            "name": "setaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "SETA statistics",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_DashboardStats"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/dashboard/summary": {
+      "get": {
+        "tags": ["Dashboard"],
+        "summary": "Get cross-SETA summary",
+        "description": "Returns aggregated statistics across all SETAs (admin only)",
+        "operationId": "getSummary",
+        "security": [{"ApiKeyAuth": []}],
+        "responses": {
+          "200": {
+            "description": "Cross-SETA summary"
+          }
+        }
+      }
+    },
+    "/api/dashboard/trends/{setaId}": {
+      "get": {
+        "tags": ["Dashboard"],
+        "summary": "Get verification trends",
+        "description": "Returns verification trends over time for a SETA",
+        "operationId": "getTrends",
+        "security": [{"ApiKeyAuth": []}],
+        "parameters": [
+          {
+            "name": "setaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "days",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 30
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Verification trends"
+          }
+        }
+      }
+    },
+    "/api/dashboard/blocked/{setaId}": {
+      "get": {
+        "tags": ["Dashboard"],
+        "summary": "Get blocked enrollments",
+        "description": "Returns a list of blocked enrollment attempts due to duplicates",
+        "operationId": "getBlocked",
+        "security": [{"ApiKeyAuth": []}],
+        "parameters": [
+          {
+            "name": "setaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Blocked enrollments list"
+          }
+        }
+      }
+    },
+    "/api/setas": {
+      "get": {
+        "tags": ["SETAs"],
+        "summary": "List all SETAs",
+        "description": "Returns a list of all 21 South African SETAs",
+        "operationId": "getAllSetas",
+        "security": [{"ApiKeyAuth": []}],
+        "responses": {
+          "200": {
+            "description": "List of SETAs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_SetaList"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/setas/{code}": {
+      "get": {
+        "tags": ["SETAs"],
+        "summary": "Get SETA by code",
+        "description": "Returns a single SETA by its code (e.g., WRSETA, MICT)",
+        "operationId": "getSetaByCode",
+        "security": [{"ApiKeyAuth": []}],
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "WRSETA"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "SETA details"
+          },
+          "404": {
+            "description": "SETA not found"
+          }
+        }
+      }
+    },
+    "/api/setas/provinces": {
+      "get": {
+        "tags": ["SETAs"],
+        "summary": "Get all provinces",
+        "description": "Returns a list of South African provinces",
+        "operationId": "getProvinces",
+        "security": [{"ApiKeyAuth": []}],
+        "responses": {
+          "200": {
+            "description": "List of provinces"
+          }
+        }
+      }
+    },
+    "/api/setas/current": {
+      "get": {
+        "tags": ["SETAs"],
+        "summary": "Get current SETA",
+        "description": "Returns the SETA associated with the current API key",
+        "operationId": "getCurrentSeta",
+        "security": [{"ApiKeyAuth": []}],
+        "responses": {
+          "200": {
+            "description": "Current SETA details"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key",
+        "description": "API key for authentication"
+      },
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT token for authenticated requests"
+      }
+    },
+    "schemas": {
+      "HealthResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["healthy", "unhealthy"]
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "version": {
+            "type": "string"
+          },
+          "service": {
+            "type": "string"
+          }
+        }
+      },
+      "DetailedHealthResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "version": {
+            "type": "string"
+          },
+          "service": {
+            "type": "string"
+          },
+          "checks": {
+            "type": "object",
+            "properties": {
+              "database": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string"
+                  },
+                  "message": {
+                    "type": "string"
+                  },
+                  "responseTimeMs": {
+                    "type": "integer"
+                  }
+                }
+              },
+              "api": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string"
+                  },
+                  "uptime": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "AuthTokenRequest": {
+        "type": "object",
+        "required": ["username", "password", "setaId"],
+        "properties": {
+          "username": {
+            "type": "string",
+            "example": "lms_admin"
+          },
+          "password": {
+            "type": "string",
+            "format": "password"
+          },
+          "setaId": {
+            "type": "integer",
+            "example": 1
+          }
+        }
+      },
+      "RefreshTokenRequest": {
+        "type": "object",
+        "required": ["refreshToken"],
+        "properties": {
+          "refreshToken": {
+            "type": "string"
+          }
+        }
+      },
+      "RevokeTokenRequest": {
+        "type": "object",
+        "required": ["refreshToken"],
+        "properties": {
+          "refreshToken": {
+            "type": "string"
+          }
+        }
+      },
+      "VerificationRequest": {
+        "type": "object",
+        "required": ["idNumber"],
+        "properties": {
+          "idNumber": {
+            "type": "string",
+            "minLength": 13,
+            "maxLength": 13,
+            "example": "8506155012089"
+          },
+          "firstName": {
+            "type": "string",
+            "example": "Thabo"
+          },
+          "surname": {
+            "type": "string",
+            "example": "Mokoena"
+          }
+        }
+      },
+      "BulkVerificationRequest": {
+        "type": "object",
+        "required": ["idNumbers"],
+        "properties": {
+          "idNumbers": {
+            "type": "array",
+            "maxItems": 500,
+            "items": {
+              "$ref": "#/components/schemas/BulkVerificationItem"
+            }
+          },
+          "batchSize": {
+            "type": "integer",
+            "default": 100,
+            "maximum": 500
+          }
+        }
+      },
+      "BulkVerificationItem": {
+        "type": "object",
+        "required": ["idNumber"],
+        "properties": {
+          "idNumber": {
+            "type": "string"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "surname": {
+            "type": "string"
+          },
+          "reference": {
+            "type": "string",
+            "description": "Client reference for tracking"
+          }
+        }
+      },
+      "EnrollmentRequest": {
+        "type": "object",
+        "required": ["idNumber", "firstName", "surname", "learnershipCode", "provinceCode"],
+        "properties": {
+          "idNumber": {
+            "type": "string",
+            "example": "8506155012089"
+          },
+          "firstName": {
+            "type": "string",
+            "example": "Thabo"
+          },
+          "surname": {
+            "type": "string",
+            "example": "Mokoena"
+          },
+          "learnershipCode": {
+            "type": "string",
+            "example": "SAQA-12345"
+          },
+          "learnershipName": {
+            "type": "string"
+          },
+          "provinceCode": {
+            "type": "string",
+            "example": "GP"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "phone": {
+            "type": "string"
+          }
+        }
+      },
+      "LearnerUpdateRequest": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string"
+          },
+          "surname": {
+            "type": "string"
+          },
+          "learnershipCode": {
+            "type": "string"
+          },
+          "learnershipName": {
+            "type": "string"
+          },
+          "province": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["Active", "Completed", "Withdrawn"]
+          }
+        }
+      },
+      "LearnerDeactivateRequest": {
+        "type": "object",
+        "required": ["reason"],
+        "properties": {
+          "reason": {
+            "type": "string",
+            "description": "Withdrawal reason"
+          },
+          "effectiveDate": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "LearnerSearchRequest": {
+        "type": "object",
+        "properties": {
+          "idNumber": {
+            "type": "string"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "surname": {
+            "type": "string"
+          },
+          "setaId": {
+            "type": "integer"
+          }
+        }
+      },
+      "ApiResponse_AuthTokenResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "token": {
+                "type": "string"
+              },
+              "expiresAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "refreshToken": {
+                "type": "string"
+              },
+              "setaId": {
+                "type": "integer"
+              },
+              "setaCode": {
+                "type": "string"
+              },
+              "setaName": {
+                "type": "string"
+              }
+            }
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "requestId": {
+            "type": "string"
+          }
+        }
+      },
+      "ApiResponse_VerificationResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": ["GREEN", "YELLOW", "RED"]
+              },
+              "message": {
+                "type": "string"
+              },
+              "isValid": {
+                "type": "boolean"
+              },
+              "formatValid": {
+                "type": "boolean"
+              },
+              "luhnValid": {
+                "type": "boolean"
+              },
+              "dhaVerified": {
+                "type": "boolean"
+              },
+              "duplicateFound": {
+                "type": "boolean"
+              },
+              "demographics": {
+                "type": "object",
+                "properties": {
+                  "dateOfBirth": {
+                    "type": "string"
+                  },
+                  "gender": {
+                    "type": "string"
+                  },
+                  "citizenship": {
+                    "type": "string"
+                  },
+                  "age": {
+                    "type": "integer"
+                  }
+                }
+              },
+              "conflictingSeta": {
+                "type": "object",
+                "properties": {
+                  "setaId": {
+                    "type": "integer"
+                  },
+                  "setaCode": {
+                    "type": "string"
+                  },
+                  "setaName": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "requestId": {
+            "type": "string"
+          }
+        }
+      },
+      "ApiResponse_BulkVerificationResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "totalProcessed": {
+                "type": "integer"
+              },
+              "successCount": {
+                "type": "integer"
+              },
+              "failedCount": {
+                "type": "integer"
+              },
+              "processingTimeMs": {
+                "type": "integer"
+              },
+              "results": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "idNumber": {
+                      "type": "string"
+                    },
+                    "reference": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "isValid": {
+                      "type": "boolean"
+                    },
+                    "duplicateFound": {
+                      "type": "boolean"
+                    },
+                    "conflictingSeta": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "requestId": {
+            "type": "string"
+          }
+        }
+      },
+      "ApiResponse_DashboardStats": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "setaId": {
+                "type": "integer"
+              },
+              "setaCode": {
+                "type": "string"
+              },
+              "setaName": {
+                "type": "string"
+              },
+              "totalLearners": {
+                "type": "integer"
+              },
+              "verifiedGreen": {
+                "type": "integer"
+              },
+              "verifiedYellow": {
+                "type": "integer"
+              },
+              "verifiedRed": {
+                "type": "integer"
+              },
+              "blockedAttempts": {
+                "type": "integer"
+              },
+              "todayVerifications": {
+                "type": "integer"
+              },
+              "thisMonthEnrollments": {
+                "type": "integer"
+              }
+            }
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ApiResponse_SetaList": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "setaId": {
+                  "type": "integer"
+                },
+                "setaCode": {
+                  "type": "string"
+                },
+                "setaName": {
+                  "type": "string"
+                },
+                "sector": {
+                  "type": "string"
+                },
+                "isActive": {
+                  "type": "boolean"
+                }
+              }
+            }
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": false
+          },
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "example": "INVALID_ID_FORMAT"
+              },
+              "message": {
+                "type": "string",
+                "example": "ID number must be exactly 13 digits"
+              }
+            }
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

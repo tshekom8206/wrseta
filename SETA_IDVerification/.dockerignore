@@ -1,0 +1,67 @@
+# =============================================
+# Docker Ignore File
+# SETA ID Verification API
+# =============================================
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Build outputs
+**/bin/
+**/obj/
+**/packages/
+**/TestResults/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# NuGet
+*.nupkg
+
+# IDE
+.idea/
+.vscode/
+
+# Documentation (keep swagger.json)
+*.md
+!README.md
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+*~
+
+# Database backups
+*.bak
+*.mdf
+*.ldf
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+# macOS
+.DS_Store
+
+# Test coverage
+coverage/
+*.coverage
+
+# Docker compose override (local dev)
+docker-compose.override.yml
+docker-compose.local.yml
+
+# Environment files with secrets
+.env
+.env.local
+.env.*.local
