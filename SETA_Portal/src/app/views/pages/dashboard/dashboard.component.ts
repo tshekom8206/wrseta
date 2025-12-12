@@ -45,7 +45,7 @@ import {
 
       <!-- Stats Cards Row -->
       <div class="row g-3 mb-4">
-        <div class="col-sm-6 col-xl-3">
+        <div class="col-sm-6 col-lg-3">
           <app-stat-card
             [title]="'dashboard.totalLearners'"
             [value]="stats?.totalLearners ?? 0"
@@ -54,30 +54,30 @@ import {
             [subtitle]="(stats?.activeLearners ?? 0) + ' active'"
           />
         </div>
-        <div class="col-sm-6 col-xl-3">
+        <div class="col-sm-6 col-lg-3">
           <app-stat-card
             [title]="'dashboard.verificationsToday'"
             [value]="stats?.verificationsToday ?? 0"
-            icon="check-circle"
+            icon="check-square"
             variant="success"
             [trend]="getVerificationTrend()"
             [trendValue]="getVerificationTrendValue()"
           />
         </div>
-        <div class="col-sm-6 col-xl-3">
+        <div class="col-sm-6 col-lg-3">
           <app-stat-card
             [title]="'dashboard.duplicatesBlocked'"
             [value]="stats?.duplicatesBlockedToday ?? 0"
-            icon="shield-off"
+            icon="ban"
             variant="danger"
             [subtitle]="(stats?.duplicatesBlockedThisMonth ?? 0) + ' this month'"
           />
         </div>
-        <div class="col-sm-6 col-xl-3">
+        <div class="col-sm-6 col-lg-3">
           <app-stat-card
             [title]="'dashboard.successRate'"
             [value]="stats?.successRate ?? 0"
-            icon="percent"
+            icon="trending-up"
             variant="info"
             format="percent"
             [subtitle]="(stats?.averageResponseTime ?? 0) + 'ms avg response'"
@@ -176,6 +176,26 @@ import {
         opacity: 1;
         transform: translateY(0);
       }
+    }
+
+    .dashboard .row.g-3 {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: stretch;
+    }
+
+    .dashboard .row.g-3 > [class*="col-"] {
+      display: flex;
+      flex-direction: column;
+      flex: 1 1 0;
+      min-width: 0;
+    }
+
+    .dashboard .row.g-3 > [class*="col-"] > app-stat-card {
+      flex: 1;
+      display: flex;
+      height: 100%;
+      width: 100%;
     }
 
     .card {
