@@ -19,8 +19,11 @@
   align-items: center;
   justify-content: center;
   padding: 3rem;
-  color: #fff;
-  transition: background-color 0.3s ease;
+  transition: background-color 0.3s ease, background-image 0.3s ease;
+  position: relative;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 
   @media (max-width: 991.98px) {
     flex: none;
@@ -28,63 +31,102 @@
   }
 }
 
+.branding-card {
+  width: 100%;
+  max-width: 440px;
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-radius: 0.75rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  padding: 2.5rem;
+  min-height: 600px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+
+  @media (max-width: 991.98px) {
+    padding: 1.5rem;
+    min-height: auto;
+  }
+}
+
 .branding-content {
   text-align: center;
   max-width: 400px;
+  width: 100%;
+  color: var(--seta-text-primary);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .seta-logo {
-  max-width: 200px;
-  max-height: 120px;
-  margin-bottom: 1.5rem;
-  filter: brightness(0) invert(1);
+  max-width: 180px;
+  max-height: 100px;
+  margin: 0 auto 1.25rem auto;
+  display: block;
+  filter: none;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15));
 
   @media (max-width: 991.98px) {
-    max-width: 150px;
-    max-height: 80px;
+    max-width: 140px;
+    max-height: 70px;
     margin-bottom: 1rem;
   }
 }
 
 .seta-name {
-  font-size: 1.75rem;
-  font-weight: 600;
-  margin-bottom: 2rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+  color: var(--seta-text-primary);
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 
   @media (max-width: 991.98px) {
-    font-size: 1.25rem;
+    font-size: 1.125rem;
     margin-bottom: 1rem;
   }
 }
 
 .default-branding {
   .portal-title {
-    font-size: 2.5rem;
+    font-size: 2rem;
     font-weight: 700;
     margin-bottom: 0.5rem;
+    color: var(--seta-text-primary);
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 
     @media (max-width: 991.98px) {
-      font-size: 1.75rem;
+      font-size: 1.5rem;
     }
   }
 
   .portal-subtitle {
-    font-size: 1.25rem;
-    opacity: 0.9;
-    margin-bottom: 2rem;
+    font-size: 0.9375rem;
+    color: var(--seta-text-secondary);
+    margin-bottom: 1.5rem;
+    font-weight: 400;
 
     @media (max-width: 991.98px) {
-      font-size: 1rem;
+      font-size: 0.875rem;
       margin-bottom: 1rem;
     }
   }
 }
 
 .branding-features {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  margin-top: 2rem;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
 
   @media (max-width: 991.98px) {
     display: none;
@@ -96,20 +138,85 @@
   align-items: center;
   gap: 0.75rem;
   padding: 0.75rem 1rem;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: var(--border-radius);
-  transition: background 0.2s ease;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(8px);
+  border-radius: 0.625rem;
+  transition: all 0.2s ease;
+  color: var(--seta-text-primary);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
 
-  &:hover {
-    background: rgba(255, 255, 255, 0.15);
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, var(--seta-primary), var(--seta-primary-dark));
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    z-index: 0;
   }
 
-  svg {
+  &:hover {
+    background: rgba(255, 255, 255, 0.85);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    border-color: var(--seta-primary);
+
+    &::after {
+      opacity: 0.05;
+    }
+
+    .feature-icon {
+      background: var(--seta-primary);
+
+      svg {
+        color: white;
+      }
+    }
+
+    span {
+      color: var(--seta-primary);
+      font-weight: 600;
+      position: relative;
+      z-index: 1;
+    }
+  }
+
+  .feature-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 0.375rem;
+    background: rgba(0, 51, 102, 0.08);
+    transition: all 0.2s ease;
     flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+    margin: 0;
+
+    svg {
+      width: 14px;
+      height: 14px;
+      color: var(--seta-primary);
+      transition: all 0.2s ease;
+    }
   }
 
   span {
-    font-size: 0.9375rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    position: relative;
+    z-index: 1;
+    line-height: 1.4;
+    white-space: nowrap;
   }
 }
 
@@ -120,35 +227,51 @@
   align-items: center;
   justify-content: center;
   padding: 2rem;
-  background-color: var(--seta-bg-primary);
+  background-color: var(--seta-bg-secondary);
 }
 
 .login-form-wrapper {
   width: 100%;
   max-width: 440px;
+  background: var(--bs-white);
+  padding: 2.5rem;
+  border-radius: 0.75rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  min-height: 600px;
+  display: flex;
+  flex-direction: column;
+
+  @media (max-width: 991.98px) {
+    min-height: auto;
+  }
 }
 
 .login-header {
   margin-bottom: 2rem;
-  text-align: center;
+  text-align: left;
 
   h2 {
-    font-size: 1.75rem;
+    font-size: 1.875rem;
     font-weight: 600;
     color: var(--seta-text-primary);
     margin-bottom: 0.5rem;
+    line-height: 1.3;
   }
 
   p {
     font-size: 0.9375rem;
+    color: var(--seta-text-secondary);
+    margin-bottom: 0;
   }
 }
 
 // Form Styling
 .form-label {
-  font-weight: 500;
+  font-weight: 600;
+  font-size: 0.875rem;
   color: var(--seta-text-primary);
   margin-bottom: 0.5rem;
+  display: block;
 
   &.required::after {
     content: ' *';
@@ -158,32 +281,48 @@
 
 .form-control,
 .form-select {
-  padding: 0.75rem 1rem;
-  border-radius: var(--border-radius-sm);
+  padding: 0.875rem 1rem;
+  border-radius: 0.5rem;
   border: 1px solid var(--seta-bg-tertiary);
-  font-size: 1rem;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  font-size: 0.9375rem;
+  transition: all 0.2s ease;
+  background-color: var(--bs-white);
 
   &:focus {
     border-color: var(--seta-primary);
-    box-shadow: 0 0 0 3px rgba(var(--seta-primary), 0.1);
+    box-shadow: 0 0 0 3px rgba(0, 51, 102, 0.1);
+    outline: none;
+  }
+
+  &::placeholder {
+    color: var(--seta-text-secondary);
+    opacity: 0.6;
   }
 
   &.is-invalid {
     border-color: var(--seta-danger);
     background-image: none;
+    
+    &:focus {
+      box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1);
+    }
   }
 }
 
 .form-select-lg {
-  padding: 0.75rem 2.5rem 0.75rem 1rem;
+  padding: 0.875rem 2.5rem 0.875rem 1rem;
 }
 
 .input-group {
+  border-radius: 0.5rem;
+  overflow: hidden;
+
   .input-group-text {
     background-color: var(--seta-bg-secondary);
     border-color: var(--seta-bg-tertiary);
     color: var(--seta-text-secondary);
+    padding: 0.875rem 1rem;
+    border-right: none;
   }
 
   .form-control {
@@ -204,11 +343,19 @@
 
   .btn-outline-secondary {
     border-color: var(--seta-bg-tertiary);
+    border-left: none;
     color: var(--seta-text-secondary);
+    padding: 0.875rem 1rem;
+    background-color: var(--seta-bg-secondary);
 
     &:hover {
-      background-color: var(--seta-bg-secondary);
+      background-color: var(--seta-bg-tertiary);
       color: var(--seta-text-primary);
+      border-color: var(--seta-bg-tertiary);
+    }
+
+    &:focus {
+      box-shadow: none;
     }
   }
 }
@@ -241,28 +388,74 @@
   cursor: pointer;
 }
 
+.forgot-password-link {
+  font-size: 0.875rem;
+  color: var(--seta-primary);
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s ease;
+
+  &:hover {
+    color: var(--seta-primary-dark);
+    text-decoration: underline;
+  }
+}
+
 // Submit Button
 .btn-primary {
-  padding: 0.875rem 1.5rem;
-  font-size: 1rem;
-  font-weight: 500;
-  background-color: var(--seta-primary);
-  border-color: var(--seta-primary);
-  border-radius: var(--border-radius-sm);
-  transition: background-color 0.2s ease, transform 0.1s ease;
+  padding: 0.875rem 1.5rem !important;
+  font-size: 1rem !important;
+  font-weight: 600 !important;
+  background-color: var(--seta-primary) !important;
+  border-color: var(--seta-primary) !important;
+  color: white !important;
+  border-radius: 0.5rem;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 51, 102, 0.2);
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.5rem;
+  border: 2px solid var(--seta-primary) !important;
+  width: 100% !important;
+  min-height: 48px !important;
+  visibility: visible !important;
 
   &:hover:not(:disabled) {
     background-color: var(--seta-primary-dark);
     border-color: var(--seta-primary-dark);
+    box-shadow: 0 4px 8px rgba(0, 51, 102, 0.3);
+    transform: translateY(-1px);
   }
 
   &:active:not(:disabled) {
-    transform: scale(0.98);
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0, 51, 102, 0.2);
   }
 
   &:disabled {
-    opacity: 0.65;
+    opacity: 0.85 !important;
     cursor: not-allowed;
+    transform: none;
+    box-shadow: 0 2px 4px rgba(0, 51, 102, 0.25) !important;
+    background-color: var(--seta-primary) !important;
+    border-color: var(--seta-primary) !important;
+    color: white !important;
+    visibility: visible !important;
+    display: flex !important;
+  }
+
+  svg {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    display: inline-block !important;
+    opacity: 1 !important;
+  }
+
+  span {
+    display: inline-block !important;
+    opacity: 1 !important;
   }
 }
 
@@ -295,8 +488,10 @@
 @media (prefers-reduced-motion: reduce) {
   .login-branding,
   .form-control,
-  .btn-primary {
+  .btn-primary,
+  .feature-item {
     transition: none;
+    animation: none;
   }
 }
 

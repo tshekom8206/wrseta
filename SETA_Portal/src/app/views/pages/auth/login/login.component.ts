@@ -3,11 +3,13 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router, ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { Subject, takeUntil } from 'rxjs';
 
 import { AuthService } from '../../../../core/auth/auth.service';
 import { ThemeService, SETA_THEMES } from '../../../../core/services/theme.service';
 import { NotificationService } from '../../../../core/services/notification.service';
+import { IconService } from '../../../../core/services/icon.service';
 import { SetaListItem } from '../../../../interfaces/seta.interface';
 
 @Component({
@@ -25,6 +27,8 @@ export class LoginComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly notification = inject(NotificationService);
   private readonly translate = inject(TranslateService);
+  private readonly iconService = inject(IconService);
+  private readonly sanitizer = inject(DomSanitizer);
 
   private destroy$ = new Subject<void>();
 
@@ -40,8 +44,8 @@ export class LoginComponent implements OnInit, OnDestroy {
   currentYear = new Date().getFullYear();
 
   ngOnInit(): void {
-    this.initializeForm();
     this.loadSetas();
+    this.initializeForm();
     this.getReturnUrl();
   }
 
@@ -52,7 +56,7 @@ export class LoginComponent implements OnInit, OnDestroy {
 
   private initializeForm(): void {
     this.loginForm = this.fb.group({
-      setaCode: ['', Validators.required],
+      setaCode: ['WRSETA', Validators.required],
       username: ['', [Validators.required, Validators.minLength(3)]],
       password: ['', [Validators.required, Validators.minLength(6)]],
       rememberMe: [false]
@@ -62,6 +66,9 @@ export class LoginComponent implements OnInit, OnDestroy {
     this.loginForm.get('setaCode')?.valueChanges
       .pipe(takeUntil(this.destroy$))
       .subscribe(code => this.onSetaChange(code));
+
+    // Trigger initial SETA selection for WRSETA
+    this.onSetaChange('WRSETA');
   }
 
   private loadSetas(): void {
@@ -152,5 +159,10 @@ export class LoginComponent implements OnInit, OnDestroy {
       });
     }
     return '';
+  }
+
+  getSafeIcon(iconName: string): SafeHtml {
+    const iconPath = this.iconService.getIconPath(iconName);
+    return this.sanitizer.bypassSecurityTrustHtml(iconPath);
   }
 }

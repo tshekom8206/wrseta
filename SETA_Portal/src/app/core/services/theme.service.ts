@@ -33,7 +33,7 @@ export const SETA_THEMES: Record<string, SetaTheme> = {
   'WRSETA': {
     code: 'WRSETA',
     name: 'Wholesale & Retail SETA',
-    logo: 'assets/images/setas/wrseta-logo.png',
+    logo: '/assets/images/logos/WRSETA_logo-2.png',
     colors: {
       primary: '#003366',
       primaryDark: '#002244',
