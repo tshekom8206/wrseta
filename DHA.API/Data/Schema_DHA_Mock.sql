@@ -31,6 +31,9 @@ BEGIN
         [DateOfBirth] DATE NOT NULL,
         [Gender] NVARCHAR(10) NOT NULL, -- 'Male' or 'Female'
         [Citizenship] NVARCHAR(50) NOT NULL, -- 'SA Citizen' or 'Permanent Resident'
+        [Race] NVARCHAR(50) NULL, -- 'Black', 'White', 'Coloured', 'Indian/Asian', etc.
+        [IssueDate] DATE NULL, -- Date when ID was issued
+        [MaritalStatus] NVARCHAR(20) NULL, -- 'Single', 'Married', 'Divorced', 'Widowed'
         [IsDeceased] BIT NOT NULL DEFAULT 0,
         [DateOfDeath] DATE NULL,
         [IsSuspended] BIT NOT NULL DEFAULT 0,
@@ -96,6 +99,9 @@ BEGIN
         [DateOfBirth],
         [Gender],
         [Citizenship],
+        [Race],
+        [IssueDate],
+        [MaritalStatus],
         [IsDeceased],
         [DateOfDeath],
         [IsSuspended],
@@ -131,6 +137,9 @@ CREATE PROCEDURE [dbo].[sp_AddPerson]
     @SuspensionReason NVARCHAR(500) = NULL,
     @NeedsManualReview BIT = 0,
     @ReviewReason NVARCHAR(500) = NULL,
+    @Race NVARCHAR(50) = NULL,
+    @IssueDate DATE = NULL,
+    @MaritalStatus NVARCHAR(20) = NULL,
     @PersonId INT OUTPUT
 AS
 BEGIN
@@ -150,6 +159,9 @@ BEGIN
         [DateOfBirth],
         [Gender],
         [Citizenship],
+        [Race],
+        [IssueDate],
+        [MaritalStatus],
         [IsDeceased],
         [DateOfDeath],
         [IsSuspended],
@@ -164,6 +176,9 @@ BEGIN
         @DateOfBirth,
         @Gender,
         @Citizenship,
+        @Race,
+        @IssueDate,
+        @MaritalStatus,
         @IsDeceased,
         @DateOfDeath,
         @IsSuspended,

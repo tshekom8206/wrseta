@@ -2,11 +2,8 @@ Imports System.Net
 Imports System.Net.Http
 Imports System.Web.Http
 Imports System.Threading
-Imports DHA.API.Models
-Imports DHA.API.Security
-Imports DHA.API.Services
-Imports DHA.API.DHA.API.Models
 Imports DHA.API.DHA.API.Security
+Imports DHA.API.DHA.API.Models
 Imports DHA.API.DHA.API.Services
 
 Namespace DHA.API.Controllers

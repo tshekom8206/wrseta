@@ -8,10 +8,9 @@ Imports System.Web.Http.Cors
 Imports Owin
 Imports Newtonsoft.Json
 Imports Newtonsoft.Json.Serialization
-Imports DHA.API.Filters
-Imports DHA.API.Handlers
 Imports DHA.API.DHA.API.Handlers
 Imports DHA.API.DHA.API.Filters
+
 
 Public Class Startup
 

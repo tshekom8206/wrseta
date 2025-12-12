@@ -4,6 +4,7 @@
 ' =============================================
 
 Imports System.Web.Http
+Imports DHA.API.DHA.API.Services
 Imports DHA.API.Services
 
 Namespace DHA.API.Controllers

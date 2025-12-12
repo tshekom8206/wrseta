@@ -129,6 +129,9 @@ Namespace DHA.API.Models
         Public Property DateOfBirth As DateTime
         Public Property Gender As String
         Public Property Citizenship As String
+        Public Property Race As String
+        Public Property IssueDate As DateTime?
+        Public Property MaritalStatus As String
         Public Property IsDeceased As Boolean
         Public Property DateOfDeath As DateTime?
         Public Property IsSuspended As Boolean
@@ -162,6 +165,9 @@ Namespace DHA.API.Models
         <Required>
         Public Property Citizenship As String
 
+        Public Property Race As String
+        Public Property IssueDate As DateTime?
+        Public Property MaritalStatus As String
         Public Property IsDeceased As Boolean = False
         Public Property DateOfDeath As DateTime?
         Public Property IsSuspended As Boolean = False

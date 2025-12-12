@@ -32,9 +32,15 @@ Namespace DHA.API.Services
         ''' </summary>
         Public Function GetPersonByIdNumber(idNumber As String) As DHAPerson
             Using conn As New SqlConnection(_connectionString)
-                conn.Open()
+                Try
+                    conn.Open()
+                Catch ex As SqlException
+                    Throw New InvalidOperationException($"Failed to connect to database: {ex.Message}", ex)
+                End Try
+
                 Using cmd As New SqlCommand("sp_GetPersonByIdNumber", conn)
                     cmd.CommandType = CommandType.StoredProcedure
+                    cmd.CommandTimeout = 10 ' 10 second timeout
                     cmd.Parameters.AddWithValue("@IdNumber", idNumber)
 
                     Using reader As SqlDataReader = cmd.ExecuteReader()
@@ -47,14 +53,17 @@ Namespace DHA.API.Services
                                 .DateOfBirth = reader.GetDateTime(4),
                                 .Gender = reader.GetString(5),
                                 .Citizenship = reader.GetString(6),
-                                .IsDeceased = reader.GetBoolean(7),
-                                .DateOfDeath = If(reader.IsDBNull(8), Nothing, reader.GetDateTime(8)),
-                                .IsSuspended = reader.GetBoolean(9),
-                                .SuspensionReason = If(reader.IsDBNull(10), Nothing, reader.GetString(10)),
-                                .NeedsManualReview = reader.GetBoolean(11),
-                                .ReviewReason = If(reader.IsDBNull(12), Nothing, reader.GetString(12)),
-                                .CreatedAt = reader.GetDateTime(13),
-                                .UpdatedAt = reader.GetDateTime(14)
+                                .Race = If(reader.IsDBNull(7), Nothing, reader.GetString(7)),
+                                .IssueDate = If(reader.IsDBNull(8), Nothing, reader.GetDateTime(8)),
+                                .MaritalStatus = If(reader.IsDBNull(9), Nothing, reader.GetString(9)),
+                                .IsDeceased = reader.GetBoolean(10),
+                                .DateOfDeath = If(reader.IsDBNull(11), Nothing, reader.GetDateTime(11)),
+                                .IsSuspended = reader.GetBoolean(12),
+                                .SuspensionReason = If(reader.IsDBNull(13), Nothing, reader.GetString(13)),
+                                .NeedsManualReview = reader.GetBoolean(14),
+                                .ReviewReason = If(reader.IsDBNull(15), Nothing, reader.GetString(15)),
+                                .CreatedAt = reader.GetDateTime(16),
+                                .UpdatedAt = reader.GetDateTime(17)
                             }
                         End If
                     End Using
@@ -69,21 +78,36 @@ Namespace DHA.API.Services
         ''' </summary>
         Public Function AddPerson(person As DHAPerson) As Integer
             Using conn As New SqlConnection(_connectionString)
-                conn.Open()
+                Try
+                    conn.Open()
+                Catch ex As SqlException
+                    Throw New InvalidOperationException($"Failed to connect to database: {ex.Message}", ex)
+                End Try
+
                 Using cmd As New SqlCommand("sp_AddPerson", conn)
                     cmd.CommandType = CommandType.StoredProcedure
+                    cmd.CommandTimeout = 10 ' 10 second timeout
+
+                    ' Validate ID number length before saving
+                    If person.IdNumber IsNot Nothing AndAlso person.IdNumber.Length <> 13 Then
+                        System.Diagnostics.Debug.WriteLine($"[DHADatabaseService.AddPerson] WARNING: ID number length is {person.IdNumber.Length}, expected 13. ID: {person.IdNumber}")
+                    End If
+
                     cmd.Parameters.AddWithValue("@IdNumber", person.IdNumber)
                     cmd.Parameters.AddWithValue("@FirstName", person.FirstName)
                     cmd.Parameters.AddWithValue("@Surname", person.Surname)
                     cmd.Parameters.AddWithValue("@DateOfBirth", person.DateOfBirth)
                     cmd.Parameters.AddWithValue("@Gender", person.Gender)
                     cmd.Parameters.AddWithValue("@Citizenship", person.Citizenship)
+                    cmd.Parameters.AddWithValue("@Race", If(String.IsNullOrEmpty(person.Race), DBNull.Value, CObj(person.Race)))
+                    cmd.Parameters.AddWithValue("@IssueDate", If(person.IssueDate.HasValue, CObj(person.IssueDate.Value), DBNull.Value))
+                    cmd.Parameters.AddWithValue("@MaritalStatus", If(String.IsNullOrEmpty(person.MaritalStatus), DBNull.Value, CObj(person.MaritalStatus)))
                     cmd.Parameters.AddWithValue("@IsDeceased", person.IsDeceased)
                     cmd.Parameters.AddWithValue("@DateOfDeath", If(person.DateOfDeath.HasValue, CObj(person.DateOfDeath.Value), DBNull.Value))
                     cmd.Parameters.AddWithValue("@IsSuspended", person.IsSuspended)
-                    cmd.Parameters.AddWithValue("@SuspensionReason", If(person.SuspensionReason, DBNull.Value))
+                    cmd.Parameters.AddWithValue("@SuspensionReason", If(String.IsNullOrEmpty(person.SuspensionReason), DBNull.Value, CObj(person.SuspensionReason)))
                     cmd.Parameters.AddWithValue("@NeedsManualReview", person.NeedsManualReview)
-                    cmd.Parameters.AddWithValue("@ReviewReason", If(person.ReviewReason, DBNull.Value))
+                    cmd.Parameters.AddWithValue("@ReviewReason", If(String.IsNullOrEmpty(person.ReviewReason), DBNull.Value, CObj(person.ReviewReason)))
 
                     Dim personIdParam As New SqlParameter("@PersonId", SqlDbType.Int)
                     personIdParam.Direction = ParameterDirection.Output
@@ -129,14 +153,18 @@ Namespace DHA.API.Services
         Public Function TestConnection() As (Success As Boolean, ErrorMessage As String)
             Try
                 Using conn As New SqlConnection(_connectionString)
+                    ' Connection timeout is set in connection string (Connect Timeout=5)
                     conn.Open()
                     Using cmd As New SqlCommand("SELECT 1", conn)
+                        cmd.CommandTimeout = 5 ' 5 second command timeout
                         cmd.ExecuteScalar()
                     End Using
                 End Using
                 Return (True, Nothing)
+            Catch ex As SqlException
+                Return (False, $"SQL Error: {ex.Message} (Error Number: {ex.Number})")
             Catch ex As Exception
-                Return (False, ex.Message)
+                Return (False, $"Connection Error: {ex.Message}")
             End Try
         End Function
 
