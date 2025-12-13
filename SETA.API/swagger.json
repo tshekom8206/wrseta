@@ -100,7 +100,7 @@
           "Authentication"
         ],
         "summary": "Register New User",
-        "description": "Register a new user account. No API key required. Creates a new user in the ApiUsers table with hashed password.",
+        "description": "Register a new user account. No API key required. Creates a new user in the ApiUsers table with hashed password.\n\n**Uniqueness Requirements:**\n- Username must be unique in ApiUsers table (case-insensitive)\n- Email must be unique in ApiUsers table (case-insensitive)\n- ID Number must be unique across both ApiUsers and LearnerRegistry tables (if provided)",
         "operationId": "registerUser",
         "requestBody": {
           "required": true,
@@ -145,11 +145,43 @@
             }
           },
           "409": {
-            "description": "Username already exists",
+            "description": "Conflict - Username, email, or ID number already exists",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ApiError"
+                },
+                "examples": {
+                  "username_exists": {
+                    "summary": "Username already exists",
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "USERNAME_EXISTS",
+                        "message": "Username already exists"
+                      }
+                    }
+                  },
+                  "email_exists": {
+                    "summary": "Email already exists",
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "EMAIL_EXISTS",
+                        "message": "Email address already exists"
+                      }
+                    }
+                  },
+                  "idnumber_exists": {
+                    "summary": "ID number already exists",
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "IDNUMBER_EXISTS",
+                        "message": "ID number already exists"
+                      }
+                    }
+                  }
                 }
               }
             }

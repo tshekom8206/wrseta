@@ -56,6 +56,18 @@ Namespace SETA.API.Controllers
                     ApiResponse(Of RegistrationResponse).ErrorResponse("USERNAME_EXISTS", "Username already exists"))
             End If
 
+            ' Check if email already exists
+            If EmailExists(request.Email) Then
+                Return Content(HttpStatusCode.Conflict,
+                    ApiResponse(Of RegistrationResponse).ErrorResponse("EMAIL_EXISTS", "Email address already exists"))
+            End If
+
+            ' Check if ID number already exists (if provided)
+            If Not String.IsNullOrWhiteSpace(request.IdNumber) AndAlso IdNumberExists(request.IdNumber) Then
+                Return Content(HttpStatusCode.Conflict,
+                    ApiResponse(Of RegistrationResponse).ErrorResponse("IDNUMBER_EXISTS", "ID number already exists"))
+            End If
+
             ' Validate SETA exists and is active
             Dim setaInfo = GetSetaInfo(request.SetaId)
             If setaInfo Is Nothing Then
@@ -64,10 +76,22 @@ Namespace SETA.API.Controllers
             End If
 
             ' Register the user
-            Dim userId = RegisterUser(request)
+            Dim userId As Integer = 0
+            Try
+                userId = RegisterUser(request)
+            Catch ex As Exception
+                ' Return detailed error message
+                Dim errorMessage As String = ex.Message
+                If ex.InnerException IsNot Nothing Then
+                    errorMessage = ex.InnerException.Message
+                End If
+                Return Content(HttpStatusCode.InternalServerError,
+                    ApiResponse(Of RegistrationResponse).ErrorResponse("REGISTRATION_FAILED", $"Failed to register user: {errorMessage}"))
+            End Try
+
             If userId <= 0 Then
                 Return Content(HttpStatusCode.InternalServerError,
-                    ApiResponse(Of RegistrationResponse).ErrorResponse("REGISTRATION_FAILED", "Failed to register user"))
+                    ApiResponse(Of RegistrationResponse).ErrorResponse("REGISTRATION_FAILED", "Failed to register user: User ID was not returned"))
             End If
 
             Dim response = New RegistrationResponse With {
@@ -399,7 +423,7 @@ Namespace SETA.API.Controllers
         End Function
 
         ''' <summary>
-        ''' Check if username already exists
+        ''' Check if username already exists (case-insensitive)
         ''' </summary>
         Private Function UsernameExists(username As String) As Boolean
             Dim connectionString As String = ConfigurationManager.ConnectionStrings("SETAConnection").ConnectionString
@@ -407,10 +431,52 @@ Namespace SETA.API.Controllers
             Using conn As New SqlConnection(connectionString)
                 conn.Open()
 
-                Dim sql As String = "SELECT COUNT(*) FROM ApiUsers WHERE Username = @Username"
+                Dim sql As String = "SELECT COUNT(*) FROM ApiUsers WHERE LOWER(Username) = LOWER(@Username)"
 
                 Using cmd As New SqlCommand(sql, conn)
                     cmd.Parameters.AddWithValue("@Username", username)
+                    Dim count As Integer = CInt(cmd.ExecuteScalar())
+                    Return count > 0
+                End Using
+            End Using
+        End Function
+
+        ''' <summary>
+        ''' Check if email already exists (case-insensitive)
+        ''' </summary>
+        Private Function EmailExists(email As String) As Boolean
+            Dim connectionString As String = ConfigurationManager.ConnectionStrings("SETAConnection").ConnectionString
+
+            Using conn As New SqlConnection(connectionString)
+                conn.Open()
+
+                Dim sql As String = "SELECT COUNT(*) FROM ApiUsers WHERE LOWER(Email) = LOWER(@Email)"
+
+                Using cmd As New SqlCommand(sql, conn)
+                    cmd.Parameters.AddWithValue("@Email", email)
+                    Dim count As Integer = CInt(cmd.ExecuteScalar())
+                    Return count > 0
+                End Using
+            End Using
+        End Function
+
+        ''' <summary>
+        ''' Check if ID number already exists in ApiUsers or LearnerRegistry tables
+        ''' </summary>
+        Private Function IdNumberExists(idNumber As String) As Boolean
+            Dim connectionString As String = ConfigurationManager.ConnectionStrings("SETAConnection").ConnectionString
+
+            Using conn As New SqlConnection(connectionString)
+                conn.Open()
+
+                ' Check both ApiUsers and LearnerRegistry tables
+                Dim sql As String = "
+                    SELECT
+                        (SELECT COUNT(*) FROM ApiUsers WHERE IDNumber = @IDNumber) +
+                        (SELECT COUNT(*) FROM LearnerRegistry WHERE IDNumber = @IDNumber)"
+
+                Using cmd As New SqlCommand(sql, conn)
+                    cmd.Parameters.AddWithValue("@IDNumber", idNumber)
                     Dim count As Integer = CInt(cmd.ExecuteScalar())
                     Return count > 0
                 End Using
@@ -489,8 +555,19 @@ Namespace SETA.API.Controllers
                         End If
                     End Using
                 End Using
+            Catch ex As SqlException
+                ' Log the full exception details for debugging
+                System.Diagnostics.Debug.WriteLine("Failed to register user: " & ex.Message)
+                System.Diagnostics.Debug.WriteLine("SQL Error Number: " & ex.Number.ToString())
+                System.Diagnostics.Debug.WriteLine("SQL Error State: " & ex.State.ToString())
+                System.Diagnostics.Debug.WriteLine("Stack Trace: " & ex.StackTrace)
+
+                ' Re-throw with more details for better error handling
+                Throw New Exception($"Database error during registration: {ex.Message}", ex)
             Catch ex As Exception
                 System.Diagnostics.Debug.WriteLine("Failed to register user: " & ex.Message)
+                System.Diagnostics.Debug.WriteLine("Stack Trace: " & ex.StackTrace)
+                Throw New Exception($"Error during registration: {ex.Message}", ex)
             End Try
 
             Return 0
