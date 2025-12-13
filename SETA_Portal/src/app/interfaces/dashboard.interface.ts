@@ -49,3 +49,34 @@ export interface ActivityLog {
   ipAddress?: string;
   details?: Record<string, unknown>;
 }
+
+export interface VerificationHistoryItem {
+  verificationId: number;
+  idNumber: string;
+  firstName?: string;
+  surname?: string;
+  status: 'GREEN' | 'YELLOW' | 'RED' | 'AMBER';
+  statusReason?: string;
+  formatValid: boolean;
+  luhnValid: boolean;
+  dhaVerified: boolean;
+  duplicateFound: boolean;
+  conflictingSetaId?: number;
+  verifiedBy: string;
+  message?: string;
+  verifiedAt: Date;
+}
+
+export interface VerificationHistoryResponse {
+  verifications: VerificationHistoryItem[];
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
+}
+
+export interface RecentVerificationHistoryResponse {
+  verifications: VerificationHistoryItem[];
+  count: number;
+  setaId: number;
+}

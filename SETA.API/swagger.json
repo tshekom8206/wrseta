@@ -44,11 +44,17 @@
   "paths": {
     "/api/auth/token": {
       "post": {
-        "tags": ["Authentication"],
+        "tags": [
+          "Authentication"
+        ],
         "summary": "Get JWT Token",
         "description": "Authenticate with username/password to receive a JWT token for subsequent API calls.",
         "operationId": "getToken",
-        "security": [{"ApiKeyAuth": []}],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -90,11 +96,17 @@
     },
     "/api/verification/verify": {
       "post": {
-        "tags": ["Verification"],
+        "tags": [
+          "Verification"
+        ],
         "summary": "Verify SA ID Number",
         "description": "Performs full verification of a South African ID number including:\n- Format validation (13 digits)\n- Luhn checksum validation\n- Demographics extraction (DOB, gender, citizenship)\n- Cross-SETA duplicate detection\n- DHA verification (simulated)\n\nReturns a traffic light status: GREEN, YELLOW, or RED.",
         "operationId": "verifyId",
-        "security": [{"ApiKeyAuth": []}],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -192,11 +204,17 @@
     },
     "/api/verification/validate-format": {
       "post": {
-        "tags": ["Verification"],
+        "tags": [
+          "Verification"
+        ],
         "summary": "Quick Format Validation",
         "description": "Performs quick format and Luhn checksum validation only (no DHA or duplicate checks). Useful for real-time form validation.",
         "operationId": "validateFormat",
-        "security": [{"ApiKeyAuth": []}],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -223,11 +241,17 @@
     },
     "/api/verification/recent/{setaId}": {
       "get": {
-        "tags": ["Verification"],
+        "tags": [
+          "Verification"
+        ],
         "summary": "Get Recent Verifications",
         "description": "Returns the most recent verification attempts for a specific SETA. Limited to own SETA data only.",
         "operationId": "getRecentVerifications",
-        "security": [{"ApiKeyAuth": []}],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
         "parameters": [
           {
             "name": "setaId",
@@ -258,11 +282,17 @@
     },
     "/api/learners/register": {
       "post": {
-        "tags": ["Learners"],
+        "tags": [
+          "Learners"
+        ],
         "summary": "Register New Learner",
         "description": "Register a new learner after successful ID verification. Performs enrollment duplicate detection based on:\n- Same learnership + Same SETA + Same province + Same year = BLOCKED\n- Same learnership + Different SETA + Same year = BLOCKED\n- Same learnership + Same SETA + Different province = ALLOWED",
         "operationId": "registerLearner",
-        "security": [{"ApiKeyAuth": []}],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -302,11 +332,17 @@
     },
     "/api/learners/{setaId}": {
       "get": {
-        "tags": ["Learners"],
+        "tags": [
+          "Learners"
+        ],
         "summary": "List Learners by SETA",
         "description": "Returns all learners registered under a specific SETA. ID numbers are masked for POPIA compliance.",
         "operationId": "getLearnersBySeta",
-        "security": [{"ApiKeyAuth": []}],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
         "parameters": [
           {
             "name": "setaId",
@@ -333,11 +369,17 @@
     },
     "/api/learners/search": {
       "post": {
-        "tags": ["Learners"],
+        "tags": [
+          "Learners"
+        ],
         "summary": "Search Learners",
         "description": "Search for learners by ID number, name, or SETA. Results are limited to the requesting SETA's data.",
         "operationId": "searchLearners",
-        "security": [{"ApiKeyAuth": []}],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -364,11 +406,17 @@
     },
     "/api/dashboard/stats/{setaId}": {
       "get": {
-        "tags": ["Dashboard"],
+        "tags": [
+          "Dashboard"
+        ],
         "summary": "Get SETA Statistics",
         "description": "Returns verification and enrollment statistics for a specific SETA.",
         "operationId": "getSetaStats",
-        "security": [{"ApiKeyAuth": []}],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
         "parameters": [
           {
             "name": "setaId",
@@ -412,11 +460,17 @@
     },
     "/api/dashboard/summary": {
       "get": {
-        "tags": ["Dashboard"],
+        "tags": [
+          "Dashboard"
+        ],
         "summary": "Get Cross-SETA Summary",
         "description": "Returns aggregated statistics across all SETAs. Admin access required.",
         "operationId": "getCrossSETASummary",
-        "security": [{"ApiKeyAuth": []}],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
         "responses": {
           "200": {
             "description": "Cross-SETA summary statistics",
@@ -431,13 +485,220 @@
         }
       }
     },
+    "/api/dashboard/verification-history/{setaId}": {
+      "get": {
+        "tags": [
+          "Dashboard"
+        ],
+        "summary": "Get Verification History",
+        "description": "Returns paginated verification history logs for a specific SETA with optional filters.",
+        "operationId": "getVerificationHistory",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "setaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "SETA ID"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1,
+              "minimum": 1
+            },
+            "description": "Page number (default: 1)"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "minimum": 1,
+              "maximum": 100
+            },
+            "description": "Number of records per page (default: 50, max: 100)"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "GREEN",
+                "YELLOW",
+                "RED"
+              ]
+            },
+            "description": "Filter by verification status"
+          },
+          {
+            "name": "startDate",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Filter from date (YYYY-MM-DD)"
+          },
+          {
+            "name": "endDate",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Filter to date (YYYY-MM-DD)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated verification history",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "verifications": {
+                          "type": "array",
+                          "items": {
+                            "type": "object"
+                          }
+                        },
+                        "page": {
+                          "type": "integer"
+                        },
+                        "pageSize": {
+                          "type": "integer"
+                        },
+                        "totalCount": {
+                          "type": "integer"
+                        },
+                        "totalPages": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Access denied - cannot access other SETA's data"
+          }
+        }
+      }
+    },
+    "/api/dashboard/verification-recent/{setaId}": {
+      "get": {
+        "tags": [
+          "Dashboard"
+        ],
+        "summary": "Get Recent Verification History",
+        "description": "Returns the most recent verification history logs for a specific SETA.",
+        "operationId": "getRecentVerificationHistory",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "setaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "SETA ID"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "minimum": 1,
+              "maximum": 200
+            },
+            "description": "Number of recent records to return (default: 50, max: 200)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Recent verification history",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "verifications": {
+                          "type": "array",
+                          "items": {
+                            "type": "object"
+                          }
+                        },
+                        "count": {
+                          "type": "integer"
+                        },
+                        "setaId": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Access denied - cannot access other SETA's data"
+          }
+        }
+      }
+    },
     "/api/setas": {
       "get": {
-        "tags": ["SETAs"],
+        "tags": [
+          "SETAs"
+        ],
         "summary": "List All SETAs",
         "description": "Returns a list of all 21 active South African SETAs.",
         "operationId": "getAllSetas",
-        "security": [{"ApiKeyAuth": []}],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
         "responses": {
           "200": {
             "description": "List of SETAs",
@@ -475,11 +736,17 @@
     },
     "/api/setas/{code}": {
       "get": {
-        "tags": ["SETAs"],
+        "tags": [
+          "SETAs"
+        ],
         "summary": "Get SETA by Code",
         "description": "Returns details for a specific SETA by its code (e.g., WRSETA, MICT).",
         "operationId": "getSetaByCode",
-        "security": [{"ApiKeyAuth": []}],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
         "parameters": [
           {
             "name": "code",
@@ -510,11 +777,17 @@
     },
     "/api/setas/provinces": {
       "get": {
-        "tags": ["SETAs"],
+        "tags": [
+          "SETAs"
+        ],
         "summary": "List SA Provinces",
         "description": "Returns a list of South African provinces with their codes.",
         "operationId": "getProvinces",
-        "security": [{"ApiKeyAuth": []}],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
         "responses": {
           "200": {
             "description": "List of provinces",
@@ -548,7 +821,11 @@
     "schemas": {
       "AuthTokenRequest": {
         "type": "object",
-        "required": ["username", "password", "setaId"],
+        "required": [
+          "username",
+          "password",
+          "setaId"
+        ],
         "properties": {
           "username": {
             "type": "string",
@@ -593,7 +870,9 @@
       },
       "VerificationRequest": {
         "type": "object",
-        "required": ["idNumber"],
+        "required": [
+          "idNumber"
+        ],
         "properties": {
           "idNumber": {
             "type": "string",
@@ -618,7 +897,11 @@
         "properties": {
           "status": {
             "type": "string",
-            "enum": ["GREEN", "YELLOW", "RED"],
+            "enum": [
+              "GREEN",
+              "YELLOW",
+              "RED"
+            ],
             "description": "Traffic light verification status"
           },
           "message": {
@@ -663,12 +946,18 @@
           },
           "gender": {
             "type": "string",
-            "enum": ["Male", "Female"],
+            "enum": [
+              "Male",
+              "Female"
+            ],
             "description": "Gender extracted from ID"
           },
           "citizenship": {
             "type": "string",
-            "enum": ["SA Citizen", "Permanent Resident"],
+            "enum": [
+              "SA Citizen",
+              "Permanent Resident"
+            ],
             "description": "Citizenship status from ID"
           },
           "age": {
@@ -697,7 +986,15 @@
       },
       "EnrollmentRequest": {
         "type": "object",
-        "required": ["idNumber", "firstName", "surname", "learnershipCode", "enrollmentYear", "province", "setaId"],
+        "required": [
+          "idNumber",
+          "firstName",
+          "surname",
+          "learnershipCode",
+          "enrollmentYear",
+          "province",
+          "setaId"
+        ],
         "properties": {
           "idNumber": {
             "type": "string",
@@ -740,11 +1037,19 @@
         "properties": {
           "decision": {
             "type": "string",
-            "enum": ["ALLOWED", "BLOCKED"]
+            "enum": [
+              "ALLOWED",
+              "BLOCKED"
+            ]
           },
           "duplicateType": {
             "type": "string",
-            "enum": ["NEW_ENROLLMENT", "SAME_SETA_SAME_PROVINCE", "DIFFERENT_SETA_SAME_YEAR", "DIFFERENT_PROVINCE"]
+            "enum": [
+              "NEW_ENROLLMENT",
+              "SAME_SETA_SAME_PROVINCE",
+              "DIFFERENT_SETA_SAME_YEAR",
+              "DIFFERENT_PROVINCE"
+            ]
           },
           "message": {
             "type": "string"

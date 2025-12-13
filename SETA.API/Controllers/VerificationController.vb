@@ -5,6 +5,7 @@ Imports System.Data.SqlClient
 Imports System.Configuration
 Imports System.Security.Cryptography
 Imports System.Text
+Imports System.Threading.Tasks
 Imports SETA.API.Models
 Imports SETA.API.Security
 Imports SETA.API.Services
@@ -627,7 +628,7 @@ Namespace SETA.API.Controllers
         End Function
 
         ''' <summary>
-        ''' Log verification attempt with detailed information
+        ''' Log verification attempt with detailed information (fire-and-forget async)
         ''' </summary>
         Private Sub LogVerification(setaId As Integer, idNumber As String, status As String, message As String,
                                     Optional formatValid As Boolean = False,
@@ -638,50 +639,64 @@ Namespace SETA.API.Controllers
                                     Optional firstName As String = Nothing,
                                     Optional surname As String = Nothing,
                                     Optional durationMs As Double = 0)
-            ' Record telemetry metrics
+            ' Record telemetry metrics synchronously (lightweight operation)
             Dim setaCode = If(Me.Request.Properties.ContainsKey("SetaCode"), Me.Request.Properties("SetaCode").ToString(), "UNKNOWN")
             TelemetryService.Instance.RecordVerification(status, setaCode, durationMs)
 
+            ' Fire-and-forget database logging to avoid blocking the request thread
+            Task.Run(Sub()
+                         Try
+                             LogVerificationSync(setaId, idNumber, status, message, formatValid, luhnValid, dhaVerified, duplicateFound, conflictingSetaId, firstName, surname, setaCode)
+                         Catch ex As Exception
+                             System.Diagnostics.Debug.WriteLine("Failed to log verification: " & ex.Message)
+                         End Try
+                     End Sub)
+        End Sub
+
+        ''' <summary>
+        ''' Synchronous logging implementation (called from async wrapper)
+        ''' </summary>
+        Private Sub LogVerificationSync(setaId As Integer, idNumber As String, status As String, message As String,
+                                        formatValid As Boolean, luhnValid As Boolean, dhaVerified As Boolean,
+                                        duplicateFound As Boolean, conflictingSetaId As Integer?,
+                                        firstName As String, surname As String, setaCode As String)
             Dim connectionString As String = ConfigurationManager.ConnectionStrings("SETAConnection").ConnectionString
             Dim idHash = ComputeSha256Hash(idNumber)
 
-            Try
-                Using conn As New SqlConnection(connectionString)
-                    conn.Open()
+            Using conn As New SqlConnection(connectionString)
+                conn.Open()
 
-                    Dim sql As String = "
-                        INSERT INTO VerificationLog (
-                            RequestingSETAID, IDNumber, FirstName, Surname, Status, StatusReason,
-                            FormatValid, LuhnValid, DHAVerified, DuplicateFound, ConflictingSETAID,
-                            VerifiedBy, Message, IDNumberHash, VerifiedAt
-                        )
-                        VALUES (
-                            @SETAID, @IDNumber, @FirstName, @Surname, @Status, @StatusReason,
-                            @FormatValid, @LuhnValid, @DHAVerified, @DuplicateFound, @ConflictingSETAID,
-                            @VerifiedBy, @Message, @IDHash, GETDATE()
-                        )"
+                Dim sql As String = "
+                    INSERT INTO VerificationLog (
+                        RequestingSETAID, IDNumber, FirstName, Surname, Status, StatusReason,
+                        FormatValid, LuhnValid, DHAVerified, DuplicateFound, ConflictingSETAID,
+                        VerifiedBy, Message, IDNumberHash, VerifiedAt
+                    )
+                    VALUES (
+                        @SETAID, @IDNumber, @FirstName, @Surname, @Status, @StatusReason,
+                        @FormatValid, @LuhnValid, @DHAVerified, @DuplicateFound, @ConflictingSETAID,
+                        @VerifiedBy, @Message, @IDHash, GETDATE()
+                    )"
 
-                    Using cmd As New SqlCommand(sql, conn)
-                        cmd.Parameters.AddWithValue("@SETAID", setaId)
-                        cmd.Parameters.AddWithValue("@IDNumber", idNumber)
-                        cmd.Parameters.AddWithValue("@FirstName", If(String.IsNullOrEmpty(firstName), DBNull.Value, firstName))
-                        cmd.Parameters.AddWithValue("@Surname", If(String.IsNullOrEmpty(surname), DBNull.Value, surname))
-                        cmd.Parameters.AddWithValue("@Status", status)
-                        cmd.Parameters.AddWithValue("@StatusReason", If(String.IsNullOrEmpty(message), DBNull.Value, message))
-                        cmd.Parameters.AddWithValue("@FormatValid", formatValid)
-                        cmd.Parameters.AddWithValue("@LuhnValid", luhnValid)
-                        cmd.Parameters.AddWithValue("@DHAVerified", dhaVerified)
-                        cmd.Parameters.AddWithValue("@DuplicateFound", duplicateFound)
-                        cmd.Parameters.AddWithValue("@ConflictingSETAID", If(conflictingSetaId.HasValue, conflictingSetaId.Value, DBNull.Value))
-                        cmd.Parameters.AddWithValue("@VerifiedBy", setaCode)
-                        cmd.Parameters.AddWithValue("@Message", If(String.IsNullOrEmpty(message), DBNull.Value, message))
-                        cmd.Parameters.AddWithValue("@IDHash", idHash)
-                        cmd.ExecuteNonQuery()
-                    End Using
+                Using cmd As New SqlCommand(sql, conn)
+                    cmd.CommandTimeout = 10 ' 10 second timeout to prevent hanging
+                    cmd.Parameters.AddWithValue("@SETAID", setaId)
+                    cmd.Parameters.AddWithValue("@IDNumber", idNumber)
+                    cmd.Parameters.AddWithValue("@FirstName", If(String.IsNullOrEmpty(firstName), DBNull.Value, firstName))
+                    cmd.Parameters.AddWithValue("@Surname", If(String.IsNullOrEmpty(surname), DBNull.Value, surname))
+                    cmd.Parameters.AddWithValue("@Status", status)
+                    cmd.Parameters.AddWithValue("@StatusReason", If(String.IsNullOrEmpty(message), DBNull.Value, message))
+                    cmd.Parameters.AddWithValue("@FormatValid", formatValid)
+                    cmd.Parameters.AddWithValue("@LuhnValid", luhnValid)
+                    cmd.Parameters.AddWithValue("@DHAVerified", dhaVerified)
+                    cmd.Parameters.AddWithValue("@DuplicateFound", duplicateFound)
+                    cmd.Parameters.AddWithValue("@ConflictingSETAID", If(conflictingSetaId.HasValue, conflictingSetaId.Value, DBNull.Value))
+                    cmd.Parameters.AddWithValue("@VerifiedBy", setaCode)
+                    cmd.Parameters.AddWithValue("@Message", If(String.IsNullOrEmpty(message), DBNull.Value, message))
+                    cmd.Parameters.AddWithValue("@IDHash", idHash)
+                    cmd.ExecuteNonQuery()
                 End Using
-            Catch ex As Exception
-                System.Diagnostics.Debug.WriteLine("Failed to log verification: " & ex.Message)
-            End Try
+            End Using
         End Sub
 
         ''' <summary>

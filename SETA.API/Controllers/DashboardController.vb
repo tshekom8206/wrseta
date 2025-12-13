@@ -86,6 +86,56 @@ Namespace SETA.API.Controllers
         End Function
 
         ''' <summary>
+        ''' Get verification history logs with pagination and optional filters
+        ''' </summary>
+        <Route("verification-history/{setaId:int}")>
+        <HttpGet>
+        Public Function GetVerificationHistory(setaId As Integer,
+                                               Optional page As Integer = 1,
+                                               Optional pageSize As Integer = 50,
+                                               Optional status As String = Nothing,
+                                               Optional startDate As String = Nothing,
+                                               Optional endDate As String = Nothing) As IHttpActionResult
+            ' Validate SETA access
+            Dim apiKeySetaId = CInt(Me.Request.Properties("SetaId"))
+            If apiKeySetaId <> setaId Then
+                Return Content(HttpStatusCode.Forbidden,
+                    ApiResponse(Of Object).ErrorResponse("ACCESS_DENIED", "Cannot access other SETA's data"))
+            End If
+
+            ' Validate pagination
+            If page < 1 Then page = 1
+            If pageSize < 1 OrElse pageSize > 100 Then pageSize = 50
+
+            Dim history = GetVerificationHistoryFromDB(setaId, page, pageSize, status, startDate, endDate)
+            Return Ok(ApiResponse(Of Object).SuccessResponse(history))
+        End Function
+
+        ''' <summary>
+        ''' Get recent verification history logs (last N records)
+        ''' </summary>
+        <Route("verification-recent/{setaId:int}")>
+        <HttpGet>
+        Public Function GetRecentVerificationHistory(setaId As Integer, Optional limit As Integer = 50) As IHttpActionResult
+            ' Validate SETA access
+            Dim apiKeySetaId = CInt(Me.Request.Properties("SetaId"))
+            If apiKeySetaId <> setaId Then
+                Return Content(HttpStatusCode.Forbidden,
+                    ApiResponse(Of Object).ErrorResponse("ACCESS_DENIED", "Cannot access other SETA's data"))
+            End If
+
+            ' Validate limit
+            If limit < 1 OrElse limit > 200 Then limit = 50
+
+            Dim recent = GetRecentVerificationHistoryFromDB(setaId, limit)
+            Return Ok(ApiResponse(Of Object).SuccessResponse(New With {
+                .verifications = recent,
+                .count = recent.Count,
+                .setaId = setaId
+            }))
+        End Function
+
+        ''' <summary>
         ''' Get dashboard statistics from database
         ''' </summary>
         Private Function GetDashboardStatsFromDB(setaId As Integer) As DashboardStats
@@ -294,7 +344,7 @@ Namespace SETA.API.Controllers
                 conn.Open()
 
                 Dim sql As String = "
-                    SELECT LogID, Status, Message, VerifiedAt
+                    SELECT VerificationID, Status, Message, VerifiedAt
                     FROM VerificationLog
                     WHERE RequestingSETAID = @SETAID
                       AND Status = 'RED'
@@ -309,7 +359,7 @@ Namespace SETA.API.Controllers
                     Using reader As SqlDataReader = cmd.ExecuteReader()
                         While reader.Read()
                             blocked.Add(New With {
-                                .logId = reader.GetInt64(0),
+                                .logId = reader.GetInt32(0),
                                 .status = reader.GetString(1),
                                 .message = reader.GetString(2),
                                 .verifiedAt = reader.GetDateTime(3)
@@ -320,6 +370,192 @@ Namespace SETA.API.Controllers
             End Using
 
             Return blocked
+        End Function
+
+        ''' <summary>
+        ''' Get verification history from database with pagination and filters
+        ''' </summary>
+        Private Function GetVerificationHistoryFromDB(setaId As Integer, page As Integer, pageSize As Integer,
+                                                      Optional status As String = Nothing,
+                                                      Optional startDate As String = Nothing,
+                                                      Optional endDate As String = Nothing) As Object
+            Dim historyList As New List(Of Object)
+            Dim connectionString As String = ConfigurationManager.ConnectionStrings("SETAConnection").ConnectionString
+            Dim offset = (page - 1) * pageSize
+            Dim totalCount As Integer = 0
+
+            Using conn As New SqlConnection(connectionString)
+                conn.Open()
+
+                ' Build WHERE clause
+                Dim whereConditions As New List(Of String) From {"RequestingSETAID = @SETAID"}
+
+                If Not String.IsNullOrWhiteSpace(status) Then
+                    whereConditions.Add("Status = @Status")
+                End If
+
+                If Not String.IsNullOrWhiteSpace(startDate) Then
+                    whereConditions.Add("CAST(VerifiedAt AS DATE) >= CAST(@StartDate AS DATE)")
+                End If
+
+                If Not String.IsNullOrWhiteSpace(endDate) Then
+                    whereConditions.Add("CAST(VerifiedAt AS DATE) <= CAST(@EndDate AS DATE)")
+                End If
+
+                Dim whereClause = String.Join(" AND ", whereConditions)
+
+                ' Get total count
+                Dim countSQL As String = $"SELECT COUNT(*) FROM VerificationLog WHERE {whereClause}"
+                Using countCmd As New SqlCommand(countSQL, conn)
+                    countCmd.Parameters.AddWithValue("@SETAID", setaId)
+                    If Not String.IsNullOrWhiteSpace(status) Then
+                        countCmd.Parameters.AddWithValue("@Status", status)
+                    End If
+                    If Not String.IsNullOrWhiteSpace(startDate) Then
+                        countCmd.Parameters.AddWithValue("@StartDate", startDate)
+                    End If
+                    If Not String.IsNullOrWhiteSpace(endDate) Then
+                        countCmd.Parameters.AddWithValue("@EndDate", endDate)
+                    End If
+                    totalCount = CInt(countCmd.ExecuteScalar())
+                End Using
+
+                ' Get paginated results
+                Dim sql As String = $"
+                    SELECT
+                        VerificationID,
+                        IDNumber,
+                        FirstName,
+                        Surname,
+                        Status,
+                        StatusReason,
+                        FormatValid,
+                        LuhnValid,
+                        DHAVerified,
+                        DuplicateFound,
+                        ConflictingSETAID,
+                        VerifiedBy,
+                        Message,
+                        VerifiedAt
+                    FROM VerificationLog
+                    WHERE {whereClause}
+                    ORDER BY VerifiedAt DESC
+                    OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY"
+
+                Using cmd As New SqlCommand(sql, conn)
+                    cmd.Parameters.AddWithValue("@SETAID", setaId)
+                    cmd.Parameters.AddWithValue("@Offset", offset)
+                    cmd.Parameters.AddWithValue("@PageSize", pageSize)
+                    If Not String.IsNullOrWhiteSpace(status) Then
+                        cmd.Parameters.AddWithValue("@Status", status)
+                    End If
+                    If Not String.IsNullOrWhiteSpace(startDate) Then
+                        cmd.Parameters.AddWithValue("@StartDate", startDate)
+                    End If
+                    If Not String.IsNullOrWhiteSpace(endDate) Then
+                        cmd.Parameters.AddWithValue("@EndDate", endDate)
+                    End If
+
+                    Using reader As SqlDataReader = cmd.ExecuteReader()
+                        While reader.Read()
+                            historyList.Add(New With {
+                                .verificationId = reader.GetInt32(0),
+                                .idNumber = If(reader.IsDBNull(1), "", MaskIdNumber(reader.GetString(1))),
+                                .firstName = If(reader.IsDBNull(2), "", reader.GetString(2)),
+                                .surname = If(reader.IsDBNull(3), "", reader.GetString(3)),
+                                .status = If(reader.IsDBNull(4), "", reader.GetString(4)),
+                                .statusReason = If(reader.IsDBNull(5), "", reader.GetString(5)),
+                                .formatValid = If(reader.IsDBNull(6), False, reader.GetBoolean(6)),
+                                .luhnValid = If(reader.IsDBNull(7), False, reader.GetBoolean(7)),
+                                .dhaVerified = If(reader.IsDBNull(8), False, reader.GetBoolean(8)),
+                                .duplicateFound = If(reader.IsDBNull(9), False, reader.GetBoolean(9)),
+                                .conflictingSetaId = If(reader.IsDBNull(10), Nothing, CType(reader.GetInt32(10), Integer?)),
+                                .verifiedBy = If(reader.IsDBNull(11), "", reader.GetString(11)),
+                                .message = If(reader.IsDBNull(12), "", reader.GetString(12)),
+                                .verifiedAt = reader.GetDateTime(13)
+                            })
+                        End While
+                    End Using
+                End Using
+            End Using
+
+            Return New With {
+                .verifications = historyList,
+                .page = page,
+                .pageSize = pageSize,
+                .totalCount = totalCount,
+                .totalPages = CInt(Math.Ceiling(totalCount / CDbl(pageSize)))
+            }
+        End Function
+
+        ''' <summary>
+        ''' Get recent verification history from database
+        ''' </summary>
+        Private Function GetRecentVerificationHistoryFromDB(setaId As Integer, limit As Integer) As List(Of Object)
+            Dim recentList As New List(Of Object)
+            Dim connectionString As String = ConfigurationManager.ConnectionStrings("SETAConnection").ConnectionString
+
+            Using conn As New SqlConnection(connectionString)
+                conn.Open()
+
+                Dim sql As String = "
+                    SELECT TOP (@Limit)
+                        VerificationID,
+                        IDNumber,
+                        FirstName,
+                        Surname,
+                        Status,
+                        StatusReason,
+                        FormatValid,
+                        LuhnValid,
+                        DHAVerified,
+                        DuplicateFound,
+                        ConflictingSETAID,
+                        VerifiedBy,
+                        Message,
+                        VerifiedAt
+                    FROM VerificationLog
+                    WHERE RequestingSETAID = @SETAID
+                    ORDER BY VerifiedAt DESC"
+
+                Using cmd As New SqlCommand(sql, conn)
+                    cmd.Parameters.AddWithValue("@SETAID", setaId)
+                    cmd.Parameters.AddWithValue("@Limit", limit)
+
+                    Using reader As SqlDataReader = cmd.ExecuteReader()
+                        While reader.Read()
+                            recentList.Add(New With {
+                                .verificationId = reader.GetInt32(0),
+                                .idNumber = If(reader.IsDBNull(1), "", MaskIdNumber(reader.GetString(1))),
+                                .firstName = If(reader.IsDBNull(2), "", reader.GetString(2)),
+                                .surname = If(reader.IsDBNull(3), "", reader.GetString(3)),
+                                .status = If(reader.IsDBNull(4), "", reader.GetString(4)),
+                                .statusReason = If(reader.IsDBNull(5), "", reader.GetString(5)),
+                                .formatValid = If(reader.IsDBNull(6), False, reader.GetBoolean(6)),
+                                .luhnValid = If(reader.IsDBNull(7), False, reader.GetBoolean(7)),
+                                .dhaVerified = If(reader.IsDBNull(8), False, reader.GetBoolean(8)),
+                                .duplicateFound = If(reader.IsDBNull(9), False, reader.GetBoolean(9)),
+                                .conflictingSetaId = If(reader.IsDBNull(10), Nothing, CType(reader.GetInt32(10), Integer?)),
+                                .verifiedBy = If(reader.IsDBNull(11), "", reader.GetString(11)),
+                                .message = If(reader.IsDBNull(12), "", reader.GetString(12)),
+                                .verifiedAt = reader.GetDateTime(13)
+                            })
+                        End While
+                    End Using
+                End Using
+            End Using
+
+            Return recentList
+        End Function
+
+        ''' <summary>
+        ''' Mask ID number for privacy (POPIA compliance)
+        ''' </summary>
+        Private Function MaskIdNumber(idNumber As String) As String
+            If String.IsNullOrEmpty(idNumber) OrElse idNumber.Length < 13 Then
+                Return "******"
+            End If
+            Return idNumber.Substring(0, 4) & "****" & idNumber.Substring(idNumber.Length - 3)
         End Function
 
     End Class

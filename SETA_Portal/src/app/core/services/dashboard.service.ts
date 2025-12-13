@@ -10,7 +10,10 @@ import {
   VerificationTrend,
   RecentVerification,
   BlockedLearner,
-  ActivityLog
+  ActivityLog,
+  VerificationHistoryResponse,
+  RecentVerificationHistoryResponse,
+  VerificationHistoryItem
 } from '../../interfaces/dashboard.interface';
 
 @Injectable({
@@ -127,21 +130,18 @@ export class DashboardService {
    * Get recent verifications
    */
   getRecentVerifications(limit: number = 10): Observable<RecentVerification[]> {
-    return this.http.get<any>(`${this.baseUrl}/verification/recent/${this.setaId}?limit=${limit}`, {
-      headers: this.getHeaders()
-    }).pipe(
+    // Use the new verification-recent endpoint
+    return this.getRecentVerificationHistory(limit).pipe(
       map(response => {
-        const data = response.data || response;
-        if (!Array.isArray(data)) return [];
-        return data.map((v: any) => ({
-          id: v.logId || v.verificationId || 0,
-          idNumber: v.idNumber || '',
+        return response.verifications.map(v => ({
+          id: v.verificationId,
+          idNumber: v.idNumber,
           maskedIdNumber: v.idNumber ? this.maskIdNumber(v.idNumber) : '******',
-          status: v.status || 'UNKNOWN',
-          learnerName: v.learnerName || 'Verified Learner',
+          status: v.status as 'GREEN' | 'AMBER' | 'RED',
+          learnerName: v.firstName && v.surname ? `${v.firstName} ${v.surname}` : 'Verified Learner',
           verifiedBy: v.verifiedBy || 'system',
-          verifiedAt: new Date(v.verifiedAt),
-          isDuplicate: v.status === 'RED'
+          verifiedAt: v.verifiedAt,
+          isDuplicate: v.duplicateFound || v.status === 'RED'
         }));
       }),
       catchError(error => {
@@ -195,6 +195,108 @@ export class DashboardService {
   getActivityLog(limit: number = 20): Observable<ActivityLog[]> {
     // API doesn't have this endpoint yet, return empty
     return of([]);
+  }
+
+  /**
+   * Get verification history with pagination and filters
+   */
+  getVerificationHistory(
+    page: number = 1,
+    pageSize: number = 50,
+    status?: string,
+    startDate?: string,
+    endDate?: string
+  ): Observable<VerificationHistoryResponse> {
+    const params: any = { page, pageSize };
+    if (status) params.status = status;
+    if (startDate) params.startDate = startDate;
+    if (endDate) params.endDate = endDate;
+
+    const queryString = new URLSearchParams(params).toString();
+    const url = `${this.baseUrl}/dashboard/verification-history/${this.setaId}?${queryString}`;
+
+    return this.http.get<any>(url, {
+      headers: this.getHeaders()
+    }).pipe(
+      map(response => {
+        const data = response.data || response;
+        return {
+          verifications: (data.verifications || []).map((v: any) => ({
+            verificationId: v.verificationId || 0,
+            idNumber: v.idNumber || '',
+            firstName: v.firstName || '',
+            surname: v.surname || '',
+            status: v.status || 'UNKNOWN',
+            statusReason: v.statusReason || '',
+            formatValid: v.formatValid || false,
+            luhnValid: v.luhnValid || false,
+            dhaVerified: v.dhaVerified || false,
+            duplicateFound: v.duplicateFound || false,
+            conflictingSetaId: v.conflictingSetaId,
+            verifiedBy: v.verifiedBy || 'system',
+            message: v.message || '',
+            verifiedAt: new Date(v.verifiedAt)
+          })),
+          page: data.page || page,
+          pageSize: data.pageSize || pageSize,
+          totalCount: data.totalCount || 0,
+          totalPages: data.totalPages || 0
+        };
+      }),
+      catchError(error => {
+        console.error('Error fetching verification history:', error);
+        return of({
+          verifications: [],
+          page: 1,
+          pageSize: 50,
+          totalCount: 0,
+          totalPages: 0
+        });
+      })
+    );
+  }
+
+  /**
+   * Get recent verification history
+   */
+  getRecentVerificationHistory(limit: number = 50): Observable<RecentVerificationHistoryResponse> {
+    const url = `${this.baseUrl}/dashboard/verification-recent/${this.setaId}?limit=${limit}`;
+
+    return this.http.get<any>(url, {
+      headers: this.getHeaders()
+    }).pipe(
+      map(response => {
+        const data = response.data || response;
+        return {
+          verifications: (data.verifications || []).map((v: any) => ({
+            verificationId: v.verificationId || 0,
+            idNumber: v.idNumber || '',
+            firstName: v.firstName || '',
+            surname: v.surname || '',
+            status: v.status || 'UNKNOWN',
+            statusReason: v.statusReason || '',
+            formatValid: v.formatValid || false,
+            luhnValid: v.luhnValid || false,
+            dhaVerified: v.dhaVerified || false,
+            duplicateFound: v.duplicateFound || false,
+            conflictingSetaId: v.conflictingSetaId,
+            verifiedBy: v.verifiedBy || 'system',
+            message: v.message || '',
+            verifiedAt: new Date(v.verifiedAt)
+          })),
+          count: data.count || 0,
+          setaId: data.setaId || this.setaId
+        };
+      }),
+      catchError(error => {
+        console.error('Error fetching recent verification history:', error);
+        return of({
+          verifications: [],
+          count: 0,
+          setaId: this.setaId
+        });
+      })
+    );
   }
 
   // ============== Mock Data Methods (for development) ==============
