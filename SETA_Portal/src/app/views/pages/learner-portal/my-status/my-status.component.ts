@@ -97,46 +97,68 @@ interface TimelineEvent {
 
       <!-- Quick Stats -->
       <div class="col-md-3 mb-4">
-        <div class="card stat-card h-100">
-          <div class="card-body text-center">
-            <div class="stat-icon-wrapper bg-primary-light mx-auto mb-3">
-              <i class="feather icon-book-open text-primary"></i>
+        <div class="stat-card learner-stat-card">
+          <div class="stat-card__icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+            </svg>
+          </div>
+          <div class="stat-card__content">
+            <span class="stat-card__label">Current Program</span>
+            <div class="stat-card__value-row">
+              <span class="stat-card__value">{{ enrollmentInfo.programName }}</span>
             </div>
-            <h4 class="mb-1">{{ enrollmentInfo.programName }}</h4>
-            <p class="text-muted small mb-0">Current Program</p>
           </div>
         </div>
       </div>
       <div class="col-md-3 mb-4">
-        <div class="card stat-card h-100">
-          <div class="card-body text-center">
-            <div class="stat-icon-wrapper bg-success-light mx-auto mb-3">
-              <i class="feather icon-percent text-success"></i>
+        <div class="stat-card learner-stat-card">
+          <div class="stat-card__icon stat-card__icon--success">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="22 6 13.5 14.5 8.5 9.5 2 16"></polyline>
+              <polyline points="16 6 22 6 22 12"></polyline>
+            </svg>
+          </div>
+          <div class="stat-card__content">
+            <span class="stat-card__label">Progress</span>
+            <div class="stat-card__value-row">
+              <span class="stat-card__value">{{ enrollmentInfo.completionPercentage }}%</span>
             </div>
-            <h4 class="mb-1">{{ enrollmentInfo.completionPercentage }}%</h4>
-            <p class="text-muted small mb-0">Progress</p>
           </div>
         </div>
       </div>
       <div class="col-md-3 mb-4">
-        <div class="card stat-card h-100">
-          <div class="card-body text-center">
-            <div class="stat-icon-wrapper bg-info-light mx-auto mb-3">
-              <i class="feather icon-award text-info"></i>
+        <div class="stat-card learner-stat-card">
+          <div class="stat-card__icon stat-card__icon--info">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="8" r="7"></circle>
+              <polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline>
+            </svg>
+          </div>
+          <div class="stat-card__content">
+            <span class="stat-card__label">Credits Earned</span>
+            <div class="stat-card__value-row">
+              <span class="stat-card__value">{{ enrollmentInfo.credits.completed }}/{{ enrollmentInfo.credits.total }}</span>
             </div>
-            <h4 class="mb-1">{{ enrollmentInfo.credits.completed }}/{{ enrollmentInfo.credits.total }}</h4>
-            <p class="text-muted small mb-0">Credits Earned</p>
           </div>
         </div>
       </div>
       <div class="col-md-3 mb-4">
-        <div class="card stat-card h-100">
-          <div class="card-body text-center">
-            <div class="stat-icon-wrapper bg-warning-light mx-auto mb-3">
-              <i class="feather icon-calendar text-warning"></i>
+        <div class="stat-card learner-stat-card">
+          <div class="stat-card__icon stat-card__icon--warning">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+          </div>
+          <div class="stat-card__content">
+            <span class="stat-card__label">Days Remaining</span>
+            <div class="stat-card__value-row">
+              <span class="stat-card__value">{{ getDaysRemaining() }}</span>
             </div>
-            <h4 class="mb-1">{{ getDaysRemaining() }}</h4>
-            <p class="text-muted small mb-0">Days Remaining</p>
           </div>
         </div>
       </div>
@@ -360,27 +382,103 @@ interface TimelineEvent {
       background: rgba(220, 53, 69, 0.2);
       color: #f8d7da;
     }
-    .stat-card {
-      transition: transform 0.2s;
+    .learner-stat-card {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      padding: 1.5rem;
+      background: var(--bs-white);
+      border-radius: 0.75rem;
+      border: 1px solid rgba(0, 0, 0, 0.06);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      transition: box-shadow 0.2s ease, transform 0.2s ease;
+      height: 100%;
+      width: 100%;
+      box-sizing: border-box;
+      overflow: visible;
+
+      &:hover {
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+        transform: translateY(-2px);
+      }
     }
-    .stat-card:hover {
-      transform: translateY(-4px);
-    }
-    .stat-icon-wrapper {
-      width: 56px;
-      height: 56px;
-      border-radius: 12px;
+
+    .learner-stat-card .stat-card__icon {
+      position: absolute;
+      top: -8px;
+      left: 1.5rem;
       display: flex;
       align-items: center;
       justify-content: center;
+      width: 56px;
+      height: 56px;
+      border-radius: 0.75rem;
+      flex-shrink: 0;
+      background: var(--seta-primary, #008550);
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
+      color: var(--bs-white);
+      transition: box-shadow 0.2s ease;
+      z-index: 2;
+
+      svg {
+        width: 24px;
+        height: 24px;
+      }
+
+      &--success {
+        background: var(--bs-success, #198754);
+      }
+
+      &--info {
+        background: var(--bs-info, #0dcaf0);
+      }
+
+      &--warning {
+        background: var(--bs-warning, #ffc107);
+      }
     }
-    .stat-icon-wrapper i {
-      font-size: 24px;
+
+    .learner-stat-card:hover .stat-card__icon {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
     }
-    .bg-primary-light { background-color: rgba(var(--bs-primary-rgb), 0.1); }
-    .bg-success-light { background-color: rgba(25, 135, 84, 0.1); }
-    .bg-info-light { background-color: rgba(13, 202, 240, 0.1); }
-    .bg-warning-light { background-color: rgba(255, 193, 7, 0.1); }
+
+    .learner-stat-card .stat-card__content {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      text-align: left;
+      margin-top: 1.5rem;
+      padding-top: 0.75rem;
+      position: relative;
+      z-index: 0;
+    }
+
+    .learner-stat-card .stat-card__label {
+      display: block;
+      font-size: 0.9375rem;
+      font-weight: 600;
+      color: var(--bs-secondary, #6c757d);
+      margin-bottom: 0.75rem;
+      line-height: 1.4;
+    }
+
+    .learner-stat-card .stat-card__value-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: flex-start;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .learner-stat-card .stat-card__value {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: var(--bs-dark, #212529);
+      line-height: 1.2;
+      letter-spacing: -0.02em;
+      word-break: break-word;
+    }
 
     .verification-status-large {
       width: 80px;

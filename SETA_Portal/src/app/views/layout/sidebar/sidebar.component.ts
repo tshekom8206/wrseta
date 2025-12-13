@@ -90,7 +90,8 @@ export class SidebarComponent {
       roles: [UserRole.Learner],
       children: [
         { label: 'nav.myStatus', icon: 'info', route: '/my-portal/status', roles: [UserRole.Learner] },
-        { label: 'nav.myCertificates', icon: 'award', route: '/my-portal/certificates', roles: [UserRole.Learner] }
+        { label: 'nav.myCertificates', icon: 'award', route: '/my-portal/certificates', roles: [UserRole.Learner] },
+        { label: 'nav.learnerships', icon: 'book-open', route: '/my-portal/learnerships', roles: [UserRole.Learner] }
       ]
     }
   ];

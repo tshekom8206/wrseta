@@ -59,13 +59,13 @@ interface Seta {
               <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
               <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
             </svg>
-          </div>
+              </div>
           <div class="stat-content">
             <div class="stat-value">{{ setas.length }}</div>
             <div class="stat-label">Total SETAs</div>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
       <div class="col-sm-6 col-lg-3">
         <div class="stat-card stat-card-success">
           <div class="stat-icon">
@@ -73,13 +73,13 @@ interface Seta {
               <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
               <polyline points="22 4 12 14.01 9 11.01"></polyline>
             </svg>
-          </div>
+        </div>
           <div class="stat-content">
             <div class="stat-value">{{ activeSetas }}</div>
             <div class="stat-label">Active SETAs</div>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
       <div class="col-sm-6 col-lg-3">
         <div class="stat-card stat-card-info">
           <div class="stat-icon">
@@ -89,13 +89,13 @@ interface Seta {
               <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
               <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
             </svg>
-          </div>
+        </div>
           <div class="stat-content">
             <div class="stat-value">{{ totalLearners | number }}</div>
             <div class="stat-label">Total Learners</div>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
       <div class="col-sm-6 col-lg-3">
         <div class="stat-card stat-card-warning">
           <div class="stat-icon">
@@ -103,7 +103,7 @@ interface Seta {
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
               <circle cx="12" cy="7" r="4"></circle>
             </svg>
-          </div>
+        </div>
           <div class="stat-content">
             <div class="stat-value">{{ totalUsers | number }}</div>
             <div class="stat-label">Total Users</div>

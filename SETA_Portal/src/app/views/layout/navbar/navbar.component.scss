@@ -126,23 +126,32 @@
 }
 
 .user-avatar {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #fff;
   font-weight: 600;
-  font-size: 0.875rem;
+  font-size: 0.9375rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+}
+
+.btn-user:hover .user-avatar {
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+  transform: scale(1.02);
 }
 
 .user-name {
   font-weight: 500;
+  font-size: 0.9375rem;
   max-width: 150px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: var(--seta-text-primary);
 }
 
 // Dropdown Styling
@@ -154,6 +163,157 @@
   min-width: 200px;
 }
 
+// Premium User Dropdown Styles
+.user-dropdown-menu {
+  padding: 0;
+  min-width: 280px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1), 0 8px 24px rgba(0, 0, 0, 0.08);
+  border-radius: 0.75rem;
+  overflow: hidden;
+}
+
+.user-dropdown-header {
+  padding: 1.25rem 1.125rem;
+  background: linear-gradient(135deg, rgba(0, 133, 80, 0.03) 0%, rgba(0, 133, 80, 0.01) 100%);
+  display: flex;
+  align-items: flex-start;
+  gap: 0.875rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.user-dropdown-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 600;
+  font-size: 1rem;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.user-dropdown-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.user-dropdown-name {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--seta-text-primary);
+  margin-bottom: 0.25rem;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-dropdown-email {
+  font-size: 0.8125rem;
+  color: var(--seta-text-secondary);
+  margin-bottom: 0.5rem;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-dropdown-badge {
+  display: inline-block;
+}
+
+.badge-text {
+  display: inline-block;
+  padding: 0.25rem 0.625rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  background: linear-gradient(135deg, var(--seta-primary) 0%, var(--seta-primary-dark) 100%);
+  color: #fff;
+  border-radius: 0.375rem;
+  box-shadow: 0 1px 3px rgba(0, 133, 80, 0.2);
+}
+
+.user-dropdown-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, rgba(0, 0, 0, 0.08) 10%, rgba(0, 0, 0, 0.08) 90%, transparent 100%);
+  margin: 0.5rem 0;
+}
+
+.user-dropdown-item {
+  padding: 0.75rem 1.125rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--seta-text-primary);
+  text-decoration: none;
+  background: transparent;
+  border: none;
+  width: 100%;
+  text-align: left;
+  transition: all 0.2s ease;
+  cursor: pointer;
+
+  &:hover {
+    background: linear-gradient(90deg, rgba(0, 133, 80, 0.05) 0%, rgba(0, 133, 80, 0.02) 100%);
+    color: var(--seta-primary);
+
+    .user-dropdown-item-icon {
+      transform: translateX(2px);
+    }
+  }
+
+  &:active {
+    background: linear-gradient(90deg, rgba(0, 133, 80, 0.08) 0%, rgba(0, 133, 80, 0.04) 100%);
+  }
+}
+
+.user-dropdown-item-icon {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+  background: rgba(0, 133, 80, 0.08);
+  color: var(--seta-primary);
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+
+  svg {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+.logout-item {
+  .user-dropdown-item-icon {
+    background: rgba(220, 53, 69, 0.1);
+    color: #dc3545;
+  }
+
+  &:hover {
+    background: linear-gradient(90deg, rgba(220, 53, 69, 0.05) 0%, rgba(220, 53, 69, 0.02) 100%);
+    color: #dc3545;
+
+    .user-dropdown-item-icon {
+      background: rgba(220, 53, 69, 0.15);
+    }
+  }
+}
+
+.user-dropdown-item-text {
+  flex: 1;
+}
+
+// Legacy dropdown styles (for language selector, etc.)
 .dropdown-header {
   padding: 0.75rem;
 
@@ -189,11 +349,6 @@
   &.active {
     background-color: var(--seta-primary);
     color: #fff;
-  }
-
-  &.text-danger:hover {
-    background-color: #f8d7da;
-    color: var(--seta-danger);
   }
 }
 
@@ -391,9 +546,24 @@
   }
 
   .user-dropdown {
-    .dropdown-menu {
+    .user-dropdown-menu {
       right: -0.5rem !important;
+      min-width: 260px;
     }
+  }
+
+  .user-dropdown-header {
+    padding: 1rem 0.875rem;
+  }
+
+  .user-dropdown-avatar {
+    width: 44px;
+    height: 44px;
+    font-size: 0.9375rem;
+  }
+
+  .user-dropdown-item {
+    padding: 0.6875rem 1rem;
   }
 
   .notification-menu {

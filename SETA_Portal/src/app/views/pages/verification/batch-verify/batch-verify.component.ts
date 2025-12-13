@@ -24,11 +24,20 @@ import { PageHeaderComponent } from '../../../../shared/components/page-header/p
     <div class="row">
       <!-- Upload Section -->
       <div class="col-lg-5">
-        <div class="card">
-          <div class="card-header">
-            <h5 class="card-title mb-0">{{ 'verification.uploadFile' | translate }}</h5>
+        <div class="card upload-card">
+          <div class="card-header upload-header">
+            <h5 class="card-title mb-0">
+              <span class="card-title__icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="17 8 12 3 7 8"></polyline>
+                  <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+              </span>
+              {{ 'verification.uploadFile' | translate }}
+            </h5>
           </div>
-          <div class="card-body">
+          <div class="card-body upload-body">
             <!-- File Drop Zone -->
             <div
               class="drop-zone"
@@ -90,26 +99,41 @@ import { PageHeaderComponent } from '../../../../shared/components/page-header/p
             </div>
 
             <!-- Manual Entry -->
-            <div class="divider my-4">
+            <div class="divider-premium my-4">
               <span>OR</span>
             </div>
 
-            <div class="mb-3">
-              <label for="idNumbers" class="form-label">Paste ID Numbers (one per line)</label>
+            <div class="mb-4">
+              <label for="idNumbers" class="form-label-premium">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="me-2">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                  <polyline points="14 2 14 8 20 8"></polyline>
+                  <line x1="16" y1="13" x2="8" y2="13"></line>
+                  <line x1="16" y1="17" x2="8" y2="17"></line>
+                </svg>
+                Paste ID Numbers (one per line)
+              </label>
               <textarea
                 id="idNumbers"
-                class="form-control font-monospace"
+                class="form-control font-monospace textarea-premium"
                 rows="6"
                 [(ngModel)]="manualInput"
                 placeholder="8501015009087&#10;9012125009088&#10;7803125009089"
               ></textarea>
-              <div class="form-text">{{ 'verification.maxRecords' | translate }}</div>
+              <div class="form-text-premium">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="me-1">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="16" x2="12" y2="12"></line>
+                  <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+                {{ 'verification.maxRecords' | translate }}
+              </div>
             </div>
 
             <!-- Process Button -->
             <button
               type="button"
-              class="btn btn-primary btn-lg w-100"
+              class="btn btn-process-premium btn-lg w-100"
               [disabled]="(!selectedFile && !manualInput) || processing || asyncProcessing"
               (click)="processVerification()"
             >
@@ -130,64 +154,104 @@ import { PageHeaderComponent } from '../../../../shared/components/page-header/p
 
             <!-- Async Processing Progress -->
             @if (asyncProcessing && batchStatus) {
-              <div class="mt-4">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                  <span class="text-muted small">{{ 'batch.progress' | translate }}</span>
-                  <span class="badge" [ngClass]="{
-                    'bg-secondary': batchStatus.status === 'PENDING',
-                    'bg-primary': batchStatus.status === 'PROCESSING',
-                    'bg-success': batchStatus.status === 'COMPLETED',
-                    'bg-warning text-dark': batchStatus.status === 'PARTIAL',
-                    'bg-danger': batchStatus.status === 'FAILED'
+              <div class="progress-section-premium mt-4">
+                <div class="progress-header-premium">
+                  <div class="d-flex align-items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="progress-header-icon">
+                      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                    </svg>
+                    <span class="progress-header-label">{{ 'batch.progress' | translate }}</span>
+                  </div>
+                  <span class="progress-status-badge" [ngClass]="{
+                    'status-pending': batchStatus.status === 'PENDING',
+                    'status-processing': batchStatus.status === 'PROCESSING',
+                    'status-completed': batchStatus.status === 'COMPLETED',
+                    'status-partial': batchStatus.status === 'PARTIAL',
+                    'status-failed': batchStatus.status === 'FAILED'
                   }">
                     {{ batchStatus.status }}
                   </span>
                 </div>
-                <div class="progress" style="height: 8px;">
+                <div class="progress-bar-wrapper-premium">
                   <div
-                    class="progress-bar progress-bar-striped progress-bar-animated"
-                    [ngClass]="{
-                      'bg-primary': batchStatus.status === 'PROCESSING',
-                      'bg-success': batchStatus.status === 'COMPLETED',
-                      'bg-warning': batchStatus.status === 'PARTIAL',
-                      'bg-danger': batchStatus.status === 'FAILED'
-                    }"
+                    class="progress-bar-premium"
                     role="progressbar"
                     [style.width.%]="batchStatus.progressPercent"
                     [attr.aria-valuenow]="batchStatus.progressPercent"
                     aria-valuemin="0"
                     aria-valuemax="100"
+                    [ngClass]="{
+                      'bg-processing': batchStatus.status === 'PROCESSING',
+                      'bg-completed': batchStatus.status === 'COMPLETED',
+                      'bg-partial': batchStatus.status === 'PARTIAL',
+                      'bg-failed': batchStatus.status === 'FAILED'
+                    }"
                   ></div>
                 </div>
                 <div class="d-flex justify-content-between mt-2">
-                  <small class="text-muted">{{ batchStatus.processedCount }} / {{ batchStatus.totalItems }} processed</small>
-                  <small class="text-muted">{{ batchStatus.progressPercent }}%</small>
+                  <small class="progress-text">{{ batchStatus.processedCount }} / {{ batchStatus.totalItems }} processed</small>
+                  <small class="progress-text progress-percentage">{{ batchStatus.progressPercent }}%</small>
                 </div>
 
                 <!-- Live Stats -->
-                <div class="row g-2 mt-3">
+                <div class="row g-2 mt-4">
                   <div class="col-3">
-                    <div class="mini-stat text-success">
-                      <span class="mini-stat-value">{{ batchStatus.greenCount }}</span>
-                      <span class="mini-stat-label">Green</span>
+                    <div class="mini-stat-premium mini-stat-success">
+                      <div class="mini-stat-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                          <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                        </svg>
+                      </div>
+                      <div class="mini-stat-content">
+                        <span class="mini-stat-value">{{ batchStatus.greenCount }}</span>
+                        <span class="mini-stat-label">Green</span>
+                      </div>
                     </div>
                   </div>
                   <div class="col-3">
-                    <div class="mini-stat text-warning">
-                      <span class="mini-stat-value">{{ batchStatus.yellowCount }}</span>
-                      <span class="mini-stat-label">Yellow</span>
+                    <div class="mini-stat-premium mini-stat-warning">
+                      <div class="mini-stat-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                          <line x1="12" y1="9" x2="12" y2="13"></line>
+                          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                        </svg>
+                      </div>
+                      <div class="mini-stat-content">
+                        <span class="mini-stat-value">{{ batchStatus.yellowCount }}</span>
+                        <span class="mini-stat-label">Yellow</span>
+                      </div>
                     </div>
                   </div>
                   <div class="col-3">
-                    <div class="mini-stat text-danger">
-                      <span class="mini-stat-value">{{ batchStatus.redCount }}</span>
-                      <span class="mini-stat-label">Red</span>
+                    <div class="mini-stat-premium mini-stat-danger">
+                      <div class="mini-stat-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <circle cx="12" cy="12" r="10"></circle>
+                          <line x1="15" y1="9" x2="9" y2="15"></line>
+                          <line x1="9" y1="9" x2="15" y2="15"></line>
+                        </svg>
+                      </div>
+                      <div class="mini-stat-content">
+                        <span class="mini-stat-value">{{ batchStatus.redCount }}</span>
+                        <span class="mini-stat-label">Red</span>
+                      </div>
                     </div>
                   </div>
                   <div class="col-3">
-                    <div class="mini-stat text-secondary">
-                      <span class="mini-stat-value">{{ batchStatus.failedCount }}</span>
-                      <span class="mini-stat-label">Failed</span>
+                    <div class="mini-stat-premium mini-stat-secondary">
+                      <div class="mini-stat-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <circle cx="12" cy="12" r="10"></circle>
+                          <line x1="12" y1="8" x2="12" y2="12"></line>
+                          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                        </svg>
+                      </div>
+                      <div class="mini-stat-content">
+                        <span class="mini-stat-value">{{ batchStatus.failedCount }}</span>
+                        <span class="mini-stat-label">Failed</span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -266,99 +330,146 @@ import { PageHeaderComponent } from '../../../../shared/components/page-header/p
       <!-- Results Section -->
       <div class="col-lg-7">
         @if (result || asyncResults.length > 0) {
-          <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-              <h5 class="card-title mb-0">{{ 'verification.result' | translate }}</h5>
-              <div class="d-flex gap-2">
-                <button class="btn btn-sm btn-outline-primary" (click)="exportResults()">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="me-1">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                    <polyline points="7 10 12 15 17 10"></polyline>
-                    <line x1="12" y1="15" x2="12" y2="3"></line>
-                  </svg>
-                  Export
-                </button>
-                <button class="btn btn-sm btn-outline-secondary" (click)="clearResults()">
-                  Clear
-                </button>
+          <div class="card results-card">
+            <div class="card-header results-header">
+              <div class="d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                  <span class="card-title__icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                      <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                    </svg>
+                  </span>
+                  {{ 'verification.result' | translate }}
+                </h5>
+                <div class="d-flex gap-2">
+                  <button class="btn btn-sm btn-outline-primary" (click)="exportResults()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="me-1">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                      <polyline points="7 10 12 15 17 10"></polyline>
+                      <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    Export
+                  </button>
+                  <button class="btn btn-sm btn-outline-secondary" (click)="clearResults()">
+                    Clear
+                  </button>
+                </div>
               </div>
             </div>
-            <div class="card-body">
+            <div class="card-body results-body">
               <!-- Summary Stats -->
-              <div class="row g-3 mb-4">
+              <div class="row g-4 mb-4">
                 <div class="col-6 col-md-3">
-                  <div class="stat-box">
-                    <span class="stat-value">{{ getTotalProcessed() }}</span>
-                    <span class="stat-label">{{ 'verification.totalProcessed' | translate }}</span>
+                  <div class="stat-card-batch">
+                    <div class="stat-card__icon">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                      </svg>
+                    </div>
+                    <div class="stat-card__content">
+                      <span class="stat-card__label">{{ 'verification.totalProcessed' | translate }}</span>
+                      <div class="stat-card__value-row">
+                        <span class="stat-card__value">{{ getTotalProcessed() }}</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
                 <div class="col-6 col-md-3">
-                  <div class="stat-box stat-green">
-                    <span class="stat-value">{{ getTotalGreen() }}</span>
-                    <span class="stat-label">Green (Clear)</span>
+                  <div class="stat-card-batch stat-card-batch--success">
+                    <div class="stat-card__icon">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                        <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                      </svg>
+                    </div>
+                    <div class="stat-card__content">
+                      <span class="stat-card__label">Green (Clear)</span>
+                      <div class="stat-card__value-row">
+                        <span class="stat-card__value">{{ getTotalGreen() }}</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
                 <div class="col-6 col-md-3">
-                  <div class="stat-box stat-amber">
-                    <span class="stat-value">{{ getTotalYellow() }}</span>
-                    <span class="stat-label">Yellow (Review)</span>
+                  <div class="stat-card-batch stat-card-batch--warning">
+                    <div class="stat-card__icon">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                        <line x1="12" y1="9" x2="12" y2="13"></line>
+                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                      </svg>
+                    </div>
+                    <div class="stat-card__content">
+                      <span class="stat-card__label">Yellow (Review)</span>
+                      <div class="stat-card__value-row">
+                        <span class="stat-card__value">{{ getTotalYellow() }}</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
                 <div class="col-6 col-md-3">
-                  <div class="stat-box stat-red">
-                    <span class="stat-value">{{ getTotalRed() }}</span>
-                    <span class="stat-label">Red (Blocked)</span>
+                  <div class="stat-card-batch stat-card-batch--danger">
+                    <div class="stat-card__icon">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="15" y1="9" x2="9" y2="15"></line>
+                        <line x1="9" y1="9" x2="15" y2="15"></line>
+                      </svg>
+                    </div>
+                    <div class="stat-card__content">
+                      <span class="stat-card__label">Red (Blocked)</span>
+                      <div class="stat-card__value-row">
+                        <span class="stat-card__value">{{ getTotalRed() }}</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
 
               <!-- Filter Tabs -->
-              <ul class="nav nav-tabs mb-3" role="tablist">
-                <li class="nav-item" role="presentation">
-                  <button
-                    class="nav-link"
-                    [class.active]="activeFilter === 'all'"
-                    (click)="setFilter('all')"
-                    type="button"
-                  >
-                    All ({{ getAllResults().length }})
-                  </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                  <button
-                    class="nav-link"
-                    [class.active]="activeFilter === 'GREEN'"
-                    (click)="setFilter('GREEN')"
-                    type="button"
-                  >
-                    <span class="badge bg-success me-1">{{ getTotalGreen() }}</span> Green
-                  </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                  <button
-                    class="nav-link"
-                    [class.active]="activeFilter === 'YELLOW'"
-                    (click)="setFilter('YELLOW')"
-                    type="button"
-                  >
-                    <span class="badge bg-warning text-dark me-1">{{ getTotalYellow() }}</span> Yellow
-                  </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                  <button
-                    class="nav-link"
-                    [class.active]="activeFilter === 'RED'"
-                    (click)="setFilter('RED')"
-                    type="button"
-                  >
-                    <span class="badge bg-danger me-1">{{ getTotalRed() }}</span> Red
-                  </button>
-                </li>
-              </ul>
+              <div class="filter-tabs-premium mb-4">
+                <button
+                  class="filter-tab"
+                  [class.active]="activeFilter === 'all'"
+                  (click)="setFilter('all')"
+                  type="button"
+                >
+                  <span class="filter-tab-badge">{{ getAllResults().length }}</span>
+                  <span class="filter-tab-label">All</span>
+                </button>
+                <button
+                  class="filter-tab filter-tab-green"
+                  [class.active]="activeFilter === 'GREEN'"
+                  (click)="setFilter('GREEN')"
+                  type="button"
+                >
+                  <span class="filter-tab-badge">{{ getTotalGreen() }}</span>
+                  <span class="filter-tab-label">Green</span>
+                </button>
+                <button
+                  class="filter-tab filter-tab-yellow"
+                  [class.active]="activeFilter === 'YELLOW'"
+                  (click)="setFilter('YELLOW')"
+                  type="button"
+                >
+                  <span class="filter-tab-badge">{{ getTotalYellow() }}</span>
+                  <span class="filter-tab-label">Yellow</span>
+                </button>
+                <button
+                  class="filter-tab filter-tab-red"
+                  [class.active]="activeFilter === 'RED'"
+                  (click)="setFilter('RED')"
+                  type="button"
+                >
+                  <span class="filter-tab-badge">{{ getTotalRed() }}</span>
+                  <span class="filter-tab-label">Red</span>
+                </button>
+              </div>
 
               <!-- Results Table -->
-              <div class="table-responsive">
-                <table class="table table-hover">
+              <div class="table-responsive table-premium-wrapper">
+                <table class="table table-premium">
                   <thead>
                     <tr>
                       <th>#</th>
@@ -374,7 +485,7 @@ import { PageHeaderComponent } from '../../../../shared/components/page-header/p
                         <td><code>{{ maskIdNumber(item.idNumber) }}</code></td>
                         <td>
                           <span
-                            class="badge"
+                            class="badge status-badge-premium"
                             [class.bg-success]="item.status === 'GREEN'"
                             [class.bg-warning]="item.status === 'YELLOW' || item.status === 'AMBER'"
                             [class.text-dark]="item.status === 'YELLOW' || item.status === 'AMBER'"
@@ -409,18 +520,18 @@ import { PageHeaderComponent } from '../../../../shared/components/page-header/p
           </div>
         } @else {
           <!-- Placeholder -->
-          <div class="card h-100">
+          <div class="card placeholder-card h-100">
             <div class="card-body d-flex flex-column justify-content-center align-items-center text-center py-5">
-              <div class="placeholder-icon mb-3">
-                <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-muted">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                  <polyline points="14 2 14 8 20 8"></polyline>
-                  <line x1="16" y1="13" x2="8" y2="13"></line>
-                  <line x1="16" y1="17" x2="8" y2="17"></line>
-                </svg>
+              <div class="placeholder-icon-premium mb-4">
+                <div class="placeholder-icon-circle">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-muted">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                  </svg>
+                </div>
               </div>
-              <h5 class="text-muted">Upload a File or Paste IDs</h5>
-              <p class="text-secondary mb-0">
+              <h5 class="placeholder-title">Upload a File or Paste IDs</h5>
+              <p class="placeholder-text mb-0">
                 Batch verification results will appear here
               </p>
             </div>
@@ -430,34 +541,116 @@ import { PageHeaderComponent } from '../../../../shared/components/page-header/p
     </div>
   `,
   styles: [`
+    // Premium Upload Card
+    .upload-card {
+      border: 1px solid rgba(0, 0, 0, 0.06);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      overflow: hidden;
+    }
+
+    .upload-header {
+      background: linear-gradient(135deg, rgba(0, 133, 80, 0.04) 0%, rgba(0, 133, 80, 0.01) 100%);
+      border-bottom: 1px solid rgba(0, 133, 80, 0.1);
+      padding: 1.25rem 1.5rem;
+      position: relative;
+
+      &::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 1.5rem;
+        right: 1.5rem;
+        height: 1px;
+        background: rgba(0, 133, 80, 0.15);
+      }
+
+      .card-title {
+        display: flex;
+        align-items: center;
+        gap: 0.625rem;
+        font-size: 1.125rem;
+        color: var(--seta-text-primary, #212529);
+      }
+
+      .card-title__icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border-radius: 0.5rem;
+        background: rgba(0, 133, 80, 0.1);
+        color: var(--seta-primary, #008550);
+        flex-shrink: 0;
+
+        svg {
+          width: 18px;
+          height: 18px;
+        }
+      }
+    }
+
+    .upload-body {
+      padding: 1.75rem 1.5rem;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 1) 0%, rgba(248, 249, 250, 0.5) 100%);
+    }
+
     .drop-zone {
-      border: 2px dashed var(--bs-border-color);
-      border-radius: 0.5rem;
-      padding: 2rem;
+      border: 2px dashed rgba(0, 133, 80, 0.3);
+      border-radius: 0.75rem;
+      padding: 2.5rem 2rem;
       text-align: center;
       cursor: pointer;
-      transition: all 0.2s ease;
+      transition: all 0.3s ease;
+      background: linear-gradient(135deg, rgba(0, 133, 80, 0.02) 0%, rgba(0, 133, 80, 0.01) 100%);
+      position: relative;
+      overflow: hidden;
+
+      &::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(0, 133, 80, 0.1) 0%, transparent 70%);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
+
+      &:hover::before, &.dragover::before {
+        opacity: 1;
+      }
 
       &:hover, &.dragover {
-        border-color: var(--seta-primary, var(--bs-primary));
-        background: rgba(var(--bs-primary-rgb), 0.05);
+        border-color: var(--seta-primary, #008550);
+        background: linear-gradient(135deg, rgba(0, 133, 80, 0.08) 0%, rgba(0, 133, 80, 0.04) 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 133, 80, 0.15);
       }
 
       &.has-file {
         border-style: solid;
-        border-color: var(--bs-success);
-        background: rgba(25, 135, 84, 0.05);
+        border-color: var(--bs-success, #198754);
+        background: linear-gradient(135deg, rgba(25, 135, 84, 0.08) 0%, rgba(25, 135, 84, 0.04) 100%);
       }
     }
 
     .drop-zone__icon {
-      color: var(--bs-secondary);
-      margin-bottom: 0.5rem;
+      color: var(--seta-primary, #008550);
+      margin-bottom: 1rem;
+      transition: transform 0.3s ease;
+    }
+
+    .drop-zone:hover .drop-zone__icon,
+    .drop-zone.dragover .drop-zone__icon {
+      transform: translateY(-4px);
     }
 
     .drop-zone__text {
-      font-weight: 500;
-      color: var(--bs-dark);
+      font-weight: 600;
+      color: var(--seta-text-primary, #212529);
+      font-size: 1rem;
     }
 
     .drop-zone__file {
@@ -465,6 +658,9 @@ import { PageHeaderComponent } from '../../../../shared/components/page-header/p
       align-items: center;
       gap: 1rem;
       text-align: left;
+      padding: 1rem;
+      background: rgba(255, 255, 255, 0.8);
+      border-radius: 0.5rem;
     }
 
     .file-info {
@@ -474,118 +670,662 @@ import { PageHeaderComponent } from '../../../../shared/components/page-header/p
 
     .file-name {
       display: block;
-      font-weight: 500;
+      font-weight: 600;
+      color: var(--seta-text-primary, #212529);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
 
-    .divider {
+    .divider-premium {
       display: flex;
       align-items: center;
       color: var(--bs-secondary);
+      margin: 1.5rem 0;
 
       &::before, &::after {
         content: '';
         flex: 1;
         height: 1px;
-        background: var(--bs-border-color);
+        background: linear-gradient(90deg, transparent 0%, rgba(0, 0, 0, 0.1) 50%, transparent 100%);
       }
 
       span {
-        padding: 0 1rem;
-        font-size: 0.75rem;
+        padding: 0 1.5rem;
+        font-size: 0.8125rem;
         text-transform: uppercase;
-        letter-spacing: 1px;
+        letter-spacing: 0.1em;
+        font-weight: 600;
+        color: var(--bs-secondary);
       }
     }
 
-    textarea.font-monospace {
+    .form-label-premium {
+      display: flex;
+      align-items: center;
+      font-weight: 600;
+      color: var(--seta-text-primary, #212529);
+      margin-bottom: 0.75rem;
+      font-size: 0.9375rem;
+
+      svg {
+        color: var(--seta-primary, #008550);
+        opacity: 0.7;
+      }
+    }
+
+    .textarea-premium {
+      border: 2px solid rgba(0, 0, 0, 0.08);
+      border-radius: 0.625rem;
+      padding: 1rem;
       font-size: 0.875rem;
       line-height: 1.6;
+      transition: all 0.2s ease;
+      background: #ffffff;
+
+      &:focus {
+        border-color: var(--seta-primary, #008550);
+        box-shadow: 0 0 0 4px rgba(0, 133, 80, 0.1);
+        outline: none;
+      }
     }
 
-    .stat-box {
+    .form-text-premium {
       display: flex;
-      flex-direction: column;
       align-items: center;
-      padding: 1rem;
-      background: var(--bs-light);
-      border-radius: 0.5rem;
-      text-align: center;
-    }
-
-    .stat-value {
-      font-size: 1.5rem;
-      font-weight: 700;
-    }
-
-    .stat-label {
-      font-size: 0.75rem;
-      color: var(--bs-secondary);
-    }
-
-    .stat-green {
-      background: rgba(25, 135, 84, 0.1);
-      .stat-value { color: var(--bs-success); }
-    }
-
-    .stat-amber {
-      background: rgba(255, 193, 7, 0.15);
-      .stat-value { color: #856404; }
-    }
-
-    .stat-red {
-      background: rgba(220, 53, 69, 0.1);
-      .stat-value { color: var(--bs-danger); }
-    }
-
-    .nav-tabs .nav-link {
-      font-size: 0.875rem;
-    }
-
-    table code {
+      margin-top: 0.5rem;
       font-size: 0.8125rem;
-      background: var(--bs-light);
-      padding: 0.125rem 0.375rem;
-      border-radius: 0.25rem;
+      color: var(--bs-secondary);
+
+      svg {
+        color: var(--bs-secondary);
+        opacity: 0.6;
+      }
     }
 
-    .placeholder-icon {
-      opacity: 0.3;
+    .btn-process-premium {
+      background: linear-gradient(135deg, var(--seta-primary, #008550) 0%, var(--seta-primary-dark, #006640) 100%);
+      border: none;
+      color: #fff;
+      font-weight: 600;
+      padding: 1rem 2rem;
+      border-radius: 0.75rem;
+      box-shadow: 0 4px 12px rgba(0, 133, 80, 0.3);
+      transition: all 0.3s ease;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-size: 0.9375rem;
+
+      &:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0, 133, 80, 0.4);
+        background: linear-gradient(135deg, var(--seta-primary-light, #00a866) 0%, var(--seta-primary, #008550) 100%);
+      }
+
+      &:active:not(:disabled) {
+        transform: translateY(0);
+      }
+
+      &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
     }
 
-    .mini-stat {
+    // Premium Results Card
+    .results-card {
+      border: 1px solid rgba(0, 0, 0, 0.06);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      overflow: hidden;
+    }
+
+    .results-header {
+      background: linear-gradient(135deg, rgba(0, 133, 80, 0.04) 0%, rgba(0, 133, 80, 0.01) 100%);
+      border-bottom: 1px solid rgba(0, 133, 80, 0.1);
+      padding: 1.25rem 1.5rem;
+      position: relative;
+
+      &::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 1.5rem;
+        right: 1.5rem;
+        height: 1px;
+        background: rgba(0, 133, 80, 0.15);
+      }
+
+      .card-title {
+        display: flex;
+        align-items: center;
+        gap: 0.625rem;
+        font-size: 1.125rem;
+        color: var(--seta-text-primary, #212529);
+      }
+
+      .card-title__icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border-radius: 0.5rem;
+        background: rgba(0, 133, 80, 0.1);
+        color: var(--seta-primary, #008550);
+        flex-shrink: 0;
+
+        svg {
+          width: 18px;
+          height: 18px;
+        }
+      }
+    }
+
+    .results-body {
+      padding: 1.75rem 1.5rem;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 1) 0%, rgba(248, 249, 250, 0.5) 100%);
+    }
+
+    // Dashboard-style Stat Cards
+    .stat-card-batch {
+      position: relative;
       display: flex;
       flex-direction: column;
+      padding: 1.5rem;
+      background: var(--bs-white);
+      border-radius: 0.75rem;
+      border: 1px solid rgba(0, 0, 0, 0.06);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      transition: box-shadow 0.2s ease, transform 0.2s ease;
+      height: 100%;
+      width: 100%;
+      box-sizing: border-box;
+      overflow: visible;
+
+      &:hover {
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+        transform: translateY(-2px);
+      }
+    }
+
+    .stat-card-batch .stat-card__icon {
+      position: absolute;
+      top: -8px;
+      left: 1.5rem;
+      display: flex;
       align-items: center;
+      justify-content: center;
+      width: 56px;
+      height: 56px;
+      border-radius: 0.75rem;
+      flex-shrink: 0;
+      background: var(--seta-primary, #008550);
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
+      color: var(--bs-white);
+      transition: box-shadow 0.2s ease;
+      z-index: 2;
+
+      svg {
+        width: 24px;
+        height: 24px;
+      }
+    }
+
+    .stat-card-batch:hover .stat-card__icon {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .stat-card-batch--success .stat-card__icon,
+    .stat-card-batch--warning .stat-card__icon,
+    .stat-card-batch--danger .stat-card__icon {
+      background: var(--seta-primary, #008550);
+    }
+
+    .stat-card-batch--success .stat-card__icon {
+      background: var(--bs-success, #198754);
+    }
+
+    .stat-card-batch--warning .stat-card__icon {
+      background: var(--bs-warning, #ffc107);
+    }
+
+    .stat-card-batch--danger .stat-card__icon {
+      background: var(--bs-danger, #dc3545);
+    }
+
+    .stat-card-batch .stat-card__content {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      text-align: left;
+      margin-top: 1.5rem;
+      padding-top: 0.75rem;
+      position: relative;
+      z-index: 0;
+    }
+
+    .stat-card-batch .stat-card__label {
+      display: block;
+      font-size: 0.9375rem;
+      font-weight: 600;
+      color: var(--bs-secondary, #6c757d);
+      margin-bottom: 0.75rem;
+      line-height: 1.4;
+    }
+
+    .stat-card-batch .stat-card__value-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: flex-start;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .stat-card-batch .stat-card__value {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: var(--bs-dark, #212529);
+      line-height: 1.2;
+      letter-spacing: -0.02em;
+    }
+
+    // Premium Filter Tabs
+    .filter-tabs-premium {
+      display: flex;
+      gap: 0.75rem;
       padding: 0.5rem;
-      background: var(--bs-light);
+      background: #f8f9fa;
+      border-radius: 0.625rem;
+      flex-wrap: wrap;
+    }
+
+    .filter-tab {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.625rem 1rem;
+      background: #ffffff;
+      border: 2px solid transparent;
+      border-radius: 0.5rem;
+      font-weight: 600;
+      font-size: 0.875rem;
+      color: var(--seta-text-primary, #212529);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      flex: 1;
+      min-width: 0;
+      justify-content: center;
+
+      &:hover:not(.active) {
+        background: rgba(0, 133, 80, 0.05);
+        border-color: rgba(0, 133, 80, 0.1);
+      }
+
+      &.active {
+        background: var(--seta-primary, #008550);
+        border-color: var(--seta-primary, #008550);
+        color: #fff;
+        box-shadow: 0 2px 8px rgba(0, 133, 80, 0.3);
+      }
+
+      &.filter-tab-green.active {
+        background: var(--bs-success, #198754);
+        border-color: var(--bs-success, #198754);
+      }
+
+      &.filter-tab-yellow.active {
+        background: #ffc107;
+        border-color: #ffc107;
+        color: #212529;
+      }
+
+      &.filter-tab-red.active {
+        background: var(--bs-danger, #dc3545);
+        border-color: var(--bs-danger, #dc3545);
+      }
+    }
+
+    .filter-tab-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 24px;
+      height: 24px;
+      padding: 0 0.5rem;
+      background: rgba(0, 0, 0, 0.1);
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      transition: all 0.2s ease;
+    }
+
+    .filter-tab.active .filter-tab-badge {
+      background: rgba(255, 255, 255, 0.3);
+      color: inherit;
+    }
+
+    .filter-tab-label {
+      white-space: nowrap;
+    }
+
+    // Premium Table
+    .table-premium-wrapper {
+      border-radius: 0.625rem;
+      overflow: hidden;
+      border: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    .table-premium {
+      margin-bottom: 0;
+      background: #ffffff;
+
+      thead {
+        background: linear-gradient(135deg, rgba(0, 133, 80, 0.04) 0%, rgba(0, 133, 80, 0.01) 100%);
+
+        th {
+          font-weight: 600;
+          font-size: 0.8125rem;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          color: var(--seta-text-primary, #212529);
+          padding: 1rem;
+          border-bottom: 2px solid rgba(0, 133, 80, 0.1);
+        }
+      }
+
+      tbody {
+        tr {
+          transition: all 0.2s ease;
+          border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+
+          &:hover {
+            background: rgba(0, 133, 80, 0.03);
+            transform: scale(1.01);
+          }
+
+          td {
+            padding: 1rem;
+            vertical-align: middle;
+          }
+        }
+      }
+    }
+
+    .table-premium code {
+      font-size: 0.8125rem;
+      background: rgba(0, 0, 0, 0.05);
+      padding: 0.375rem 0.625rem;
       border-radius: 0.375rem;
+      font-weight: 500;
+      color: var(--seta-text-primary, #212529);
+    }
+
+    .status-badge-premium {
+      display: inline-block;
+      min-width: 70px;
       text-align: center;
+      padding: 0.375rem 0.75rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.025em;
+      border-radius: 0.375rem;
+    }
+
+    .placeholder-card {
+      border: 1px solid rgba(0, 0, 0, 0.06);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    .placeholder-icon-premium {
+      position: relative;
+    }
+
+    .placeholder-icon-circle {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, rgba(0, 133, 80, 0.08) 0%, rgba(0, 133, 80, 0.04) 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+      50% {
+        opacity: 0.8;
+        transform: scale(1.05);
+      }
+    }
+
+    .placeholder-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--seta-text-primary, #212529);
+      margin-bottom: 0.5rem;
+    }
+
+    .placeholder-text {
+      font-size: 0.9375rem;
+      color: var(--bs-secondary, #6c757d);
+    }
+
+    // Premium Progress Section
+    .progress-section-premium {
+      padding: 1.5rem;
+      background: #ffffff;
+      border: 1px solid rgba(0, 0, 0, 0.05);
+      border-radius: 0.625rem;
+    }
+
+    .progress-header-premium {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .progress-header-label {
+      font-size: 0.9375rem;
+      font-weight: 600;
+      color: var(--seta-text-primary, #212529);
+    }
+
+    .progress-header-icon {
+      color: var(--seta-primary, #008550);
+    }
+
+    .progress-status-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.375rem 0.75rem;
+      border-radius: 0.5rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+
+      &.status-pending {
+        background: rgba(108, 117, 125, 0.15);
+        color: var(--bs-secondary, #6c757d);
+      }
+
+      &.status-processing {
+        background: rgba(0, 133, 80, 0.15);
+        color: var(--seta-primary, #008550);
+      }
+
+      &.status-completed {
+        background: rgba(25, 135, 84, 0.15);
+        color: var(--bs-success, #198754);
+      }
+
+      &.status-partial {
+        background: rgba(255, 193, 7, 0.2);
+        color: #856404;
+      }
+
+      &.status-failed {
+        background: rgba(220, 53, 69, 0.15);
+        color: var(--bs-danger, #dc3545);
+      }
+    }
+
+    .progress-bar-wrapper-premium {
+      width: 100%;
+      height: 12px;
+      background: #e9ecef;
+      border-radius: 6px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .progress-bar-premium {
+      height: 100%;
+      border-radius: 6px;
+      transition: width 0.6s ease;
+      position: relative;
+      overflow: hidden;
+
+      &.bg-processing {
+        background: linear-gradient(90deg, var(--seta-primary, #008550) 0%, var(--seta-primary-light, #00a866) 100%);
+      }
+
+      &.bg-completed {
+        background: linear-gradient(90deg, var(--bs-success, #198754) 0%, #20c997 100%);
+      }
+
+      &.bg-partial {
+        background: linear-gradient(90deg, #ffc107 0%, #ffca2c 100%);
+      }
+
+      &.bg-failed {
+        background: linear-gradient(90deg, var(--bs-danger, #dc3545) 0%, #e4606d 100%);
+      }
+
+      &::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        right: 0;
+        background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.3) 50%, transparent 100%);
+        animation: shimmer 2s infinite;
+      }
+    }
+
+    @keyframes shimmer {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+
+    .progress-text {
+      font-size: 0.8125rem;
+      color: var(--bs-secondary, #6c757d);
+      font-weight: 500;
+    }
+
+    .progress-percentage {
+      font-weight: 700;
+      color: var(--seta-primary, #008550);
+    }
+
+    .mini-stat-premium {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.875rem;
+      background: #ffffff;
+      border: 1px solid rgba(0, 0, 0, 0.05);
+      border-radius: 0.5rem;
+      transition: all 0.2s ease;
+
+      &:hover {
+        border-color: rgba(0, 133, 80, 0.15);
+        box-shadow: 0 2px 6px rgba(0, 133, 80, 0.08);
+      }
+    }
+
+    .mini-stat-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border-radius: 0.375rem;
+      flex-shrink: 0;
+    }
+
+    .mini-stat-success .mini-stat-icon {
+      background: rgba(25, 135, 84, 0.1);
+      color: var(--bs-success, #198754);
+    }
+
+    .mini-stat-warning .mini-stat-icon {
+      background: rgba(255, 193, 7, 0.15);
+      color: #ffc107;
+    }
+
+    .mini-stat-danger .mini-stat-icon {
+      background: rgba(220, 53, 69, 0.1);
+      color: var(--bs-danger, #dc3545);
+    }
+
+    .mini-stat-secondary .mini-stat-icon {
+      background: rgba(108, 117, 125, 0.1);
+      color: var(--bs-secondary, #6c757d);
+    }
+
+    .mini-stat-content {
+      display: flex;
+      flex-direction: column;
+      gap: 0.125rem;
+      flex: 1;
+      min-width: 0;
     }
 
     .mini-stat-value {
-      font-size: 1.25rem;
+      font-size: 1.125rem;
       font-weight: 700;
+      line-height: 1.2;
+    }
+
+    .mini-stat-success .mini-stat-value {
+      color: var(--bs-success, #198754);
+    }
+
+    .mini-stat-warning .mini-stat-value {
+      color: #ffc107;
+    }
+
+    .mini-stat-danger .mini-stat-value {
+      color: var(--bs-danger, #dc3545);
+    }
+
+    .mini-stat-secondary .mini-stat-value {
+      color: var(--bs-secondary, #6c757d);
     }
 
     .mini-stat-label {
       font-size: 0.6875rem;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
-      opacity: 0.8;
-    }
-
-    .progress {
-      background-color: var(--bs-gray-200);
+      letter-spacing: 0.05em;
+      font-weight: 600;
+      color: var(--bs-secondary, #6c757d);
     }
 
     .current-activity {
-      padding: 0.75rem;
-      background: var(--bs-light);
-      border-radius: 0.375rem;
-      border-left: 3px solid var(--bs-primary);
+      padding: 0.875rem;
+      background: linear-gradient(135deg, rgba(0, 133, 80, 0.05) 0%, rgba(0, 133, 80, 0.02) 100%);
+      border-radius: 0.5rem;
+      border-left: 3px solid var(--seta-primary, #008550);
     }
 
     .retry-status .alert {

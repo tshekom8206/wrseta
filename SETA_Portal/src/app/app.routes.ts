@@ -180,6 +180,16 @@ export const routes: Routes = [
               import('./views/pages/my-portal/certificates/certificates.component').then(m => m.LearnerCertificatesComponent)
           },
           {
+            path: 'learnerships',
+            loadComponent: () =>
+              import('./views/pages/my-portal/learnerships/learnerships.component').then(m => m.LearnershipsComponent)
+          },
+          {
+            path: 'learnerships/apply/:id',
+            loadComponent: () =>
+              import('./views/pages/my-portal/learnership-apply/learnership-apply.component').then(m => m.LearnershipApplyComponent)
+          },
+          {
             path: '',
             redirectTo: 'status',
             pathMatch: 'full'

@@ -26,7 +26,28 @@ import { PageHeaderComponent } from '../../../../shared/components/page-header/p
       <div class="col-lg-5">
         <div class="card">
           <div class="card-header">
-            <h5 class="card-title mb-0">{{ 'verification.idNumber' | translate }}</h5>
+            <h5 class="card-title mb-0">
+              <span class="card-title__icon">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7"></path>
+                  <path d="M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4"></path>
+                  <path d="M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"></path>
+                  <line x1="9" y1="9" x2="9.01" y2="9"></line>
+                  <line x1="15" y1="9" x2="15.01" y2="9"></line>
+                </svg>
+              </span>
+              {{ 'verification.idNumber' | translate }}
+            </h5>
           </div>
           <div class="card-body">
             <form (ngSubmit)="verify()" #verifyForm="ngForm">
