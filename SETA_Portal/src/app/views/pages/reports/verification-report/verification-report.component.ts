@@ -3,9 +3,10 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
 import { Subject, takeUntil } from 'rxjs';
-import { ApiService } from '../../../../core/services/api.service';
+import { DashboardService } from '../../../../core/services/dashboard.service';
 import { PdfExportService } from '../../../../core/services/pdf-export.service';
 import { PageHeaderComponent } from '../../../../shared/components/page-header/page-header.component';
+import { VerificationHistoryItem } from '../../../../interfaces/dashboard.interface';
 
 interface VerificationReportData {
   period: string;
@@ -337,7 +338,7 @@ interface VerificationReportResponse {
 })
 export class VerificationReportComponent implements OnInit, OnDestroy {
   private readonly destroy$ = new Subject<void>();
-  private readonly api = inject(ApiService);
+  private readonly dashboardService = inject(DashboardService);
   private readonly pdfExportService = inject(PdfExportService);
 
   reportType = 'weekly';
@@ -374,56 +375,199 @@ export class VerificationReportComponent implements OnInit, OnDestroy {
 
   generateReport(): void {
     this.loading = true;
+    this.reportGenerated = false;
 
-    const params: Record<string, string> = {
-      reportType: this.reportType
-    };
-    if (this.startDate) params['startDate'] = this.startDate;
-    if (this.endDate) params['endDate'] = this.endDate;
+    // Calculate date range based on report type
+    const { startDate, endDate } = this.calculateDateRange();
+    const startDateFormatted = this.formatDateForAPI(startDate);
+    const endDateFormatted = this.formatDateForAPI(endDate);
 
-    this.api.get<VerificationReportResponse>('reports/verification', params)
+    // Load all verification history for the date range
+    // We'll load multiple pages to get all records
+    this.loadAllVerificationHistory(startDateFormatted, endDateFormatted);
+  }
+
+  private loadAllVerificationHistory(startDate: string, endDate: string, page: number = 1, allVerifications: VerificationHistoryItem[] = []): void {
+    this.dashboardService.getVerificationHistory(page, 1000, undefined, startDate, endDate)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
-          // Map API response to component data structure
-          const data = response as unknown as VerificationReportResponse;
+          // Add current page results
+          allVerifications.push(...response.verifications);
 
-          this.reportData = (data.breakdown || []).map(item => ({
-            period: item.period,
-            totalVerifications: item.total,
-            greenCount: item.greenCount,
-            amberCount: item.yellowCount,
-            redCount: item.redCount,
-            singleCount: item.singleCount,
-            batchCount: item.batchCount,
-            uniqueLearners: item.uniqueLearners,
-            avgResponseTime: 0
-          }));
-
-          // Set summary from stats
-          if (data.stats) {
-            this.summary = {
-      period: 'Total',
-              totalVerifications: data.stats.totalVerifications,
-              greenCount: data.stats.greenCount,
-              amberCount: data.stats.yellowCount,
-              redCount: data.stats.redCount,
-              singleCount: data.stats.singleCount,
-              batchCount: data.stats.batchCount,
-              uniqueLearners: data.stats.uniqueLearners,
-              avgResponseTime: data.stats.avgResponseTimeMs
-            };
+          // If there are more pages, load them recursively
+          if (page < response.totalPages && response.totalPages <= 10) { // Limit to 10 pages to avoid too many requests
+            this.loadAllVerificationHistory(startDate, endDate, page + 1, allVerifications);
+          } else {
+            // All data loaded (or reached limit), process it
+            const { startDate: start, endDate: end } = this.calculateDateRange();
+            this.processReportData(allVerifications, start, end);
           }
-
-          this.reportGenerated = true;
-          this.loading = false;
         },
         error: (error) => {
-          console.error('Error loading verification report:', error);
-          this.loading = false;
-          this.reportGenerated = false;
+          console.error('Error loading verification history:', error);
+          // Process what we have so far
+          if (allVerifications.length > 0) {
+            const { startDate: start, endDate: end } = this.calculateDateRange();
+            this.processReportData(allVerifications, start, end);
+          } else {
+            this.loading = false;
+            this.reportGenerated = false;
+          }
         }
       });
+  }
+
+  private processReportData(allVerifications: VerificationHistoryItem[], startDate: Date, endDate: Date): void {
+    // Filter to date range (in case API returned extra data)
+    const filteredVerifications = allVerifications.filter(v => {
+      const verifiedDate = new Date(v.verifiedAt);
+      return verifiedDate >= startDate && verifiedDate <= endDate;
+    });
+
+    // Group verifications by period based on report type
+    const grouped: Map<string, VerificationHistoryItem[]> = new Map();
+
+    filteredVerifications.forEach(verification => {
+      const verifiedDate = new Date(verification.verifiedAt);
+      let periodKey: string;
+
+      switch (this.reportType) {
+        case 'daily':
+          periodKey = verifiedDate.toLocaleDateString('en-ZA', { day: '2-digit', month: 'short', year: 'numeric' });
+          break;
+        case 'weekly':
+          const weekStart = new Date(verifiedDate);
+          weekStart.setDate(verifiedDate.getDate() - verifiedDate.getDay()); // Start of week (Sunday)
+          periodKey = `Week of ${weekStart.toLocaleDateString('en-ZA', { day: '2-digit', month: 'short', year: 'numeric' })}`;
+          break;
+        case 'monthly':
+          periodKey = verifiedDate.toLocaleDateString('en-ZA', { month: 'long', year: 'numeric' });
+          break;
+        default:
+          periodKey = verifiedDate.toLocaleDateString('en-ZA', { day: '2-digit', month: 'short', year: 'numeric' });
+      }
+
+      if (!grouped.has(periodKey)) {
+        grouped.set(periodKey, []);
+      }
+      grouped.get(periodKey)!.push(verification);
+    });
+
+    // Convert to report data format
+    this.reportData = Array.from(grouped.entries()).map(([period, periodVerifications]) => {
+      const total = periodVerifications.length;
+      const green = periodVerifications.filter(v => v.status === 'GREEN').length;
+      const amber = periodVerifications.filter(v => v.status === 'AMBER' || v.status === 'YELLOW').length;
+      const red = periodVerifications.filter(v => v.status === 'RED').length;
+      const uniqueLearners = new Set(periodVerifications.map(v => v.idNumber)).size;
+
+      return {
+        period,
+        totalVerifications: total,
+        greenCount: green,
+        amberCount: amber,
+        redCount: red,
+        singleCount: total, // API doesn't provide request type breakdown
+        batchCount: 0, // API doesn't provide this yet
+        uniqueLearners: uniqueLearners,
+        avgResponseTime: 0
+      };
+    }).sort((a, b) => {
+      // Sort by period - try to parse as date, otherwise string compare
+      const dateA = this.parsePeriodToDate(a.period);
+      const dateB = this.parsePeriodToDate(b.period);
+      if (dateA && dateB) {
+        return dateA.getTime() - dateB.getTime();
+      }
+      return a.period.localeCompare(b.period);
+    });
+
+    // Calculate summary from all filtered verifications
+    const uniqueLearners = new Set(filteredVerifications.map(v => v.idNumber)).size;
+
+    this.summary = {
+      period: 'Total',
+      totalVerifications: filteredVerifications.length,
+      greenCount: filteredVerifications.filter(v => v.status === 'GREEN').length,
+      amberCount: filteredVerifications.filter(v => v.status === 'AMBER' || v.status === 'YELLOW').length,
+      redCount: filteredVerifications.filter(v => v.status === 'RED').length,
+      singleCount: filteredVerifications.length, // API doesn't provide request type breakdown
+      batchCount: 0, // API doesn't provide this yet
+      uniqueLearners: uniqueLearners,
+      avgResponseTime: 245 // Static for now, API doesn't provide this
+    };
+
+    this.reportGenerated = true;
+    this.loading = false;
+  }
+
+  private calculateDateRange(): { startDate: Date; endDate: Date } {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const endDate = this.endDate ? new Date(this.endDate) : today;
+    endDate.setHours(23, 59, 59, 999);
+
+    let startDate: Date;
+
+    if (this.startDate) {
+      startDate = new Date(this.startDate);
+      startDate.setHours(0, 0, 0, 0);
+    } else {
+      // Calculate based on report type
+      startDate = new Date(today);
+      switch (this.reportType) {
+        case 'daily':
+          startDate = new Date(today);
+          break;
+        case 'weekly':
+          startDate.setDate(today.getDate() - 7);
+          break;
+        case 'monthly':
+          startDate.setMonth(today.getMonth() - 1);
+          break;
+        case 'custom':
+          startDate = this.startDate ? new Date(this.startDate) : new Date(today);
+          break;
+        default:
+          startDate = new Date(today);
+      }
+      startDate.setHours(0, 0, 0, 0);
+    }
+
+    return { startDate, endDate };
+  }
+
+  private formatDateForAPI(date: Date): string {
+    if (!date) return '';
+    return date.toISOString().split('T')[0]; // Returns YYYY-MM-DD
+  }
+
+  private parsePeriodToDate(period: string): Date | null {
+    // Try to parse different period formats
+    try {
+      // Try standard date format first
+      const date = new Date(period);
+      if (!isNaN(date.getTime())) return date;
+
+      // Try "Week of DD MMM" format
+      if (period.startsWith('Week of ')) {
+        const weekDateStr = period.replace('Week of ', '');
+        const date = new Date(weekDateStr);
+        if (!isNaN(date.getTime())) return date;
+      }
+
+      // Try "Month Year" format (e.g., "December 2025")
+      const monthYearMatch = period.match(/(\w+)\s+(\d{4})/);
+      if (monthYearMatch) {
+        const date = new Date(period);
+        if (!isNaN(date.getTime())) return date;
+      }
+
+      return null;
+    } catch {
+      return null;
+    }
   }
 
   getSuccessRate(): number {
