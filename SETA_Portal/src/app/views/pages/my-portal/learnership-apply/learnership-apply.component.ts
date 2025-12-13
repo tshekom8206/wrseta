@@ -304,8 +304,12 @@ type EnrollmentStep = 'verify' | 'details' | 'confirm';
                     id="firstName"
                     class="form-control"
                     formControlName="firstName"
+                    [disabled]="isFieldDisabled('firstName')"
                     [class.is-invalid]="isFieldInvalid('firstName')"
                   />
+                  @if (isFieldDisabled('firstName')) {
+                    <small class="text-muted">ID verified</small>
+                  }
                   @if (isFieldInvalid('firstName')) {
                     <div class="invalid-feedback">This field is required</div>
                   }
@@ -317,8 +321,12 @@ type EnrollmentStep = 'verify' | 'details' | 'confirm';
                     id="lastName"
                     class="form-control"
                     formControlName="lastName"
+                    [disabled]="isFieldDisabled('lastName')"
                     [class.is-invalid]="isFieldInvalid('lastName')"
                   />
+                  @if (isFieldDisabled('lastName')) {
+                    <small class="text-muted">ID verified</small>
+                  }
                   @if (isFieldInvalid('lastName')) {
                     <div class="invalid-feedback">This field is required</div>
                   }
@@ -606,9 +614,9 @@ type EnrollmentStep = 'verify' | 'details' | 'confirm';
                 <button type="button" class="btn btn-outline-secondary" (click)="closeDuplicateModal()">
                   Close
                 </button>
-                <button 
-                  type="button" 
-                  class="btn btn-primary btn-dispute" 
+                <button
+                  type="button"
+                  class="btn btn-primary btn-dispute"
                   (click)="logDispute()"
                   [disabled]="loggingDispute"
                 >
@@ -1146,7 +1154,7 @@ export class LearnershipApplyComponent implements OnInit, OnDestroy {
   // Step 3: Confirm
   submitting = false;
   applicationSuccess = false;
-  
+
   // Duplicate enrollment modal
   showDuplicateModal = false;
   duplicateEnrollmentInfo: any = null;
@@ -1189,7 +1197,7 @@ export class LearnershipApplyComponent implements OnInit, OnDestroy {
   onIdInput(event: Event): void {
     const input = event.target as HTMLInputElement;
     this.idNumber = input.value.replace(/\D/g, '');
-    
+
     if (this.idNumber.length === 13) {
       this.extractIdInfo();
     } else {
@@ -1245,11 +1253,14 @@ export class LearnershipApplyComponent implements OnInit, OnDestroy {
           this.verificationResult = result;
           this.verifying = false;
 
-          // Pre-fill details from verification result if not already filled
-          if (result.learnerInfo) {
+          // Fetch DHA data to get firstName and surname
+          if (result.status === 'GREEN' || result.status === 'AMBER') {
+            this.fetchDHAInfo();
+          } else if (result.learnerInfo) {
+            // If verification failed but we have learnerInfo, try to use it
             const currentFirstName = this.detailsForm.get('firstName')?.value || '';
             const currentLastName = this.detailsForm.get('lastName')?.value || '';
-            
+
             this.detailsForm.patchValue({
               firstName: currentFirstName || result.learnerInfo.firstName || '',
               lastName: currentLastName || result.learnerInfo.lastName || ''
@@ -1259,7 +1270,7 @@ export class LearnershipApplyComponent implements OnInit, OnDestroy {
         error: (error) => {
           console.error('Verification error:', error);
           this.verifying = false;
-          
+
           // Show error message to user
           if (error.message) {
             alert(`Verification failed: ${error.message}`);
@@ -1270,9 +1281,43 @@ export class LearnershipApplyComponent implements OnInit, OnDestroy {
       });
   }
 
+  /**
+   * Fetch DHA person data to get firstName and surname
+   */
+  private fetchDHAInfo(): void {
+    this.verificationService.verifyWithDHA(this.idNumber)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (dhaResponse) => {
+          if (dhaResponse.success && dhaResponse.data) {
+            const dhaData = dhaResponse.data;
+
+            // Populate firstName and lastName from DHA response
+            if (dhaData.firstName || dhaData.surname) {
+              this.detailsForm.patchValue({
+                firstName: dhaData.firstName || '',
+                lastName: dhaData.surname || ''
+              });
+
+              // Make fields read-only after populating from DHA
+              this.detailsForm.get('firstName')?.disable();
+              this.detailsForm.get('lastName')?.disable();
+            }
+          }
+        },
+        error: (error) => {
+          // Silently fail - names might not be available from DHA
+          console.warn('Could not fetch DHA person data:', error);
+        }
+      });
+  }
+
   proceedToDetails(): void {
     this.completedSteps.push('verify');
     this.currentStep = 'details';
+
+    // If fields are already disabled (from DHA data), keep them disabled
+    // This ensures the names from DHA remain read-only
   }
 
   proceedToConfirm(): void {
@@ -1298,6 +1343,11 @@ export class LearnershipApplyComponent implements OnInit, OnDestroy {
   isFieldInvalid(field: string): boolean {
     const control = this.detailsForm.get(field);
     return !!(control && control.invalid && (control.dirty || control.touched));
+  }
+
+  isFieldDisabled(field: string): boolean {
+    const control = this.detailsForm.get(field);
+    return !!(control && control.disabled);
   }
 
   maskIdNumber(idNumber: string): string {
@@ -1332,13 +1382,14 @@ export class LearnershipApplyComponent implements OnInit, OnDestroy {
 
     this.submitting = true;
 
-    // Get form values
-    const firstName = this.detailsForm.get('firstName')?.value || '';
-    const lastName = this.detailsForm.get('lastName')?.value || '';
-    
+    // Get form values - use getRawValue() to include disabled fields
+    const formValues = this.detailsForm.getRawValue();
+    const firstName = formValues.firstName || '';
+    const lastName = formValues.lastName || '';
+
     // Get current year for enrollment
     const enrollmentYear = new Date().getFullYear();
-    
+
     // Get province (default to 'GP' if not available - should be added to form)
     const province = 'GP'; // TODO: Add province selection to form
 
@@ -1373,7 +1424,7 @@ export class LearnershipApplyComponent implements OnInit, OnDestroy {
       error: (error) => {
         console.error('Registration error:', error);
         this.submitting = false;
-        
+
         // Check if it's a duplicate error
         if (error.decision === 'BLOCKED' || error.message?.toLowerCase().includes('already enrolled') || error.message?.toLowerCase().includes('duplicate')) {
           this.showDuplicateEnrollmentModal(
@@ -1416,9 +1467,10 @@ export class LearnershipApplyComponent implements OnInit, OnDestroy {
 
     this.loggingDispute = true;
 
-    // Get form values
-    const firstName = this.detailsForm.get('firstName')?.value || '';
-    const lastName = this.detailsForm.get('lastName')?.value || '';
+    // Get form values - use getRawValue() to include disabled fields
+    const formValues = this.detailsForm.getRawValue();
+    const firstName = formValues.firstName || '';
+    const lastName = formValues.lastName || '';
 
     // Prepare dispute data
     const disputeData = {
@@ -1437,7 +1489,7 @@ export class LearnershipApplyComponent implements OnInit, OnDestroy {
       next: (result: { success: boolean; disputeId?: string; message: string }) => {
         this.loggingDispute = false;
         this.closeDuplicateModal();
-        
+
         alert('Your dispute has been logged successfully. WRSETA will review your case and contact you within 5-7 business days.');
       },
       error: (error: any) => {
