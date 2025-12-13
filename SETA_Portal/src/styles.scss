@@ -191,6 +191,67 @@ p {
   margin-bottom: 2rem;
   padding-bottom: 1rem;
   border-bottom: 1px solid var(--seta-bg-tertiary);
+  width: 100%;
+
+  &__content {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  &__title-section {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+
+    .btn {
+      white-space: nowrap;
+
+      &.btn-primary {
+        background-color: var(--seta-primary);
+        border-color: var(--seta-primary);
+        color: #fff !important;
+
+        &:hover {
+          background-color: var(--seta-primary-dark);
+          border-color: var(--seta-primary-dark);
+          color: #fff !important;
+        }
+
+        svg {
+          color: #fff;
+        }
+      }
+
+      &.btn-outline-primary {
+        border-color: var(--seta-primary);
+        color: var(--seta-primary) !important;
+
+        &:hover {
+          background-color: var(--seta-primary);
+          border-color: var(--seta-primary);
+          color: #fff !important;
+        }
+
+        svg {
+          color: var(--seta-primary);
+        }
+
+        &:hover svg {
+          color: #fff;
+        }
+      }
+    }
+  }
 
   .page-title {
     font-size: 2rem;
@@ -237,6 +298,24 @@ p {
       opacity: 0.5;
     }
   }
+
+  // Responsive behavior
+  @media (max-width: 767.98px) {
+    &__content {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    &__actions {
+      width: 100%;
+      justify-content: flex-start;
+
+      .btn {
+        flex: 1;
+        min-width: auto;
+      }
+    }
+  }
 }
 
 // Footer
@@ -260,9 +339,47 @@ p {
 
   .card-header {
     background-color: transparent;
-    border-bottom: 1px solid var(--seta-bg-tertiary);
-    padding: 1rem 1.25rem;
+    border-bottom: none;
+    padding: 1rem 1.25rem 1.5rem;
     font-weight: $font-weight-semibold;
+    position: relative;
+
+    &::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 1.25rem;
+      right: 1.25rem;
+      height: 1px;
+      background: var(--seta-bg-tertiary);
+    }
+  }
+
+  .card-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--seta-text-primary, #212529);
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    margin-bottom: 0;
+
+    &__icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border-radius: 0.5rem;
+      background: rgba(0, 133, 80, 0.1);
+      color: var(--seta-primary, #008550);
+      flex-shrink: 0;
+
+      svg {
+        width: 18px;
+        height: 18px;
+      }
+    }
   }
 
   .card-body {

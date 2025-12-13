@@ -1,11 +1,14 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
 import { NgbModal, NgbModalModule, NgbPaginationModule } from '@ng-bootstrap/ng-bootstrap';
 import { Subject, takeUntil, debounceTime, distinctUntilChanged } from 'rxjs';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { User, UserRole } from '../../../../interfaces/user.interface';
 import { AuthService } from '../../../../core/auth/auth.service';
+import { IconService } from '../../../../core/services/icon.service';
+import { PageHeaderComponent } from '../../../../shared/components/page-header/page-header.component';
 
 interface UserWithActions extends User {
   editing?: boolean;
@@ -20,79 +23,85 @@ interface UserWithActions extends User {
     ReactiveFormsModule,
     TranslateModule,
     NgbModalModule,
-    NgbPaginationModule
+    NgbPaginationModule,
+    PageHeaderComponent
   ],
   template: `
-    <div class="page-header d-flex justify-content-between align-items-center">
-      <div>
-        <h1 class="page-title">{{ 'admin.users' | translate }}</h1>
-        <p class="page-subtitle">Manage system users and their roles</p>
-      </div>
+    <app-page-header
+      titleKey="admin.users"
+      subtitle="Manage system users and their roles"
+      icon="user"
+    >
       <button class="btn btn-primary" (click)="openAddUserModal(addUserModal)">
-        <i class="feather icon-user-plus me-2"></i>
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="me-2">
+          <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+          <circle cx="8.5" cy="7" r="4"></circle>
+          <line x1="20" y1="8" x2="20" y2="14"></line>
+          <line x1="23" y1="11" x2="17" y2="11"></line>
+        </svg>
         Add New User
       </button>
-    </div>
+    </app-page-header>
 
     <!-- Stats Cards -->
-    <div class="row mb-4">
-      <div class="col-md-3">
-        <div class="card stat-card">
-          <div class="card-body">
-            <div class="d-flex justify-content-between">
-              <div>
-                <p class="text-muted mb-1">Total Users</p>
-                <h3 class="mb-0">{{ totalUsers }}</h3>
-              </div>
-              <div class="stat-icon bg-primary-light">
-                <i class="feather icon-users text-primary"></i>
-              </div>
-            </div>
+    <div class="row g-3 mb-4">
+      <div class="col-sm-6 col-lg-3">
+        <div class="stat-card stat-card-primary">
+          <div class="stat-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value">{{ totalUsers }}</div>
+            <div class="stat-label">Total Users</div>
           </div>
         </div>
       </div>
-      <div class="col-md-3">
-        <div class="card stat-card">
-          <div class="card-body">
-            <div class="d-flex justify-content-between">
-              <div>
-                <p class="text-muted mb-1">Active Users</p>
-                <h3 class="mb-0 text-success">{{ activeUsers }}</h3>
-              </div>
-              <div class="stat-icon bg-success-light">
-                <i class="feather icon-user-check text-success"></i>
-              </div>
-            </div>
+      <div class="col-sm-6 col-lg-3">
+        <div class="stat-card stat-card-success">
+          <div class="stat-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="8.5" cy="7" r="4"></circle>
+              <polyline points="17 11 19 13 23 9"></polyline>
+            </svg>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value">{{ activeUsers }}</div>
+            <div class="stat-label">Active Users</div>
           </div>
         </div>
       </div>
-      <div class="col-md-3">
-        <div class="card stat-card">
-          <div class="card-body">
-            <div class="d-flex justify-content-between">
-              <div>
-                <p class="text-muted mb-1">Admins</p>
-                <h3 class="mb-0 text-info">{{ adminCount }}</h3>
-              </div>
-              <div class="stat-icon bg-info-light">
-                <i class="feather icon-shield text-info"></i>
-              </div>
-            </div>
+      <div class="col-sm-6 col-lg-3">
+        <div class="stat-card stat-card-info">
+          <div class="stat-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            </svg>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value">{{ adminCount }}</div>
+            <div class="stat-label">Admins</div>
           </div>
         </div>
       </div>
-      <div class="col-md-3">
-        <div class="card stat-card">
-          <div class="card-body">
-            <div class="d-flex justify-content-between">
-              <div>
-                <p class="text-muted mb-1">Inactive Users</p>
-                <h3 class="mb-0 text-danger">{{ inactiveUsers }}</h3>
-              </div>
-              <div class="stat-icon bg-danger-light">
-                <i class="feather icon-user-x text-danger"></i>
-              </div>
-            </div>
+      <div class="col-sm-6 col-lg-3">
+        <div class="stat-card stat-card-danger">
+          <div class="stat-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="8.5" cy="7" r="4"></circle>
+              <line x1="18" y1="8" x2="23" y2="13"></line>
+              <line x1="23" y1="8" x2="18" y2="13"></line>
+            </svg>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value">{{ inactiveUsers }}</div>
+            <div class="stat-label">Inactive Users</div>
           </div>
         </div>
       </div>
@@ -105,7 +114,12 @@ interface UserWithActions extends User {
           <div class="col-md-4">
             <label class="form-label">Search</label>
             <div class="input-group">
-              <span class="input-group-text"><i class="feather icon-search"></i></span>
+              <span class="input-group-text">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+              </span>
               <input
                 type="text"
                 class="form-control"
@@ -140,7 +154,11 @@ interface UserWithActions extends User {
           </div>
           <div class="col-md-2 d-flex align-items-end">
             <button class="btn btn-outline-secondary w-100" (click)="clearFilters()">
-              <i class="feather icon-x me-2"></i>Clear
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="me-2">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+              Clear
             </button>
           </div>
         </div>
@@ -192,17 +210,34 @@ interface UserWithActions extends User {
                 <td>
                   <div class="btn-group btn-group-sm">
                     <button class="btn btn-outline-primary" (click)="openEditUserModal(editUserModal, user)" title="Edit">
-                      <i class="feather icon-edit-2"></i>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
+                      </svg>
                     </button>
                     <button
                       class="btn"
                       [ngClass]="user.isActive ? 'btn-outline-warning' : 'btn-outline-success'"
                       (click)="toggleUserStatus(user)"
                       [title]="user.isActive ? 'Deactivate' : 'Activate'">
-                      <i class="feather" [ngClass]="user.isActive ? 'icon-user-x' : 'icon-user-check'"></i>
+                      @if (user.isActive) {
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                          <circle cx="8.5" cy="7" r="4"></circle>
+                          <line x1="18" y1="8" x2="23" y2="13"></line>
+                          <line x1="23" y1="8" x2="18" y2="13"></line>
+                        </svg>
+                      } @else {
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                          <circle cx="8.5" cy="7" r="4"></circle>
+                          <polyline points="17 11 19 13 23 9"></polyline>
+                        </svg>
+                      }
                     </button>
                     <button class="btn btn-outline-info" (click)="resetPassword(user)" title="Reset Password">
-                      <i class="feather icon-key"></i>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path>
+                      </svg>
                     </button>
                   </div>
                 </td>
@@ -212,7 +247,12 @@ interface UserWithActions extends User {
 
           <ng-template #emptyTemplate>
             <div class="text-center py-5">
-              <i class="feather icon-users text-muted" style="font-size: 48px;"></i>
+              <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="text-muted">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+              </svg>
               <p class="text-muted mt-3">No users found matching your criteria</p>
             </div>
           </ng-template>
@@ -386,26 +426,64 @@ interface UserWithActions extends User {
   `,
   styles: [`
     .stat-card {
-      transition: transform 0.2s;
+      display: flex;
+      align-items: center;
+      padding: 1rem 1.25rem;
+      border-radius: 0.5rem;
+      background: var(--bs-white);
+      border: 1px solid var(--bs-border-color);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      transition: transform 0.2s, box-shadow 0.2s;
     }
     .stat-card:hover {
       transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     }
     .stat-icon {
-      width: 48px;
-      height: 48px;
-      border-radius: 12px;
+      width: 40px;
+      height: 40px;
+      border-radius: 0.5rem;
       display: flex;
       align-items: center;
       justify-content: center;
+      margin-right: 1rem;
+      flex-shrink: 0;
     }
-    .stat-icon i {
-      font-size: 24px;
+    .stat-icon svg {
+      width: 20px;
+      height: 20px;
     }
-    .bg-primary-light { background-color: rgba(var(--bs-primary-rgb), 0.1); }
-    .bg-success-light { background-color: rgba(25, 135, 84, 0.1); }
-    .bg-info-light { background-color: rgba(13, 202, 240, 0.1); }
-    .bg-danger-light { background-color: rgba(220, 53, 69, 0.1); }
+    .stat-card-primary .stat-icon { 
+      background: rgba(0, 133, 80, 0.1);
+      color: #008550;
+    }
+    .stat-card-success .stat-icon { 
+      background: rgba(25, 135, 84, 0.1);
+      color: #198754;
+    }
+    .stat-card-info .stat-icon { 
+      background: rgba(13, 202, 240, 0.1);
+      color: #0dcaf0;
+    }
+    .stat-card-danger .stat-icon { 
+      background: rgba(220, 53, 69, 0.1);
+      color: #dc3545;
+    }
+    .stat-content {
+      flex: 1;
+      min-width: 0;
+    }
+    .stat-value {
+      font-size: 1.375rem;
+      font-weight: 700;
+      line-height: 1.2;
+      margin-bottom: 0.25rem;
+    }
+    .stat-label {
+      font-size: 0.8125rem;
+      color: var(--bs-secondary);
+      font-weight: 500;
+    }
     .avatar {
       width: 36px;
       height: 36px;
@@ -435,8 +513,15 @@ interface UserWithActions extends User {
   `]
 })
 export class UserManagementComponent implements OnInit, OnDestroy {
+  private readonly iconService = inject(IconService);
+  private readonly sanitizer = inject(DomSanitizer);
   private destroy$ = new Subject<void>();
   private searchSubject = new Subject<string>();
+
+  getSafeIcon(iconName: string): SafeHtml {
+    const iconPath = this.iconService.getIconPath(iconName);
+    return this.sanitizer.bypassSecurityTrustHtml(iconPath);
+  }
 
   users: UserWithActions[] = [];
   filteredUsers: UserWithActions[] = [];

@@ -1,9 +1,12 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
 import { NgbModal, NgbModalModule, NgbNavModule } from '@ng-bootstrap/ng-bootstrap';
 import { Subject, takeUntil } from 'rxjs';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
+import { IconService } from '../../../../core/services/icon.service';
+import { PageHeaderComponent } from '../../../../shared/components/page-header/page-header.component';
 
 interface Seta {
   id: number;
@@ -37,75 +40,73 @@ interface Seta {
     ReactiveFormsModule,
     TranslateModule,
     NgbModalModule,
-    NgbNavModule
+    NgbNavModule,
+    PageHeaderComponent
   ],
   template: `
-    <div class="page-header d-flex justify-content-between align-items-center">
-      <div>
-        <h1 class="page-title">SETA Management</h1>
-        <p class="page-subtitle">Manage SETA configurations and branding</p>
-      </div>
-    </div>
+    <app-page-header
+      title="SETA Management"
+      subtitle="Manage SETA configurations and branding"
+      icon="briefcase"
+    ></app-page-header>
 
     <!-- Stats Overview -->
-    <div class="row mb-4">
-      <div class="col-md-3">
-        <div class="card stat-card">
-          <div class="card-body">
-            <div class="d-flex justify-content-between">
-              <div>
-                <p class="text-muted mb-1">Total SETAs</p>
-                <h3 class="mb-0">{{ setas.length }}</h3>
-              </div>
-              <div class="stat-icon bg-primary-light">
-                <i class="feather icon-briefcase text-primary"></i>
-              </div>
-            </div>
+    <div class="row g-3 mb-4">
+      <div class="col-sm-6 col-lg-3">
+        <div class="stat-card stat-card-primary">
+          <div class="stat-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+              <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+            </svg>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value">{{ setas.length }}</div>
+            <div class="stat-label">Total SETAs</div>
           </div>
         </div>
       </div>
-      <div class="col-md-3">
-        <div class="card stat-card">
-          <div class="card-body">
-            <div class="d-flex justify-content-between">
-              <div>
-                <p class="text-muted mb-1">Active SETAs</p>
-                <h3 class="mb-0 text-success">{{ activeSetas }}</h3>
-              </div>
-              <div class="stat-icon bg-success-light">
-                <i class="feather icon-check-circle text-success"></i>
-              </div>
-            </div>
+      <div class="col-sm-6 col-lg-3">
+        <div class="stat-card stat-card-success">
+          <div class="stat-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+              <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value">{{ activeSetas }}</div>
+            <div class="stat-label">Active SETAs</div>
           </div>
         </div>
       </div>
-      <div class="col-md-3">
-        <div class="card stat-card">
-          <div class="card-body">
-            <div class="d-flex justify-content-between">
-              <div>
-                <p class="text-muted mb-1">Total Learners</p>
-                <h3 class="mb-0 text-info">{{ totalLearners | number }}</h3>
-              </div>
-              <div class="stat-icon bg-info-light">
-                <i class="feather icon-users text-info"></i>
-              </div>
-            </div>
+      <div class="col-sm-6 col-lg-3">
+        <div class="stat-card stat-card-info">
+          <div class="stat-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value">{{ totalLearners | number }}</div>
+            <div class="stat-label">Total Learners</div>
           </div>
         </div>
       </div>
-      <div class="col-md-3">
-        <div class="card stat-card">
-          <div class="card-body">
-            <div class="d-flex justify-content-between">
-              <div>
-                <p class="text-muted mb-1">Total Users</p>
-                <h3 class="mb-0 text-warning">{{ totalUsers | number }}</h3>
-              </div>
-              <div class="stat-icon bg-warning-light">
-                <i class="feather icon-user text-warning"></i>
-              </div>
-            </div>
+      <div class="col-sm-6 col-lg-3">
+        <div class="stat-card stat-card-warning">
+          <div class="stat-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value">{{ totalUsers | number }}</div>
+            <div class="stat-label">Total Users</div>
           </div>
         </div>
       </div>
@@ -117,7 +118,12 @@ interface Seta {
         <div class="row">
           <div class="col-md-6">
             <div class="input-group">
-              <span class="input-group-text"><i class="feather icon-search"></i></span>
+              <span class="input-group-text">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+              </span>
               <input
                 type="text"
                 class="form-control"
@@ -154,8 +160,10 @@ interface Seta {
                 {{ seta.isActive ? 'Active' : 'Inactive' }}
               </span>
             </div>
-            <h5 class="text-white mt-3 mb-0">{{ seta.code }}</h5>
-            <p class="text-white-50 small mb-0">{{ seta.name }}</p>
+            <div class="seta-header-content">
+              <h5 class="text-white mb-1">{{ seta.code }}</h5>
+              <p class="text-white-50 small mb-0" style="opacity: 0.9;">{{ seta.name }}</p>
+            </div>
           </div>
           <div class="card-body">
             <div class="seta-stats mb-3">
@@ -172,17 +180,26 @@ interface Seta {
             </div>
 
             <div class="seta-info small">
-              <div class="mb-2" *ngIf="seta.contactEmail">
-                <i class="feather icon-mail text-muted me-2"></i>
-                <a [href]="'mailto:' + seta.contactEmail">{{ seta.contactEmail }}</a>
+              <div class="mb-2 d-flex align-items-center" *ngIf="seta.contactEmail">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-muted me-2 flex-shrink-0">
+                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                  <polyline points="22,6 12,13 2,6"></polyline>
+                </svg>
+                <a [href]="'mailto:' + seta.contactEmail" class="text-decoration-none">{{ seta.contactEmail }}</a>
               </div>
-              <div class="mb-2" *ngIf="seta.contactPhone">
-                <i class="feather icon-phone text-muted me-2"></i>
-                {{ seta.contactPhone }}
+              <div class="mb-2 d-flex align-items-center" *ngIf="seta.contactPhone">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-muted me-2 flex-shrink-0">
+                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                </svg>
+                <span>{{ seta.contactPhone }}</span>
               </div>
-              <div *ngIf="seta.website">
-                <i class="feather icon-globe text-muted me-2"></i>
-                <a [href]="seta.website" target="_blank">{{ getDomain(seta.website) }}</a>
+              <div class="d-flex align-items-center" *ngIf="seta.website">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-muted me-2 flex-shrink-0">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="2" y1="12" x2="22" y2="12"></line>
+                  <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                </svg>
+                <a [href]="seta.website" target="_blank" class="text-decoration-none">{{ getDomain(seta.website) }}</a>
               </div>
             </div>
 
@@ -198,11 +215,18 @@ interface Seta {
           </div>
           <div class="card-footer bg-transparent">
             <div class="d-flex gap-2">
-              <button class="btn btn-sm btn-outline-primary flex-grow-1" (click)="openEditModal(editModal, seta)">
-                <i class="feather icon-edit-2 me-1"></i> Edit
+              <button class="btn btn-sm btn-outline-primary flex-grow-1 d-flex align-items-center justify-content-center" (click)="openEditModal(editModal, seta)">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="me-1 flex-shrink-0">
+                  <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
+                </svg>
+                <span>Edit</span>
               </button>
-              <button class="btn btn-sm btn-outline-info" (click)="openDetailsModal(detailsModal, seta)">
-                <i class="feather icon-eye me-1"></i> View
+              <button class="btn btn-sm btn-outline-info d-flex align-items-center justify-content-center" (click)="openDetailsModal(detailsModal, seta)">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="me-1 flex-shrink-0">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+                <span>View</span>
               </button>
               <button
                 class="btn btn-sm"
@@ -218,7 +242,10 @@ interface Seta {
       <div class="col-12" *ngIf="filteredSetas.length === 0">
         <div class="card">
           <div class="card-body text-center py-5">
-            <i class="feather icon-briefcase text-muted" style="font-size: 48px;"></i>
+            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="text-muted">
+              <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+              <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+            </svg>
             <p class="text-muted mt-3">No SETAs found matching your criteria</p>
           </div>
         </div>
@@ -428,11 +455,19 @@ interface Seta {
         <hr>
         <div class="row text-muted small">
           <div class="col-6">
-            <i class="feather icon-calendar me-1"></i>
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="me-1" style="vertical-align: middle; display: inline-block;">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
             Created: {{ selectedSeta.createdAt | date:'mediumDate' }}
           </div>
           <div class="col-6">
-            <i class="feather icon-clock me-1"></i>
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="me-1" style="vertical-align: middle; display: inline-block;">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
             Updated: {{ selectedSeta.updatedAt | date:'mediumDate' }}
           </div>
         </div>
@@ -440,33 +475,74 @@ interface Seta {
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" (click)="modal.dismiss()">Close</button>
         <button type="button" class="btn btn-primary" (click)="modal.dismiss(); openEditModal(editModal, selectedSeta!)">
-          <i class="feather icon-edit-2 me-2"></i>Edit
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="me-2" style="vertical-align: middle;">
+            <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
+          </svg>
+          Edit
         </button>
       </div>
     </ng-template>
   `,
   styles: [`
     .stat-card {
-      transition: transform 0.2s;
+      display: flex;
+      align-items: center;
+      padding: 1rem 1.25rem;
+      border-radius: 0.5rem;
+      background: var(--bs-white);
+      border: 1px solid var(--bs-border-color);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      transition: transform 0.2s, box-shadow 0.2s;
     }
     .stat-card:hover {
       transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     }
     .stat-icon {
-      width: 48px;
-      height: 48px;
-      border-radius: 12px;
+      width: 40px;
+      height: 40px;
+      border-radius: 0.5rem;
       display: flex;
       align-items: center;
       justify-content: center;
+      margin-right: 1rem;
+      flex-shrink: 0;
     }
-    .stat-icon i {
-      font-size: 24px;
+    .stat-icon svg {
+      width: 20px;
+      height: 20px;
     }
-    .bg-primary-light { background-color: rgba(var(--bs-primary-rgb), 0.1); }
-    .bg-success-light { background-color: rgba(25, 135, 84, 0.1); }
-    .bg-info-light { background-color: rgba(13, 202, 240, 0.1); }
-    .bg-warning-light { background-color: rgba(255, 193, 7, 0.1); }
+    .stat-card-primary .stat-icon { 
+      background: rgba(0, 133, 80, 0.1);
+      color: #008550;
+    }
+    .stat-card-success .stat-icon { 
+      background: rgba(25, 135, 84, 0.1);
+      color: #198754;
+    }
+    .stat-card-info .stat-icon { 
+      background: rgba(13, 202, 240, 0.1);
+      color: #0dcaf0;
+    }
+    .stat-card-warning .stat-icon { 
+      background: rgba(255, 193, 7, 0.1);
+      color: #ffc107;
+    }
+    .stat-content {
+      flex: 1;
+      min-width: 0;
+    }
+    .stat-value {
+      font-size: 1.375rem;
+      font-weight: 700;
+      line-height: 1.2;
+      margin-bottom: 0.25rem;
+    }
+    .stat-label {
+      font-size: 0.8125rem;
+      color: var(--bs-secondary);
+      font-weight: 500;
+    }
 
     .seta-card {
       transition: transform 0.2s, box-shadow 0.2s;
@@ -478,10 +554,15 @@ interface Seta {
     .seta-header {
       padding: 1.5rem;
       border-radius: 0.375rem 0.375rem 0 0;
+      height: 160px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
     }
     .seta-logo-wrapper {
       display: flex;
       align-items: center;
+      margin-bottom: 1.5rem;
     }
     .seta-logo {
       width: 48px;
@@ -494,6 +575,42 @@ interface Seta {
     .seta-logo-text {
       font-size: 18px;
       font-weight: 700;
+    }
+    .seta-header-content {
+      margin-top: 0;
+      flex-shrink: 0;
+    }
+    .seta-header-content h5 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      line-height: 1.3;
+      margin-bottom: 0.5rem;
+    }
+    .seta-header-content p {
+      font-size: 0.8125rem;
+      line-height: 1.4;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      margin-bottom: 2rem;
+    }
+    .seta-info {
+      display: flex;
+      flex-direction: column;
+    }
+    .seta-info svg {
+      flex-shrink: 0;
+      display: block;
+    }
+    .seta-info a {
+      color: inherit;
+      text-decoration: none;
+    }
+    .seta-info a:hover {
+      color: var(--seta-primary);
+      text-decoration: underline;
     }
     .seta-stats {
       padding: 1rem 0;
@@ -539,7 +656,14 @@ interface Seta {
   `]
 })
 export class SetaManagementComponent implements OnInit, OnDestroy {
+  private readonly iconService = inject(IconService);
+  private readonly sanitizer = inject(DomSanitizer);
   private destroy$ = new Subject<void>();
+
+  getSafeIcon(iconName: string): SafeHtml {
+    const iconPath = this.iconService.getIconPath(iconName);
+    return this.sanitizer.bypassSecurityTrustHtml(iconPath);
+  }
 
   setas: Seta[] = [];
   filteredSetas: Seta[] = [];
@@ -560,7 +684,7 @@ export class SetaManagementComponent implements OnInit, OnDestroy {
 
   // Mock data for all 21 SETAs
   private mockSetas: Seta[] = [
-    { id: 1, code: 'WRSETA', name: 'Wholesale and Retail SETA', description: 'The Wholesale and Retail Sector Education and Training Authority promotes skills development in the wholesale and retail sector.', logo: '', colors: { primary: '#003366', primaryDark: '#002244', secondary: '#4a90d9', accent: '#ff9800' }, contactEmail: 'info@wrseta.org.za', contactPhone: '+27 11 622 0800', website: 'https://www.wrseta.org.za', address: '87 Juta Street, Braamfontein, Johannesburg', isActive: true, totalLearners: 45230, totalUsers: 156, createdAt: new Date('2020-01-01'), updatedAt: new Date('2024-12-15') },
+    { id: 1, code: 'WRSETA', name: 'Wholesale and Retail SETA', description: 'The Wholesale and Retail Sector Education and Training Authority promotes skills development in the wholesale and retail sector.', logo: '', colors: { primary: '#008550', primaryDark: '#006640', secondary: '#4a90d9', accent: '#ff9800' }, contactEmail: 'info@wrseta.org.za', contactPhone: '+27 11 622 0800', website: 'https://www.wrseta.org.za', address: '87 Juta Street, Braamfontein, Johannesburg', isActive: true, totalLearners: 45230, totalUsers: 156, createdAt: new Date('2020-01-01'), updatedAt: new Date('2024-12-15') },
     { id: 2, code: 'MICT', name: 'Media, Information and Communication Technologies SETA', description: 'MICT SETA leads and facilitates the development of appropriately skilled people in the MICT sector.', logo: '', colors: { primary: '#2EA3F2', primaryDark: '#1a8fd4', secondary: '#6bc4f7', accent: '#ff6b35' }, contactEmail: 'info@mict.org.za', contactPhone: '+27 11 207 2600', website: 'https://www.mict.org.za', address: 'Block 2, Gallagher Estate, Midrand', isActive: true, totalLearners: 32150, totalUsers: 89, createdAt: new Date('2020-01-01'), updatedAt: new Date('2024-11-20') },
     { id: 3, code: 'MERSETA', name: 'Manufacturing, Engineering and Related Services SETA', description: 'merSETA facilitates skills development in the manufacturing, engineering and related services sector.', logo: '', colors: { primary: '#1a5276', primaryDark: '#123d57', secondary: '#5dade2', accent: '#f39c12' }, contactEmail: 'info@merseta.org.za', contactPhone: '+27 10 219 3000', website: 'https://www.merseta.org.za', address: '95 7th Avenue, Cnr Rustenburg Road, Melville', isActive: true, totalLearners: 67890, totalUsers: 234, createdAt: new Date('2020-01-01'), updatedAt: new Date('2024-12-01') },
     { id: 4, code: 'BANKSETA', name: 'Banking Sector Education and Training Authority', description: 'BANKSETA develops skills for the banking and microfinance industry.', logo: '', colors: { primary: '#1e3a5f', primaryDark: '#152a45', secondary: '#3498db', accent: '#27ae60' }, contactEmail: 'info@bankseta.org.za', contactPhone: '+27 11 805 9661', website: 'https://www.bankseta.org.za', address: '3rd Floor, Building 3, Waterfall Corporate Campus, Midrand', isActive: true, totalLearners: 28500, totalUsers: 67, createdAt: new Date('2020-01-01'), updatedAt: new Date('2024-10-30') },
@@ -609,7 +733,7 @@ export class SetaManagementComponent implements OnInit, OnDestroy {
       website: [''],
       address: [''],
       colors: this.fb.group({
-        primary: ['#003366'],
+        primary: ['#008550'],
         primaryDark: ['#002244'],
         secondary: ['#4a90d9'],
         accent: ['#ff9800']
