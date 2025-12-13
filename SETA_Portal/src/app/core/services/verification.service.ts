@@ -45,6 +45,40 @@ interface DHAPersonResponse {
   timestamp?: string;
 }
 
+// Verification API Request/Response interfaces
+interface VerificationApiRequest {
+  idNumber: string;
+  firstName: string;
+  surname: string;
+}
+
+interface VerificationApiResponse {
+  success: boolean;
+  data?: {
+    idNumberMasked: string;
+    status: string;
+    message: string;
+    isValid: boolean;
+    formatValid: boolean;
+    luhnValid: boolean;
+    dhaVerified: boolean;
+    duplicateFound: boolean;
+    demographics?: {
+      dateOfBirth: string;
+      gender: string;
+      citizenship: string;
+      age: number;
+    };
+  };
+  timestamp?: string;
+  requestId?: string;
+  error?: {
+    code: string;
+    message: string;
+    details?: any;
+  };
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -60,9 +94,9 @@ export class VerificationService {
   }
 
   /**
-   * Verify a single ID number via DHA API
+   * Verify a single ID number via Verification API
    */
-  verifySingle(idNumber: string): Observable<VerificationResponse> {
+  verifySingle(idNumber: string, firstName: string = '', surname: string = ''): Observable<VerificationResponse> {
     // Validate ID format first
     if (!this.isValidIdNumber(idNumber)) {
       return throwError(() => ({
@@ -71,15 +105,114 @@ export class VerificationService {
       }));
     }
 
-    // Call DHA API through our proxy endpoint
-    return this.http.get<DHAPersonResponse>(`${this.baseUrl}/dha/person/${idNumber}`).pipe(
-      map(response => this.mapDHAResponseToVerification(idNumber, response)),
-      catchError(error => this.handleDHAError(error, idNumber))
+    // Prepare request body
+    const requestBody: VerificationApiRequest = {
+      idNumber: idNumber,
+      firstName: firstName || '',
+      surname: surname || ''
+    };
+
+    // Call verification API endpoint
+    return this.api.post<VerificationApiResponse>('verification/verify', requestBody).pipe(
+      map(response => this.mapVerificationApiResponseToVerification(idNumber, response)),
+      catchError(error => this.handleVerificationApiError(error, idNumber))
     );
   }
 
   /**
-   * Map DHA API response to VerificationResponse
+   * Map Verification API response to VerificationResponse
+   */
+  private mapVerificationApiResponseToVerification(idNumber: string, response: VerificationApiResponse): VerificationResponse {
+    if (!response.success || !response.data) {
+      throw {
+        success: false,
+        errorCode: response.error?.code || 'VERIFICATION_FAILED',
+        errorMessage: response.error?.message || 'Verification failed',
+      };
+    }
+
+    const data = response.data;
+
+    // Map status (GREEN, YELLOW/AMBER, RED)
+    let status: 'GREEN' | 'AMBER' | 'RED' = 'GREEN';
+    if (data.status === 'GREEN') {
+      status = 'GREEN';
+    } else if (data.status === 'YELLOW' || data.status === 'AMBER') {
+      status = 'AMBER';
+    } else {
+      status = 'RED';
+    }
+
+    // Build learner info from demographics
+    const learnerInfo: LearnerInfo | undefined = data.demographics ? {
+      firstName: '',
+      lastName: '',
+      fullName: '',
+      dateOfBirth: data.demographics.dateOfBirth ? new Date(data.demographics.dateOfBirth) : new Date(),
+      gender: data.demographics.gender || 'Unknown',
+      citizenship: data.demographics.citizenship || ''
+    } : undefined;
+
+    return {
+      success: true,
+      status,
+      idNumber, // Keep original ID number for internal use
+      message: data.message || 'Verification completed',
+      learnerInfo,
+      verifiedAt: new Date(),
+      traceId: response.requestId || `VRF-${Date.now()}`
+    };
+  }
+
+  /**
+   * Handle Verification API errors
+   */
+  private handleVerificationApiError(error: HttpErrorResponse | any, idNumber: string): Observable<never> {
+    let errorCode: string;
+    let userMessage: string;
+
+    if (error instanceof HttpErrorResponse) {
+      const body = error.error;
+
+      switch (error.status) {
+        case 400:
+          errorCode = body?.error?.code || 'INVALID_REQUEST';
+          userMessage = body?.error?.message || 'Invalid request. Please check the ID number.';
+          break;
+        case 401:
+          errorCode = 'UNAUTHORIZED';
+          userMessage = 'Unauthorized. Please check your API key.';
+          break;
+        case 500:
+          errorCode = 'SERVER_ERROR';
+          userMessage = 'Server error. Please try again later.';
+          break;
+        default:
+          errorCode = 'UNKNOWN_ERROR';
+          userMessage = body?.error?.message || error.message || 'Verification failed';
+      }
+    } else if (error.errorCode) {
+      errorCode = error.errorCode;
+      userMessage = error.errorMessage || 'Verification failed';
+    } else {
+      errorCode = 'NETWORK_ERROR';
+      userMessage = 'Network error. Please check your connection.';
+    }
+
+    console.error('Verification API Error:', { idNumber, errorCode, error });
+
+    return throwError(() => ({
+      success: false,
+      status: 'AMBER' as const,
+      idNumber,
+      message: userMessage,
+      errorCode,
+      verifiedAt: new Date()
+    }));
+  }
+
+  /**
+   * Map DHA API response to VerificationResponse (kept for backward compatibility)
    */
   private mapDHAResponseToVerification(idNumber: string, response: DHAPersonResponse): VerificationResponse {
     if (!response.success || !response.data) {
@@ -267,7 +400,7 @@ export class VerificationService {
   /**
    * Verify a single ID for batch processing - handles errors gracefully
    */
-  private verifySingleForBatch(idNumber: string): Observable<{idNumber: string; status: 'GREEN' | 'AMBER' | 'RED'; message: string}> {
+  private verifySingleForBatch(idNumber: string): Observable<{ idNumber: string; status: 'GREEN' | 'AMBER' | 'RED'; message: string }> {
     return this.http.get<DHAPersonResponse>(`${this.baseUrl}/dha/person/${idNumber}`).pipe(
       map(response => {
         if (!response.success || !response.data) {

@@ -146,15 +146,17 @@ import { PageHeaderComponent } from '../../../../shared/components/page-header/p
                 <p class="status-message mt-3">{{ result.message }}</p>
               </div>
 
-              <!-- Learner Info -->
+              <!-- Learner Info / Demographics -->
               @if (result.learnerInfo) {
                 <div class="learner-info mb-4">
                   <h6 class="section-title">{{ 'verification.learnerInfo' | translate }}</h6>
                   <div class="info-grid">
-                    <div class="info-item">
-                      <label>{{ 'learner.fullName' | translate }}</label>
-                      <span>{{ result.learnerInfo.fullName }}</span>
-                    </div>
+                    @if (result.learnerInfo.fullName) {
+                      <div class="info-item">
+                        <label>{{ 'learner.fullName' | translate }}</label>
+                        <span>{{ result.learnerInfo.fullName }}</span>
+                      </div>
+                    }
                     <div class="info-item">
                       <label>{{ 'verification.idNumber' | translate }}</label>
                       <code>{{ maskIdNumber(result.idNumber) }}</code>
@@ -167,6 +169,12 @@ import { PageHeaderComponent } from '../../../../shared/components/page-header/p
                       <label>{{ 'learner.gender' | translate }}</label>
                       <span>{{ result.learnerInfo.gender }}</span>
                     </div>
+                    @if (result.learnerInfo.citizenship) {
+                      <div class="info-item">
+                        <label>Citizenship</label>
+                        <span>{{ result.learnerInfo.citizenship }}</span>
+                      </div>
+                    }
                   </div>
                 </div>
               }
@@ -426,7 +434,7 @@ export class SingleVerifyComponent implements OnDestroy {
     this.result = null;
 
     this.verificationService
-      .verifySingle(this.idNumber)
+      .verifySingle(this.idNumber, '', '')
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
