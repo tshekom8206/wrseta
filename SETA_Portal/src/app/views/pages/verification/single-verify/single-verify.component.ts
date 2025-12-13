@@ -51,8 +51,8 @@ import { PageHeaderComponent } from '../../../../shared/components/page-header/p
           </div>
           <div class="card-body">
             <form (ngSubmit)="verify()" #verifyForm="ngForm">
-              <div class="mb-4">
-                <label for="idNumber" class="form-label visually-hidden">
+              <div class="mb-3">
+                <label for="idNumber" class="form-label">
                   {{ 'verification.idNumber' | translate }}
                 </label>
                 <input
@@ -80,6 +80,37 @@ import { PageHeaderComponent } from '../../../../shared/components/page-header/p
                     {{ 'verification.invalidIdFormat' | translate }}
                   </div>
                 }
+              </div>
+
+              <div class="row mb-3">
+                <div class="col-md-6">
+                  <label for="firstName" class="form-label">
+                    {{ 'learner.firstName' | translate }}
+                  </label>
+                  <input
+                    type="text"
+                    id="firstName"
+                    class="form-control"
+                    [(ngModel)]="firstName"
+                    name="firstName"
+                    placeholder="First Name"
+                    autocomplete="given-name"
+                  />
+                </div>
+                <div class="col-md-6">
+                  <label for="surname" class="form-label">
+                    {{ 'learner.lastName' | translate }}
+                  </label>
+                  <input
+                    type="text"
+                    id="surname"
+                    class="form-control"
+                    [(ngModel)]="surname"
+                    name="surname"
+                    placeholder="Surname"
+                    autocomplete="family-name"
+                  />
+                </div>
               </div>
 
               @if (idNumber && isValidFormat) {
@@ -331,7 +362,7 @@ import { PageHeaderComponent } from '../../../../shared/components/page-header/p
                       <ul class="mb-0 mt-2">
                         @for (seta of result.duplicateInfo.enrolledSetas; track seta.setaCode) {
                           <li>
-                            <strong>{{ seta.setaName }}</strong> - Enrolled {{ seta.enrollmentDate | date:'dd MMM yyyy' }} 
+                            <strong>{{ seta.setaName }}</strong> - Enrolled {{ seta.enrollmentDate | date:'dd MMM yyyy' }}
                             <span class="badge ms-2" [class.bg-success]="seta.status !== 'Active'" [class.bg-danger]="seta.status === 'Active'">
                               {{ seta.status }}
                             </span>
@@ -395,7 +426,7 @@ import { PageHeaderComponent } from '../../../../shared/components/page-header/p
       /* Maintain standard ID card aspect ratio (85.6mm x 53.98mm ≈ 1.586:1) */
       aspect-ratio: 1.586 / 1;
       min-height: 240px;
-      
+
       /* Guilloché-style security pattern background */
       &::before {
         content: '';
@@ -405,7 +436,7 @@ import { PageHeaderComponent } from '../../../../shared/components/page-header/p
         right: 0;
         bottom: 0;
         opacity: 0.03;
-        background-image: 
+        background-image:
           /* Fine grid pattern */
           repeating-linear-gradient(
             0deg,
@@ -432,7 +463,7 @@ import { PageHeaderComponent } from '../../../../shared/components/page-header/p
             rgba(0, 0, 0, 0.05) 0.5px,
             transparent 0.5px
           );
-        background-size: 
+        background-size:
           20px 20px,
           20px 20px,
           15px 15px,
@@ -609,17 +640,17 @@ import { PageHeaderComponent } from '../../../../shared/components/page-header/p
       font-size: 0.75rem;
       font-weight: 700;
       text-transform: uppercase;
-      
+
       &.status-green {
         background: rgba(25, 135, 84, 0.15);
         color: #198754;
       }
-      
+
       &.status-amber {
         background: rgba(255, 193, 7, 0.2);
         color: #856404;
       }
-      
+
       &.status-red {
         background: rgba(220, 53, 69, 0.15);
         color: #dc3545;
@@ -772,7 +803,7 @@ import { PageHeaderComponent } from '../../../../shared/components/page-header/p
     .verification-status-icon {
       display: flex;
       align-items: center;
-      
+
       svg {
         width: 14px;
         height: 14px;
@@ -792,7 +823,7 @@ import { PageHeaderComponent } from '../../../../shared/components/page-header/p
 
       .btn-success {
         color: #fff !important;
-        
+
         svg {
           color: #fff !important;
           stroke: #fff !important;
@@ -1018,6 +1049,8 @@ export class SingleVerifyComponent implements OnDestroy {
   private readonly destroy$ = new Subject<void>();
 
   idNumber = '';
+  firstName = '';
+  surname = '';
   loading = false;
   result: VerificationResponse | null = null;
 
@@ -1063,7 +1096,7 @@ export class SingleVerifyComponent implements OnDestroy {
     this.result = null;
 
     this.verificationService
-      .verifySingle(this.idNumber, '', '')
+      .verifySingle(this.idNumber, this.firstName, this.surname)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
@@ -1093,6 +1126,8 @@ export class SingleVerifyComponent implements OnDestroy {
   verifyAnother(): void {
     this.result = null;
     this.idNumber = '';
+    this.firstName = '';
+    this.surname = '';
   }
 
   maskIdNumber(idNumber: string): string {
