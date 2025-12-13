@@ -34,7 +34,10 @@ export const publicGuard: CanActivateFn = () => {
   const user = authService.currentUser;
   if (user?.role === UserRole.Learner) {
     router.navigate(['/app/my-portal/status']);
+  } else if (user?.role === UserRole.Admin || user?.role === UserRole.Staff) {
+    router.navigate(['/app/dashboard']);
   } else {
+    // Fallback to dashboard for any other role
     router.navigate(['/app/dashboard']);
   }
   return false;
@@ -53,7 +56,10 @@ export const roleBasedRedirectGuard: CanActivateFn = () => {
   const user = authService.currentUser;
   if (user?.role === UserRole.Learner) {
     router.navigate(['/app/my-portal/status']);
+  } else if (user?.role === UserRole.Admin || user?.role === UserRole.Staff) {
+    router.navigate(['/app/dashboard']);
   } else {
+    // Fallback to dashboard for any other role
     router.navigate(['/app/dashboard']);
   }
   return false;
