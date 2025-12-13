@@ -124,9 +124,9 @@ export class LoginComponent implements OnInit, OnDestroy {
             );
             // Redirect based on user role
             if (response.user.role === UserRole.Learner) {
-              this.router.navigateByUrl('/my-portal/status');
+              this.router.navigateByUrl('/app/my-portal/status');
             } else {
-              this.router.navigateByUrl(this.returnUrl);
+              this.router.navigateByUrl(this.returnUrl || '/app/dashboard');
             }
           }
         },

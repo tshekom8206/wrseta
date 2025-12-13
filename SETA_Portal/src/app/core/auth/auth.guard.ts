@@ -1,6 +1,7 @@
 import { inject } from '@angular/core';
 import { Router, CanActivateFn, CanActivateChildFn } from '@angular/router';
 import { AuthService } from './auth.service';
+import { UserRole } from '../../interfaces/user.interface';
 
 export const authGuard: CanActivateFn = (route, state) => {
   const authService = inject(AuthService);
@@ -29,7 +30,31 @@ export const publicGuard: CanActivateFn = () => {
     return true;
   }
 
-  // Already logged in, redirect to app dashboard
-  router.navigate(['/app/dashboard']);
+  // Already logged in, redirect based on user role
+  const user = authService.currentUser;
+  if (user?.role === UserRole.Learner) {
+    router.navigate(['/app/my-portal/status']);
+  } else {
+    router.navigate(['/app/dashboard']);
+  }
+  return false;
+};
+
+// Guard to redirect to role-appropriate default page
+export const roleBasedRedirectGuard: CanActivateFn = () => {
+  const authService = inject(AuthService);
+  const router = inject(Router);
+
+  if (!authService.isAuthenticated) {
+    router.navigate(['/auth/login']);
+    return false;
+  }
+
+  const user = authService.currentUser;
+  if (user?.role === UserRole.Learner) {
+    router.navigate(['/app/my-portal/status']);
+  } else {
+    router.navigate(['/app/dashboard']);
+  }
   return false;
 };

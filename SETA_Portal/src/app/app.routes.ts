@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { authGuard, authChildGuard, publicGuard } from './core/auth/auth.guard';
+import { authGuard, authChildGuard, publicGuard, roleBasedRedirectGuard } from './core/auth/auth.guard';
 import { adminGuard, staffGuard, learnerGuard, adminOrStaffGuard } from './core/auth/role.guard';
 
 export const routes: Routes = [
@@ -212,11 +212,10 @@ export const routes: Routes = [
           import('./views/pages/profile/profile.component').then(m => m.ProfileComponent)
       },
 
-      // Default redirect
+      // Default redirect - role-based
       {
         path: '',
-        redirectTo: 'dashboard',
-        pathMatch: 'full'
+        loadComponent: () => import('./core/auth/role-redirect.component').then(m => m.RoleRedirectComponent)
       }
     ]
   },
