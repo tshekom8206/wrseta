@@ -67,18 +67,18 @@ import { BlockedLearner } from '../../../../interfaces/dashboard.interface';
                   <div class="failed-verification-item__name">{{ learner.learnerName }}</div>
                   <div class="failed-verification-item__id">{{ learner.maskedIdNumber }}</div>
                   <div class="failed-verification-item__setas">
-                    @for (seta of learner.enrolledSetas; track seta) {
+                      @for (seta of learner.enrolledSetas; track seta) {
                       <span class="seta-tag">{{ seta }}</span>
-                    }
+                      }
+                    </div>
                   </div>
-                </div>
                 <div class="failed-verification-item__meta">
                   <span class="attempt-badge">{{ learner.attemptCount }} attempts</span>
                   <div class="time-label">{{ formatTime(learner.lastAttemptedAt) }}</div>
-                </div>
-              </div>
+                    </div>
+                  </div>
             }
-          </div>
+                </div>
         }
       </div>
     </div>
@@ -191,7 +191,7 @@ import { BlockedLearner } from '../../../../interfaces/dashboard.interface';
         color: var(--seta-text-secondary, #6c757d);
         background: var(--seta-bg-secondary, #f8f9fa);
         padding: 0.125rem 0.5rem;
-        border-radius: 0.25rem;
+      border-radius: 0.25rem;
         display: inline-block;
         margin-bottom: 0.5rem;
       }
@@ -209,11 +209,11 @@ import { BlockedLearner } from '../../../../interfaces/dashboard.interface';
         align-items: flex-end;
         gap: 0.375rem;
         flex-shrink: 0;
-      }
+    }
 
       .seta-tag {
         display: inline-block;
-        font-size: 0.6875rem;
+      font-size: 0.6875rem;
         font-weight: 500;
         padding: 0.125rem 0.5rem;
         border-radius: 0.25rem;
@@ -224,7 +224,7 @@ import { BlockedLearner } from '../../../../interfaces/dashboard.interface';
       .attempt-badge {
         display: inline-block;
         font-size: 0.75rem;
-        font-weight: 600;
+      font-weight: 600;
         padding: 0.25rem 0.625rem;
         border-radius: 0.375rem;
         background: rgba(220, 53, 69, 0.1);

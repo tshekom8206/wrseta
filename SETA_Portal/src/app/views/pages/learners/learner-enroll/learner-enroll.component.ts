@@ -8,25 +8,33 @@ import { Subject, takeUntil } from 'rxjs';
 import { LearnerService, QualificationOption } from '../../../../core/services/learner.service';
 import { VerificationService } from '../../../../core/services/verification.service';
 import { VerificationResponse } from '../../../../interfaces/verification.interface';
+import { PageHeaderComponent } from '../../../../shared/components/page-header/page-header.component';
 
 type EnrollmentStep = 'verify' | 'details' | 'confirm';
 
 @Component({
   selector: 'app-learner-enroll',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink, TranslateModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink, TranslateModule, PageHeaderComponent],
   template: `
     <div class="learner-enroll">
-      <div class="page-header">
-        <nav aria-label="breadcrumb">
-          <ol class="breadcrumb mb-2">
-            <li class="breadcrumb-item"><a routerLink="/learners">{{ 'learner.list' | translate }}</a></li>
-            <li class="breadcrumb-item active" aria-current="page">{{ 'learner.enroll' | translate }}</li>
-          </ol>
-        </nav>
-        <h1 class="page-title">{{ 'learner.enroll' | translate }}</h1>
-        <p class="page-subtitle">{{ 'learner.enrollSubtitle' | translate }}</p>
-      </div>
+      <app-page-header
+        titleKey="learner.enroll"
+        subtitleKey="learner.enrollSubtitle"
+        icon="user-plus"
+      >
+        <a routerLink="/learners/list" class="btn btn-outline-primary">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="me-2">
+            <line x1="8" y1="6" x2="21" y2="6"></line>
+            <line x1="8" y1="12" x2="21" y2="12"></line>
+            <line x1="8" y1="18" x2="21" y2="18"></line>
+            <line x1="3" y1="6" x2="3.01" y2="6"></line>
+            <line x1="3" y1="12" x2="3.01" y2="12"></line>
+            <line x1="3" y1="18" x2="3.01" y2="18"></line>
+          </svg>
+          {{ 'learner.list' | translate }}
+        </a>
+      </app-page-header>
 
       <!-- Progress Steps -->
       <div class="card mb-4">
