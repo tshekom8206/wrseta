@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable, of, delay, throwError } from 'rxjs';
+import { Observable, of, delay, throwError, map, catchError } from 'rxjs';
 import { ApiService } from './api.service';
 import { AuthService } from '../auth/auth.service';
 import {
@@ -32,8 +32,18 @@ export class LearnerService {
   private mockLearners: Learner[] = [];
   private initialized = false;
 
+  // Cache for all learners from API (for stats calculation)
+  private allLearnersCache: Learner[] = [];
+
+  // Cache for currently viewed learner (passed from list to detail)
+  private currentLearnerCache: Learner | null = null;
+
   private get setaCode(): string {
     return this.authService.currentUser?.setaCode ?? 'WRSETA';
+  }
+
+  private get setaId(): number {
+    return this.authService.currentUser?.setaId ?? 1;
   }
 
   constructor() {
@@ -44,22 +54,192 @@ export class LearnerService {
    * Search and list learners with pagination
    */
   searchLearners(request: LearnerSearchRequest): Observable<LearnerSearchResponse> {
-    // Return mock data for development
-    return this.getMockSearchResults(request);
+    // Call the real API endpoint
+    return this.api.get<any>(`learners/${this.setaId}`, {
+      page: request.page.toString(),
+      pageSize: request.pageSize.toString()
+    }).pipe(
+      map(response => {
+        const data = response.data || response;
+        const apiLearners = data.learners || [];
 
-    // Actual API call:
-    // return this.api.post<LearnerSearchResponse>('learners/search', request);
+        // Map API response to Learner interface
+        let learners: Learner[] = apiLearners.map((apiLearner: any) => this.mapApiLearnerToLearner(apiLearner));
+
+        // Store all learners for stats calculation
+        this.allLearnersCache = learners;
+
+        // Apply client-side filtering if needed (since API doesn't support all filters yet)
+        if (request.searchTerm) {
+          const term = request.searchTerm.toLowerCase();
+          learners = learners.filter(l =>
+            l.fullName.toLowerCase().includes(term) ||
+            l.idNumber.toLowerCase().includes(term) ||
+            l.email?.toLowerCase().includes(term)
+          );
+        }
+
+        if (request.status) {
+          learners = learners.filter(l => l.status === request.status);
+        }
+
+        if (request.verificationStatus) {
+          learners = learners.filter(l => l.verificationStatus === request.verificationStatus);
+        }
+
+        // Sort
+        if (request.sortBy) {
+          learners.sort((a, b) => {
+            const aVal = (a as any)[request.sortBy!];
+            const bVal = (b as any)[request.sortBy!];
+            const direction = request.sortDirection === 'desc' ? -1 : 1;
+
+            if (aVal < bVal) return -1 * direction;
+            if (aVal > bVal) return 1 * direction;
+            return 0;
+          });
+        }
+
+        // Paginate (client-side since API returns all learners)
+        const totalCount = learners.length;
+        const totalPages = Math.ceil(totalCount / request.pageSize);
+        const start = (request.page - 1) * request.pageSize;
+        const items = learners.slice(start, start + request.pageSize);
+
+        return {
+          items,
+          totalCount,
+          page: request.page,
+          pageSize: request.pageSize,
+          totalPages
+        };
+      }),
+      catchError(error => {
+        console.error('Error fetching learners:', error);
+        // Fallback to empty result
+        return of({
+          items: [],
+          totalCount: 0,
+          page: request.page,
+          pageSize: request.pageSize,
+          totalPages: 0
+        });
+      })
+    );
+  }
+
+  /**
+   * Map API learner response to Learner interface
+   */
+  private mapApiLearnerToLearner(apiLearner: any): Learner {
+    const fullName = `${apiLearner.firstName || ''} ${apiLearner.surname || ''}`.trim();
+
+    // Use the masked ID number as-is (API already masks it)
+    const idNumberMasked = apiLearner.idNumberMasked || '';
+
+    // Try to extract date of birth from unmasked parts if possible
+    // The masked format is like "980806****084" - we can extract year/month/day from visible parts
+    let dateOfBirth = new Date();
+    let gender: 'Male' | 'Female' | 'Other' = 'Other';
+
+    // Try to extract info from visible parts of masked ID
+    if (idNumberMasked.length >= 6) {
+      const yearPart = idNumberMasked.substring(0, 2);
+      const monthPart = idNumberMasked.substring(2, 4);
+      const dayPart = idNumberMasked.substring(4, 6);
+
+      if (yearPart && monthPart && dayPart && !yearPart.includes('*') && !monthPart.includes('*') && !dayPart.includes('*')) {
+        const year = parseInt(yearPart, 10);
+        const month = parseInt(monthPart, 10) - 1;
+        const day = parseInt(dayPart, 10);
+        const fullYear = year <= 24 ? 2000 + year : 1900 + year;
+        dateOfBirth = new Date(fullYear, month, day);
+      }
+    }
+
+    // Map status
+    let status: LearnerStatus = LearnerStatus.Active;
+    if (apiLearner.status === 'Active') status = LearnerStatus.Active;
+    else if (apiLearner.status === 'Completed') status = LearnerStatus.Completed;
+    else if (apiLearner.status === 'Withdrawn') status = LearnerStatus.Withdrawn;
+    else if (apiLearner.status === 'Inactive') status = LearnerStatus.Inactive;
+
+    // Default verification status (API doesn't provide this yet)
+    const verificationStatus = VerificationStatus.Green;
+
+    // Map qualifications
+    const qualifications: Qualification[] = [];
+    if (apiLearner.learnershipCode || apiLearner.programmeName) {
+      qualifications.push({
+        id: 1,
+        name: apiLearner.programmeName || apiLearner.learnershipCode || '',
+        code: apiLearner.learnershipCode || '',
+        nqfLevel: 0,
+        startDate: new Date(apiLearner.registrationDate),
+        status: status === LearnerStatus.Completed ? QualificationStatus.Completed : QualificationStatus.InProgress,
+        credits: 0
+      });
+    }
+
+    return {
+      id: apiLearner.learnerId,
+      idNumber: idNumberMasked, // Use masked ID as-is
+      firstName: apiLearner.firstName || '',
+      lastName: apiLearner.surname || '',
+      fullName: fullName || 'Unknown Learner',
+      email: undefined, // API doesn't provide email
+      phone: undefined, // API doesn't provide phone
+      dateOfBirth,
+      gender,
+      setaId: this.setaId,
+      setaCode: this.setaCode,
+      enrollmentDate: new Date(apiLearner.registrationDate),
+      status,
+      verificationStatus,
+      lastVerifiedAt: new Date(apiLearner.registrationDate),
+      qualifications,
+      isActive: status === LearnerStatus.Active,
+      createdAt: new Date(apiLearner.registrationDate),
+      updatedAt: new Date(apiLearner.registrationDate)
+    };
   }
 
   /**
    * Get learner by ID
+   * First checks cache, then falls back to API or mock data
    */
   getLearnerById(id: number): Observable<Learner | null> {
+    // Check if we have the learner in cache (passed from list)
+    if (this.currentLearnerCache && this.currentLearnerCache.id === id) {
+      return of(this.currentLearnerCache);
+    }
+
+    // Check all learners cache
+    const cachedLearner = this.allLearnersCache.find(l => l.id === id);
+    if (cachedLearner) {
+      return of(cachedLearner);
+    }
+
+    // Fallback to mock data
     const learner = this.mockLearners.find(l => l.id === id);
     return of(learner || null).pipe(delay(300));
 
     // Actual API call:
-    // return this.api.get<Learner>(`learners/${id}`);
+    // return this.api.get<Learner>(`learners/detail/${id}`);
+  }
+
+  /**
+   * Set the current learner (used when navigating from list to detail)
+   */
+  setCurrentLearner(learner: Learner): void {
+    this.currentLearnerCache = learner;
+  }
+
+  /**
+   * Clear the current learner cache
+   */
+  clearCurrentLearner(): void {
+    this.currentLearnerCache = null;
   }
 
   /**
@@ -216,29 +396,66 @@ export class LearnerService {
    * Get learner statistics for the current SETA
    */
   getLearnerStats(): Observable<LearnerStats> {
-    const setaLearners = this.mockLearners.filter(l => l.setaCode === this.setaCode);
+    // Use cached learners if available, otherwise fetch
+    if (this.allLearnersCache.length > 0) {
+      return of(this.calculateStatsFromLearners(this.allLearnersCache));
+    }
 
-    const stats: LearnerStats = {
-      total: setaLearners.length,
-      active: setaLearners.filter(l => l.status === LearnerStatus.Active).length,
-      inactive: setaLearners.filter(l => l.status === LearnerStatus.Inactive).length,
-      completed: setaLearners.filter(l => l.status === LearnerStatus.Completed).length,
-      withdrawn: setaLearners.filter(l => l.status === LearnerStatus.Withdrawn).length,
-      blocked: setaLearners.filter(l => l.status === LearnerStatus.Blocked).length,
+    // Fetch all learners to calculate stats
+    return this.api.get<any>(`learners/${this.setaId}`, {
+      page: '1',
+      pageSize: '1000' // Get as many as possible for accurate stats
+    }).pipe(
+      map(response => {
+        const data = response.data || response;
+        const apiLearners = data.learners || [];
+        const learners = apiLearners.map((apiLearner: any) => this.mapApiLearnerToLearner(apiLearner));
+
+        // Cache for future use
+        this.allLearnersCache = learners;
+
+        return this.calculateStatsFromLearners(learners);
+      }),
+      catchError(error => {
+        console.error('Error fetching learner stats:', error);
+        // Return empty stats on error
+        return of({
+          total: 0,
+          active: 0,
+          inactive: 0,
+          completed: 0,
+          withdrawn: 0,
+          blocked: 0,
+          byGender: { male: 0, female: 0, other: 0 },
+          byVerificationStatus: { green: 0, amber: 0, red: 0, notVerified: 0 }
+        });
+      })
+    );
+  }
+
+  /**
+   * Calculate stats from learners array
+   */
+  private calculateStatsFromLearners(learners: Learner[]): LearnerStats {
+    return {
+      total: learners.length,
+      active: learners.filter(l => l.status === LearnerStatus.Active).length,
+      inactive: learners.filter(l => l.status === LearnerStatus.Inactive).length,
+      completed: learners.filter(l => l.status === LearnerStatus.Completed).length,
+      withdrawn: learners.filter(l => l.status === LearnerStatus.Withdrawn).length,
+      blocked: learners.filter(l => l.status === LearnerStatus.Blocked).length,
       byGender: {
-        male: setaLearners.filter(l => l.gender === 'Male').length,
-        female: setaLearners.filter(l => l.gender === 'Female').length,
-        other: setaLearners.filter(l => l.gender === 'Other').length
+        male: learners.filter(l => l.gender === 'Male').length,
+        female: learners.filter(l => l.gender === 'Female').length,
+        other: learners.filter(l => l.gender === 'Other').length
       },
       byVerificationStatus: {
-        green: setaLearners.filter(l => l.verificationStatus === VerificationStatus.Green).length,
-        amber: setaLearners.filter(l => l.verificationStatus === VerificationStatus.Amber).length,
-        red: setaLearners.filter(l => l.verificationStatus === VerificationStatus.Red).length,
-        notVerified: setaLearners.filter(l => l.verificationStatus === VerificationStatus.NotVerified).length
+        green: learners.filter(l => l.verificationStatus === VerificationStatus.Green).length,
+        amber: learners.filter(l => l.verificationStatus === VerificationStatus.Amber).length,
+        red: learners.filter(l => l.verificationStatus === VerificationStatus.Red).length,
+        notVerified: learners.filter(l => l.verificationStatus === VerificationStatus.NotVerified).length
       }
     };
-
-    return of(stats).pipe(delay(300));
   }
 
   // ============== Helper Methods ==============
