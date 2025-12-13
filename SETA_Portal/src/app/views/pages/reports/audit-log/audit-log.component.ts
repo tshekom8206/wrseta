@@ -2,7 +2,8 @@ import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
-import { Subject, takeUntil, of, delay } from 'rxjs';
+import { Subject, takeUntil } from 'rxjs';
+import { ApiService } from '../../../../core/services/api.service';
 
 interface AuditLogEntry {
   id: number;
@@ -16,6 +17,28 @@ interface AuditLogEntry {
   status: 'SUCCESS' | 'FAILURE' | 'WARNING';
   metadata?: Record<string, any>;
   createdAt: Date;
+}
+
+interface AuditReportApiItem {
+  auditId: number;
+  action: string;
+  tableAffected?: string | null;
+  recordId?: number | null;
+  idNumber?: string | null;
+  details?: string | null;
+  userId?: string | null;
+  ipAddress?: string | null;
+  actionDate: string;
+  success: boolean;
+  category: 'AUTH' | 'VERIFICATION' | 'LEARNER' | 'ADMIN' | 'SYSTEM';
+}
+
+interface AuditReportApiResponse {
+  items: AuditReportApiItem[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
 }
 
 @Component({
@@ -299,6 +322,7 @@ interface AuditLogEntry {
 })
 export class AuditLogComponent implements OnInit, OnDestroy {
   private readonly destroy$ = new Subject<void>();
+  private readonly api = inject(ApiService);
   Math = Math;
 
   logs: AuditLogEntry[] = [];
@@ -320,6 +344,10 @@ export class AuditLogComponent implements OnInit, OnDestroy {
   totalPages = 1;
 
   ngOnInit(): void {
+    // Default dates to today
+    const today = new Date().toISOString().split('T')[0];
+    this.startDate = today;
+    this.endDate = today;
     this.loadLogs();
   }
 
@@ -330,66 +358,87 @@ export class AuditLogComponent implements OnInit, OnDestroy {
 
   private loadLogs(): void {
     this.loading = true;
-    // Generate mock audit logs
-    this.generateMockLogs().pipe(takeUntil(this.destroy$)).subscribe(logs => {
-      this.logs = logs;
-      this.applyFilters();
-      this.loading = false;
-    });
+    const params: Record<string, string | number | boolean> = {
+      page: this.currentPage,
+      pageSize: this.pageSize
+    };
+
+    if (this.startDate) params['startDate'] = this.startDate;
+    if (this.endDate) params['endDate'] = this.endDate;
+    if (this.userFilter) params['userId'] = this.userFilter;
+
+    // Map UI status filter to API "success" filter
+    if (this.statusFilter === 'SUCCESS') params['success'] = true;
+    if (this.statusFilter === 'FAILURE') params['success'] = false;
+
+    this.api.get<any>('reports/audit', params)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (apiResponse) => {
+          const payload: AuditReportApiResponse = (apiResponse?.data ?? apiResponse) as AuditReportApiResponse;
+
+          const items = Array.isArray(payload?.items) ? payload.items : [];
+          this.totalPages = payload?.totalPages ?? 1;
+
+          this.logs = items.map(i => this.mapApiItemToLog(i));
+          this.applyClientCategoryFilter();
+          this.loading = false;
+        },
+        error: () => {
+          this.logs = [];
+          this.filteredLogs = [];
+          this.paginatedLogs = [];
+          this.totalPages = 1;
+          this.loading = false;
+        }
+      });
   }
 
-  private generateMockLogs() {
-    const actions = [
-      { action: 'LOGIN', category: 'AUTH' as const, desc: 'User logged in successfully' },
-      { action: 'LOGOUT', category: 'AUTH' as const, desc: 'User logged out' },
-      { action: 'LOGIN_FAILED', category: 'AUTH' as const, desc: 'Failed login attempt' },
-      { action: 'VERIFY_ID', category: 'VERIFICATION' as const, desc: 'Single ID verification performed' },
-      { action: 'BATCH_VERIFY', category: 'VERIFICATION' as const, desc: 'Batch verification processed' },
-      { action: 'LEARNER_ENROLLED', category: 'LEARNER' as const, desc: 'New learner enrolled' },
-      { action: 'LEARNER_UPDATED', category: 'LEARNER' as const, desc: 'Learner record updated' },
-      { action: 'LEARNER_DEACTIVATED', category: 'LEARNER' as const, desc: 'Learner deactivated' },
-      { action: 'USER_CREATED', category: 'ADMIN' as const, desc: 'New user account created' },
-      { action: 'SETTINGS_UPDATED', category: 'ADMIN' as const, desc: 'System settings modified' },
-      { action: 'SYSTEM_BACKUP', category: 'SYSTEM' as const, desc: 'Automated backup completed' },
-      { action: 'RATE_LIMIT_EXCEEDED', category: 'SYSTEM' as const, desc: 'API rate limit exceeded' }
-    ];
+  private mapApiItemToLog(item: AuditReportApiItem): AuditLogEntry {
+    const createdAt = item?.actionDate ? new Date(item.actionDate) : new Date();
+    const description = item?.details || '';
+    const action = item?.action || '';
 
-    const users = ['admin.user', 'staff.member', 'john.doe', 'jane.smith', 'system'];
-    const statuses: Array<'SUCCESS' | 'FAILURE' | 'WARNING'> = ['SUCCESS', 'SUCCESS', 'SUCCESS', 'FAILURE', 'WARNING'];
-    const ips = ['192.168.1.100', '10.0.0.50', '172.16.0.25', '192.168.1.105', '10.0.0.75'];
-
-    const logs: AuditLogEntry[] = [];
-    for (let i = 0; i < 150; i++) {
-      const actionItem = actions[Math.floor(Math.random() * actions.length)];
-      const user = users[Math.floor(Math.random() * users.length)];
-      logs.push({
-        id: i + 1,
-        action: actionItem.action,
-        category: actionItem.category,
-        description: actionItem.desc,
-        userId: `USR${String(Math.floor(Math.random() * 100)).padStart(3, '0')}`,
-        userName: user,
-        ipAddress: ips[Math.floor(Math.random() * ips.length)],
-        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        status: statuses[Math.floor(Math.random() * statuses.length)],
-        metadata: Math.random() > 0.7 ? { idNumber: '****5678901**', setaCode: 'WRSETA' } : undefined,
-        createdAt: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000)
-      });
+    let status: AuditLogEntry['status'] = item?.success ? 'SUCCESS' : 'FAILURE';
+    // Heuristic: treat "pending"/"review" as WARNING (useful for demo/YELLOW flows)
+    const descLower = description.toLowerCase();
+    if (item?.success && (descLower.includes('pending') || descLower.includes('review'))) {
+      status = 'WARNING';
     }
-    return of(logs.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())).pipe(delay(500));
+
+    const metadata: Record<string, any> | undefined = {
+      tableAffected: item?.tableAffected ?? undefined,
+      recordId: item?.recordId ?? undefined,
+      idNumber: item?.idNumber ?? undefined
+    };
+
+    return {
+      id: item?.auditId ?? 0,
+      action,
+      category: item?.category ?? 'SYSTEM',
+      description,
+      userId: item?.userId ?? '',
+      userName: item?.userId ?? '',
+      ipAddress: item?.ipAddress ?? '',
+      userAgent: 'SETA.API',
+      status,
+      metadata,
+      createdAt
+    };
+  }
+
+  private applyClientCategoryFilter(): void {
+    this.filteredLogs = this.logs.filter(log => {
+      if (this.categoryFilter && log.category !== this.categoryFilter) return false;
+      if (this.statusFilter === 'WARNING' && log.status !== 'WARNING') return false;
+      return true;
+    });
+    this.paginatedLogs = this.filteredLogs;
   }
 
   applyFilters(): void {
-    this.filteredLogs = this.logs.filter(log => {
-      if (this.categoryFilter && log.category !== this.categoryFilter) return false;
-      if (this.statusFilter && log.status !== this.statusFilter) return false;
-      if (this.userFilter && !log.userName.toLowerCase().includes(this.userFilter.toLowerCase())) return false;
-      if (this.startDate && new Date(log.createdAt) < new Date(this.startDate)) return false;
-      if (this.endDate && new Date(log.createdAt) > new Date(this.endDate + 'T23:59:59')) return false;
-      return true;
-    });
     this.currentPage = 1;
-    this.updatePagination();
+    this.loadLogs();
   }
 
   resetFilters(): void {
@@ -398,19 +447,19 @@ export class AuditLogComponent implements OnInit, OnDestroy {
     this.userFilter = '';
     this.startDate = '';
     this.endDate = '';
-    this.applyFilters();
+    this.currentPage = 1;
+    this.loadLogs();
   }
 
   updatePagination(): void {
-    this.totalPages = Math.ceil(this.filteredLogs.length / this.pageSize);
-    const start = (this.currentPage - 1) * this.pageSize;
-    this.paginatedLogs = this.filteredLogs.slice(start, start + this.pageSize);
+    this.currentPage = 1;
+    this.loadLogs();
   }
 
   goToPage(page: number): void {
     if (page >= 1 && page <= this.totalPages) {
       this.currentPage = page;
-      this.updatePagination();
+      this.loadLogs();
     }
   }
 

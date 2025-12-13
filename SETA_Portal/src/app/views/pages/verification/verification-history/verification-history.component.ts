@@ -3,11 +3,13 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
+import { NgbDropdownModule } from '@ng-bootstrap/ng-bootstrap';
 import { Subject, takeUntil, debounceTime, distinctUntilChanged } from 'rxjs';
 
 import { VerificationService } from '../../../../core/services/verification.service';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { PageHeaderComponent } from '../../../../shared/components/page-header/page-header.component';
+import { PdfExportService } from '../../../../core/services/pdf-export.service';
 import {
   VerificationHistoryRequest,
   VerificationHistoryResponse
@@ -27,7 +29,7 @@ interface HistoryItem {
 @Component({
   selector: 'app-verification-history',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, TranslateModule, PageHeaderComponent],
+  imports: [CommonModule, FormsModule, RouterLink, TranslateModule, NgbDropdownModule, PageHeaderComponent],
   template: `
     <div class="verification-history">
       <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
@@ -177,14 +179,38 @@ interface HistoryItem {
             }
           </h5>
           <div class="d-flex gap-2 align-items-center">
-            <button class="btn btn-outline-secondary btn-sm" (click)="exportHistory()" [disabled]="historyItems.length === 0">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="me-1">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                <polyline points="7 10 12 15 17 10"></polyline>
-                <line x1="12" y1="15" x2="12" y2="3"></line>
-              </svg>
-              {{ 'common.export' | translate }}
-            </button>
+            <div ngbDropdown class="d-inline-block">
+              <button class="btn btn-outline-secondary btn-sm" ngbDropdownToggle [disabled]="historyItems.length === 0">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="me-1">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="7 10 12 15 17 10"></polyline>
+                  <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                {{ 'common.export' | translate }}
+              </button>
+              <div ngbDropdownMenu>
+                <button ngbDropdownItem (click)="exportToPDF()">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="me-2 text-danger">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                    <polyline points="10 9 9 9 8 9"></polyline>
+                  </svg>
+                  Export to PDF
+                </button>
+                <button ngbDropdownItem (click)="exportToCSV()">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="me-2 text-success">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                    <polyline points="10 9 9 9 8 9"></polyline>
+                  </svg>
+                  Export to CSV
+                </button>
+              </div>
+            </div>
             <select class="form-select form-select-sm" style="width: auto;" [(ngModel)]="pageSize" (ngModelChange)="onPageSizeChange()">
               <option [value]="10">10</option>
               <option [value]="25">25</option>
@@ -470,6 +496,7 @@ interface HistoryItem {
 export class VerificationHistoryComponent implements OnInit, OnDestroy {
   private readonly verificationService = inject(VerificationService);
   private readonly authService = inject(AuthService);
+  private readonly pdfExportService = inject(PdfExportService);
   private readonly destroy$ = new Subject<void>();
   private readonly searchSubject$ = new Subject<string>();
 
@@ -640,7 +667,7 @@ export class VerificationHistoryComponent implements OnInit, OnDestroy {
     window.location.href = `/verification/single?id=${idNumber}`;
   }
 
-  exportHistory(): void {
+  exportToCSV(): void {
     if (this.historyItems.length === 0) return;
 
     const headers = ['ID Number', 'Status', 'Type', 'Duplicate', 'Verified By', 'Verified At'];
@@ -668,5 +695,31 @@ export class VerificationHistoryComponent implements OnInit, OnDestroy {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  }
+
+  exportToPDF(): void {
+    if (this.historyItems.length === 0) return;
+
+    this.pdfExportService.exportToPDF({
+      title: 'Verification History Report',
+      subtitle: `Generated from ${this.totalCount} verification records`,
+      filename: 'verification-history-report',
+      orientation: 'landscape',
+      summary: [
+        { label: 'Total Verifications', value: this.totalCount },
+        { label: 'Green (Verified)', value: this.greenCount },
+        { label: 'Amber (Warning)', value: this.amberCount },
+        { label: 'Red (Blocked)', value: this.redCount }
+      ],
+      columns: [
+        { header: 'ID Number', field: 'idNumber', format: (v) => this.maskIdNumber(v) },
+        { header: 'Status', field: 'status', align: 'center' },
+        { header: 'Request Type', field: 'requestType', align: 'center' },
+        { header: 'Duplicate', field: 'isDuplicate', align: 'center', format: (v) => v ? 'Yes' : 'No' },
+        { header: 'Verified By', field: 'verifiedBy' },
+        { header: 'Verified At', field: 'verifiedAt', format: (v) => this.pdfExportService.formatDate(v) }
+      ],
+      data: this.historyItems
+    });
   }
 }

@@ -63,6 +63,11 @@ export const routes: Routes = [
               import('./views/pages/verification/verification-history/verification-history.component').then(m => m.VerificationHistoryComponent)
           },
           {
+            path: 'queue',
+            loadComponent: () =>
+              import('./views/pages/verification/batch-queue/batch-queue.component').then(m => m.BatchQueueComponent)
+          },
+          {
             path: '',
             redirectTo: 'single',
             pathMatch: 'full'
@@ -167,12 +172,12 @@ export const routes: Routes = [
           {
             path: 'status',
             loadComponent: () =>
-              import('./views/pages/learner-portal/my-status/my-status.component').then(m => m.MyStatusComponent)
+              import('./views/pages/my-portal/status/status.component').then(m => m.LearnerStatusComponent)
           },
           {
             path: 'certificates',
             loadComponent: () =>
-              import('./views/pages/learner-portal/my-certificates/my-certificates.component').then(m => m.MyCertificatesComponent)
+              import('./views/pages/my-portal/certificates/certificates.component').then(m => m.LearnerCertificatesComponent)
           },
           {
             path: '',

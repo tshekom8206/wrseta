@@ -24,13 +24,51 @@ Namespace SETA.API.Controllers
         ''' Get the client IP address from the request
         ''' </summary>
         Private Function GetClientIp() As String
+            ' Check for forwarded headers first (behind proxy/load balancer)
+            If Me.Request.Headers.Contains("X-Forwarded-For") Then
+                Return Me.Request.Headers.GetValues("X-Forwarded-For").FirstOrDefault()?.Split(","c).FirstOrDefault()?.Trim()
+            End If
+
+            If Me.Request.Headers.Contains("X-Real-IP") Then
+                Return Me.Request.Headers.GetValues("X-Real-IP").FirstOrDefault()
+            End If
+
+            ' Try OWIN context (for self-hosted apps)
+            If Me.Request.Properties.ContainsKey("MS_OwinContext") Then
+                Try
+                    Dim owinContext = Me.Request.Properties("MS_OwinContext")
+                    If owinContext IsNot Nothing Then
+                        Dim requestProp = owinContext.GetType().GetProperty("Request")
+                        If requestProp IsNot Nothing Then
+                            Dim owinRequest = requestProp.GetValue(owinContext)
+                            If owinRequest IsNot Nothing Then
+                                Dim remoteIpProp = owinRequest.GetType().GetProperty("RemoteIpAddress")
+                                If remoteIpProp IsNot Nothing Then
+                                    Dim ip = TryCast(remoteIpProp.GetValue(owinRequest), String)
+                                    If Not String.IsNullOrEmpty(ip) Then
+                                        If ip = "::1" OrElse ip = "127.0.0.1" Then Return "localhost"
+                                        Return ip
+                                    End If
+                                End If
+                            End If
+                        End If
+                    End If
+                Catch
+                End Try
+            End If
+
+            ' Fallback for IIS hosting
             If Me.Request.Properties.ContainsKey("MS_HttpContext") Then
                 Dim ctx = Me.Request.Properties("MS_HttpContext")
                 If ctx IsNot Nothing Then
-                    Return "127.0.0.1"
+                    Dim httpContext = TryCast(ctx, System.Web.HttpContextWrapper)
+                    If httpContext IsNot Nothing Then
+                        Return httpContext.Request.UserHostAddress
+                    End If
                 End If
             End If
-            Return "unknown"
+
+            Return "localhost"
         End Function
 
         ''' <summary>
@@ -487,10 +525,20 @@ Namespace SETA.API.Controllers
                 conn.Open()
 
                 Dim sql As String = "
-                    SELECT TOP (@Limit) VerificationID, Status, ISNULL(Message, StatusReason) AS Message, VerifiedAt
-                    FROM VerificationLog
-                    WHERE RequestingSETAID = @SETAID
-                    ORDER BY VerifiedAt DESC"
+                    SELECT TOP (@Limit)
+                        vl.VerificationID,
+                        vl.Status,
+                        ISNULL(vl.Message, vl.StatusReason) AS Message,
+                        vl.VerifiedAt,
+                        vl.IDNumber,
+                        ISNULL(vl.FirstName, lr.FirstName) AS FirstName,
+                        ISNULL(vl.Surname, lr.Surname) AS Surname,
+                        cs.SETACode AS ConflictingSeta
+                    FROM VerificationLog vl
+                    LEFT JOIN LearnerRegistry lr ON vl.IDNumberHash = lr.IDNumberHash
+                    LEFT JOIN SETAs cs ON lr.RegisteredSETAID = cs.SETAID AND cs.SETAID <> @SETAID
+                    WHERE vl.RequestingSETAID = @SETAID
+                    ORDER BY vl.VerifiedAt DESC"
 
                 Using cmd As New SqlCommand(sql, conn)
                     cmd.Parameters.AddWithValue("@Limit", limit)
@@ -498,11 +546,24 @@ Namespace SETA.API.Controllers
 
                     Using reader As SqlDataReader = cmd.ExecuteReader()
                         While reader.Read()
+                            Dim idNumber As String = If(reader.IsDBNull(4), "", reader.GetString(4))
+                            Dim firstName As String = If(reader.IsDBNull(5), "", reader.GetString(5))
+                            Dim surname As String = If(reader.IsDBNull(6), "", reader.GetString(6))
+                            Dim conflictingSeta As String = If(reader.IsDBNull(7), "", reader.GetString(7))
+
+                            Dim learnerName As String = ""
+                            If Not String.IsNullOrEmpty(firstName) OrElse Not String.IsNullOrEmpty(surname) Then
+                                learnerName = (firstName & " " & surname).Trim()
+                            End If
+
                             results.Add(New With {
                                 .LogId = reader.GetInt32(0),
                                 .Status = reader.GetString(1),
                                 .Message = If(reader.IsDBNull(2), "", reader.GetString(2)),
-                                .VerifiedAt = reader.GetDateTime(3)
+                                .VerifiedAt = reader.GetDateTime(3),
+                                .IdNumber = idNumber,
+                                .LearnerName = learnerName,
+                                .ConflictingSeta = conflictingSeta
                             })
                         End While
                     End Using

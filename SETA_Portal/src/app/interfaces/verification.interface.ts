@@ -13,6 +13,9 @@ export interface VerificationResponse {
   duplicateInfo?: DuplicateInfo;
   verifiedAt: Date;
   traceId?: string;
+  source?: string;  // 'DHA_API', 'CACHE', or 'SIMULATED'
+  errorCode?: string;
+  needsManualReview?: boolean;
 }
 
 export interface LearnerInfo {
@@ -21,6 +24,7 @@ export interface LearnerInfo {
   fullName: string;
   dateOfBirth: Date;
   gender: string;
+  citizenship?: string;
   currentSeta?: string;
   enrollmentDate?: Date;
   status?: string;

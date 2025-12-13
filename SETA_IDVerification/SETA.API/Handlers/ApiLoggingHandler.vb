@@ -73,7 +73,36 @@ Namespace Handlers
                 Return request.Headers.GetValues("X-Real-IP").FirstOrDefault()
             End If
 
-            ' Fall back to remote endpoint
+            ' Try OWIN context (for self-hosted apps)
+            If request.Properties.ContainsKey("MS_OwinContext") Then
+                Try
+                    Dim owinContext = request.Properties("MS_OwinContext")
+                    If owinContext IsNot Nothing Then
+                        Dim owinType = owinContext.GetType()
+                        Dim requestProp = owinType.GetProperty("Request")
+                        If requestProp IsNot Nothing Then
+                            Dim owinRequest = requestProp.GetValue(owinContext)
+                            If owinRequest IsNot Nothing Then
+                                Dim remoteIpProp = owinRequest.GetType().GetProperty("RemoteIpAddress")
+                                If remoteIpProp IsNot Nothing Then
+                                    Dim ip = TryCast(remoteIpProp.GetValue(owinRequest), String)
+                                    If Not String.IsNullOrEmpty(ip) Then
+                                        ' For localhost, return a friendly name
+                                        If ip = "::1" OrElse ip = "127.0.0.1" Then
+                                            Return "localhost"
+                                        End If
+                                        Return ip
+                                    End If
+                                End If
+                            End If
+                        End If
+                    End If
+                Catch
+                    ' Ignore reflection errors
+                End Try
+            End If
+
+            ' Fall back to IIS HttpContext
             If request.Properties.ContainsKey("MS_HttpContext") Then
                 Dim ctx = request.Properties("MS_HttpContext")
                 If ctx IsNot Nothing Then
@@ -84,7 +113,7 @@ Namespace Handlers
                 End If
             End If
 
-            Return "unknown"
+            Return "localhost"
         End Function
 
     End Class

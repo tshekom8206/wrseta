@@ -46,6 +46,7 @@ export class SidebarComponent {
       children: [
         { label: 'nav.singleVerify', icon: 'check', route: '/verification/single', roles: [UserRole.Admin, UserRole.Staff] },
         { label: 'nav.batchVerify', icon: 'upload', route: '/verification/batch', roles: [UserRole.Admin, UserRole.Staff] },
+        { label: 'nav.batchQueue', icon: 'layers', route: '/verification/queue', roles: [UserRole.Admin, UserRole.Staff] },
         { label: 'nav.recentVerifications', icon: 'clock', route: '/verification/history', roles: [UserRole.Admin, UserRole.Staff] }
       ]
     },

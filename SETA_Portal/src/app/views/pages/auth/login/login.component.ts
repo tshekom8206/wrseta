@@ -11,6 +11,7 @@ import { ThemeService, SETA_THEMES } from '../../../../core/services/theme.servi
 import { NotificationService } from '../../../../core/services/notification.service';
 import { IconService } from '../../../../core/services/icon.service';
 import { SetaListItem } from '../../../../interfaces/seta.interface';
+import { UserRole } from '../../../../interfaces/user.interface';
 
 @Component({
   selector: 'app-login',
@@ -121,7 +122,12 @@ export class LoginComponent implements OnInit, OnDestroy {
               this.translate.instant('auth.welcomeBack'),
               response.user.fullName
             );
-            this.router.navigateByUrl(this.returnUrl);
+            // Redirect based on user role
+            if (response.user.role === UserRole.Learner) {
+              this.router.navigateByUrl('/my-portal/status');
+            } else {
+              this.router.navigateByUrl(this.returnUrl);
+            }
           }
         },
         error: (error) => {

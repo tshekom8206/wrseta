@@ -297,11 +297,11 @@ Namespace SETA.API.Controllers
                     Using reader As SqlDataReader = cmd.ExecuteReader()
                         If reader.Read() Then
                             Return New UserInfo With {
-                                .UserId = reader.GetInt32(0),
-                                .Username = reader.GetString(1),
-                                .SetaId = reader.GetInt32(2),
-                                .SetaCode = reader.GetString(3),
-                                .SetaName = reader.GetString(4)
+                                .UserId = If(reader.IsDBNull(0), 0, reader.GetInt32(0)),
+                                .Username = If(reader.IsDBNull(1), "", reader.GetString(1)),
+                                .SetaId = If(reader.IsDBNull(2), 0, reader.GetInt32(2)),
+                                .SetaCode = If(reader.IsDBNull(3), "", reader.GetString(3)),
+                                .SetaName = If(reader.IsDBNull(4), "", reader.GetString(4))
                             }
                         End If
                     End Using
@@ -334,11 +334,11 @@ Namespace SETA.API.Controllers
                     Using reader As SqlDataReader = cmd.ExecuteReader()
                         If reader.Read() Then
                             Return New UserInfo With {
-                                .UserId = reader.GetInt32(0),
-                                .Username = reader.GetString(1),
-                                .SetaId = reader.GetInt32(2),
-                                .SetaCode = reader.GetString(3),
-                                .SetaName = reader.GetString(4)
+                                .UserId = If(reader.IsDBNull(0), 0, reader.GetInt32(0)),
+                                .Username = If(reader.IsDBNull(1), "", reader.GetString(1)),
+                                .SetaId = If(reader.IsDBNull(2), 0, reader.GetInt32(2)),
+                                .SetaCode = If(reader.IsDBNull(3), "", reader.GetString(3)),
+                                .SetaName = If(reader.IsDBNull(4), "", reader.GetString(4))
                             }
                         End If
                     End Using

@@ -10,8 +10,11 @@ Imports Newtonsoft.Json
 Imports Newtonsoft.Json.Serialization
 Imports SETA.API.Filters
 Imports SETA.API.Handlers
+Imports SETA.API.Services.RabbitMQ
 
 Public Class Startup
+
+    Private Shared _workersInitialized As Boolean = False
 
     Public Sub Configuration(app As IAppBuilder)
         ' Configure Web API
@@ -62,6 +65,34 @@ Public Class Startup
         app.UseWebApi(config)
 
         System.Diagnostics.Debug.WriteLine("SETA API configured with CORS, message handlers, and exception filter")
+
+        ' =============================================
+        ' Initialize RabbitMQ Workers for Batch Processing
+        ' =============================================
+        If Not _workersInitialized Then
+            Try
+                System.Threading.Tasks.Task.Run(Sub()
+                    ' Delay slightly to let the API fully start
+                    System.Threading.Thread.Sleep(2000)
+                    WorkerManager.Instance.Initialize()
+                End Sub)
+                _workersInitialized = True
+            Catch ex As Exception
+                Console.WriteLine($"[Startup] Warning: Failed to start batch workers: {ex.Message}")
+                ' Continue - batch processing won't be available but API will work
+            End Try
+        End If
+    End Sub
+
+    ''' <summary>
+    ''' Shuts down the worker manager gracefully
+    ''' </summary>
+    Public Shared Sub Shutdown()
+        Try
+            WorkerManager.Instance.Shutdown()
+        Catch ex As Exception
+            Console.WriteLine($"[Startup] Error during shutdown: {ex.Message}")
+        End Try
     End Sub
 
 End Class

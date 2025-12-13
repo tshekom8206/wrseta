@@ -1,8 +1,11 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable, of, delay, throwError } from 'rxjs';
-import { catchError, map } from 'rxjs/operators';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { Observable, of, delay, throwError, forkJoin, from } from 'rxjs';
+import { catchError, map, tap, mergeMap, toArray, concatMap } from 'rxjs/operators';
 import { ApiService } from './api.service';
 import { AuthService } from '../auth/auth.service';
+import { TranslateService } from '@ngx-translate/core';
+import { environment } from '../../../environments/environment';
 import {
   VerificationRequest,
   VerificationResponse,
@@ -10,47 +13,220 @@ import {
   BatchVerificationResponse,
   VerificationHistoryRequest,
   VerificationHistoryResponse,
+  VerificationResult,
   LearnerInfo,
   DuplicateInfo
 } from '../../interfaces/verification.interface';
+
+// DHA API Response interfaces
+interface DHAPersonResponse {
+  success: boolean;
+  data?: {
+    idNumber: string;
+    firstName: string;
+    surname: string;
+    dateOfBirth: string;
+    gender: string;
+    citizenship: string;
+    race?: string;
+    maritalStatus?: string;
+    issueDate?: string;
+    isDeceased: boolean;
+    dateOfDeath?: string;
+    isSuspended: boolean;
+    needsManualReview: boolean;
+  };
+  source?: string;
+  requestId?: string;
+  errorCode?: string;
+  errorMessage?: string;
+  circuitBreakerOpen?: boolean;
+  needsManualReview?: boolean;
+  timestamp?: string;
+}
 
 @Injectable({
   providedIn: 'root'
 })
 export class VerificationService {
   private readonly api = inject(ApiService);
+  private readonly http = inject(HttpClient);
   private readonly authService = inject(AuthService);
+  private readonly translate = inject(TranslateService);
+  private readonly baseUrl = environment.apiUrl;
 
   private get setaCode(): string {
     return this.authService.currentUser?.setaCode ?? '';
   }
 
   /**
-   * Verify a single ID number
+   * Verify a single ID number via DHA API
    */
   verifySingle(idNumber: string): Observable<VerificationResponse> {
     // Validate ID format first
     if (!this.isValidIdNumber(idNumber)) {
       return throwError(() => ({
         success: false,
-        message: 'Invalid South African ID number format'
+        message: this.translate.instant('dha.errors.invalidIdFormat')
       }));
     }
 
-    // Return mock data for development
-    return this.getMockVerificationResult(idNumber);
-
-    // Actual API call (uncomment when API is ready):
-    // const request: VerificationRequest = {
-    //   idNumber,
-    //   setaCode: this.setaCode,
-    //   checkDuplicates: true
-    // };
-    // return this.api.post<VerificationResponse>('verification/verify', request);
+    // Call DHA API through our proxy endpoint
+    return this.http.get<DHAPersonResponse>(`${this.baseUrl}/dha/person/${idNumber}`).pipe(
+      map(response => this.mapDHAResponseToVerification(idNumber, response)),
+      catchError(error => this.handleDHAError(error, idNumber))
+    );
   }
 
   /**
-   * Verify multiple ID numbers in batch
+   * Map DHA API response to VerificationResponse
+   */
+  private mapDHAResponseToVerification(idNumber: string, response: DHAPersonResponse): VerificationResponse {
+    if (!response.success || !response.data) {
+      throw {
+        success: false,
+        errorCode: response.errorCode,
+        errorMessage: response.errorMessage,
+        circuitBreakerOpen: response.circuitBreakerOpen
+      };
+    }
+
+    const data = response.data;
+
+    // Determine status based on DHA data
+    let status: 'GREEN' | 'AMBER' | 'RED' = 'GREEN';
+    let message: string;
+
+    if (data.isDeceased) {
+      status = 'RED';
+      message = this.translate.instant('dha.status.deceased');
+    } else if (data.isSuspended) {
+      status = 'RED';
+      message = this.translate.instant('dha.status.suspended');
+    } else if (data.needsManualReview) {
+      status = 'AMBER';
+      message = this.translate.instant('dha.status.manualReview');
+    } else {
+      status = 'GREEN';
+      message = this.translate.instant('dha.status.verified');
+    }
+
+    const learnerInfo: LearnerInfo = {
+      firstName: data.firstName || '',
+      lastName: data.surname || '',
+      fullName: `${data.firstName || ''} ${data.surname || ''}`.trim(),
+      dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : new Date(),
+      gender: data.gender || 'Unknown',
+      citizenship: data.citizenship
+    };
+
+    return {
+      success: true,
+      status,
+      idNumber,
+      message,
+      learnerInfo,
+      verifiedAt: new Date(),
+      traceId: response.requestId || `VRF-${Date.now()}`,
+      source: response.source
+    };
+  }
+
+  /**
+   * Handle DHA API errors with user-friendly messages
+   */
+  private handleDHAError(error: HttpErrorResponse | any, idNumber: string): Observable<never> {
+    let errorCode: string;
+    let userMessage: string;
+    let needsManualReview = false;
+
+    // Check if it's an HTTP error
+    if (error instanceof HttpErrorResponse) {
+      const body = error.error;
+
+      switch (error.status) {
+        case 400:
+          errorCode = body?.errorCode || 'INVALID_REQUEST';
+          userMessage = this.translate.instant('dha.errors.invalidRequest');
+          break;
+        case 404:
+          errorCode = 'ID_NOT_FOUND';
+          userMessage = this.translate.instant('dha.errors.idNotFound');
+          needsManualReview = true;
+          break;
+        case 503:
+          // Service unavailable - likely circuit breaker open or DHA down
+          errorCode = body?.errorCode || 'SERVICE_UNAVAILABLE';
+          if (body?.circuitBreakerOpen) {
+            userMessage = this.translate.instant('dha.errors.serviceTemporarilyUnavailable');
+          } else {
+            userMessage = this.translate.instant('dha.errors.serviceUnavailable');
+          }
+          needsManualReview = true;
+          break;
+        case 502:
+          // Bad gateway - DHA API error
+          errorCode = body?.errorCode || 'DHA_ERROR';
+          userMessage = this.translate.instant('dha.errors.dhaServiceError');
+          needsManualReview = true;
+          break;
+        case 429:
+          errorCode = 'RATE_LIMITED';
+          userMessage = this.translate.instant('dha.errors.rateLimited');
+          break;
+        default:
+          errorCode = 'UNKNOWN_ERROR';
+          userMessage = this.translate.instant('dha.errors.unknownError');
+      }
+    } else if (error.errorCode) {
+      // Error from mapping function or API response with success=false
+      errorCode = error.errorCode;
+
+      // Map specific error codes to user-friendly translations
+      switch (error.errorCode) {
+        case 'DHA_HTTP_ERROR':
+        case 'SERVICE_UNAVAILABLE':
+          userMessage = this.translate.instant('dha.errors.serviceUnavailable');
+          needsManualReview = true;
+          break;
+        case 'DHA_TIMEOUT':
+          userMessage = this.translate.instant('dha.errors.serviceTemporarilyUnavailable');
+          needsManualReview = true;
+          break;
+        case 'CIRCUIT_BREAKER_OPEN':
+          userMessage = this.translate.instant('dha.errors.serviceTemporarilyUnavailable');
+          needsManualReview = true;
+          break;
+        case 'ID_NOT_FOUND':
+          userMessage = this.translate.instant('dha.errors.idNotFound');
+          needsManualReview = true;
+          break;
+        case 'INVALID_ID_FORMAT':
+          userMessage = this.translate.instant('dha.errors.invalidIdFormat');
+          break;
+        default:
+          userMessage = this.translate.instant('dha.errors.verificationFailed');
+      }
+    } else {
+      errorCode = 'NETWORK_ERROR';
+      userMessage = this.translate.instant('dha.errors.networkError');
+    }
+
+    console.error('DHA Verification Error:', { idNumber, errorCode, error });
+
+    return throwError(() => ({
+      success: false,
+      status: 'AMBER' as const,
+      idNumber,
+      message: userMessage,
+      errorCode,
+      needsManualReview,
+      verifiedAt: new Date()
+    }));
+  }
+
+  /**
+   * Verify multiple ID numbers in batch - calls real DHA API for each ID
    */
   verifyBatch(idNumbers: string[]): Observable<BatchVerificationResponse> {
     // Filter valid ID numbers
@@ -63,16 +239,94 @@ export class VerificationService {
       }));
     }
 
-    // Return mock data for development
-    return this.getMockBatchResult(validIds);
+    // Call DHA API for each ID number (with concurrency limit of 5)
+    return from(validIds).pipe(
+      mergeMap(idNumber => this.verifySingleForBatch(idNumber), 5), // 5 concurrent requests
+      toArray(),
+      map(results => {
+        const verificationResults: VerificationResult[] = results.map(r => ({
+          idNumber: r.idNumber,
+          status: r.status,
+          message: r.message,
+          isDuplicate: r.status === 'RED' || r.status === 'AMBER'
+        }));
 
-    // Actual API call:
-    // const request: BatchVerificationRequest = {
-    //   setaCode: this.setaCode,
-    //   idNumbers: validIds,
-    //   checkDuplicates: true
-    // };
-    // return this.api.post<BatchVerificationResponse>('verification/verify-batch', request);
+        return {
+          success: true,
+          totalProcessed: verificationResults.length,
+          totalGreen: verificationResults.filter(r => r.status === 'GREEN').length,
+          totalAmber: verificationResults.filter(r => r.status === 'AMBER').length,
+          totalRed: verificationResults.filter(r => r.status === 'RED').length,
+          results: verificationResults,
+          processedAt: new Date()
+        } as BatchVerificationResponse;
+      })
+    );
+  }
+
+  /**
+   * Verify a single ID for batch processing - handles errors gracefully
+   */
+  private verifySingleForBatch(idNumber: string): Observable<{idNumber: string; status: 'GREEN' | 'AMBER' | 'RED'; message: string}> {
+    return this.http.get<DHAPersonResponse>(`${this.baseUrl}/dha/person/${idNumber}`).pipe(
+      map(response => {
+        if (!response.success || !response.data) {
+          return {
+            idNumber,
+            status: 'AMBER' as const,
+            message: response.errorMessage || 'Verification failed'
+          };
+        }
+
+        const data = response.data;
+
+        if (data.isDeceased) {
+          return { idNumber, status: 'RED' as const, message: 'ID belongs to deceased person' };
+        } else if (data.isSuspended) {
+          return { idNumber, status: 'RED' as const, message: 'ID has been suspended' };
+        } else if (data.needsManualReview) {
+          return { idNumber, status: 'AMBER' as const, message: 'Manual verification required' };
+        } else {
+          return { idNumber, status: 'GREEN' as const, message: 'Verified successfully' };
+        }
+      }),
+      catchError(error => {
+        // Handle DHA API errors gracefully - return AMBER status
+        let message = 'Verification service unavailable';
+
+        if (error instanceof HttpErrorResponse) {
+          // Try to get message from response body first
+          const errorBody = error.error;
+          if (errorBody?.errorMessage) {
+            message = errorBody.errorMessage;
+          } else if (error.status === 0 || error.status === undefined) {
+            // Network/connection errors (service truly offline)
+            message = 'DHA service is offline - please try again later';
+          } else if (error.status === 404) {
+            message = 'ID not found in DHA database';
+          } else if (error.status === 503) {
+            message = 'DHA service is currently unavailable';
+          } else if (error.status === 502 || error.status === 504) {
+            message = 'DHA service is not responding';
+          } else if (error.status === 429) {
+            message = 'Rate limited - please try again later';
+          } else if (error.status >= 500) {
+            message = 'DHA service error - please try again later';
+          } else {
+            message = 'Unable to verify - DHA service issue';
+          }
+        } else {
+          // Non-HTTP error (network failure, timeout, etc.)
+          message = 'DHA service is offline - please try again later';
+        }
+
+        return of({
+          idNumber,
+          status: 'AMBER' as const,
+          message
+        });
+      })
+    );
   }
 
   /**

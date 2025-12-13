@@ -46,6 +46,16 @@ Module Program
             Console.WriteLine("  GET  /api/dashboard/stats/1 - SETA stats")
             Console.WriteLine("  POST /api/learners/enroll  - Enroll learner")
             Console.WriteLine("  GET  /api/health           - Health check")
+            Console.WriteLine()
+            Console.WriteLine("Batch Verification:")
+            Console.WriteLine("  POST /api/batch            - Submit batch")
+            Console.WriteLine("  GET  /api/batch/{id}/status - Batch progress")
+            Console.WriteLine("  GET  /api/batch/{id}/results - Batch results")
+            Console.WriteLine("  GET  /api/batch/health     - Batch health check")
+            Console.WriteLine()
+            Console.WriteLine("Notifications:")
+            Console.WriteLine("  GET  /api/notifications    - Get notifications")
+            Console.WriteLine("  GET  /api/notifications/unread-count - Unread count")
             Console.WriteLine("--------------------------------------------")
             Console.WriteLine()
             Console.ForegroundColor = ConsoleColor.Magenta
@@ -58,6 +68,12 @@ Module Program
             Console.WriteLine("Press ENTER to stop the server...")
             Console.ResetColor()
             Console.ReadLine()
+
+            ' Graceful shutdown
+            Console.WriteLine()
+            Console.WriteLine("Shutting down...")
+            Startup.Shutdown()
+
         Catch ex As Exception
             Console.ForegroundColor = ConsoleColor.Red
             Console.WriteLine("Error starting server: " & ex.Message)

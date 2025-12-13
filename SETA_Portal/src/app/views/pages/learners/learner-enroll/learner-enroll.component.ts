@@ -188,7 +188,9 @@ type EnrollmentStep = 'verify' | 'details' | 'confirm';
                       }
                     </div>
                     <div class="result-status">
-                      @if (verificationResult.status === 'GREEN') {
+                      @if (verificationResult.errorCode) {
+                        {{ 'dha.status.serviceError' | translate }}
+                      } @else if (verificationResult.status === 'GREEN') {
                         {{ 'verification.resultGreen' | translate }}
                       } @else if (verificationResult.status === 'AMBER') {
                         {{ 'verification.resultAmber' | translate }}
@@ -836,6 +838,17 @@ export class LearnerEnrollComponent implements OnDestroy {
         error: (error) => {
           console.error('Verification error:', error);
           this.verifying = false;
+
+          // Display error as AMBER status with the error message
+          this.verificationResult = {
+            success: false,
+            status: error.status || 'AMBER',
+            idNumber: this.idNumber,
+            message: error.message || 'Verification service unavailable. Please try again later.',
+            verifiedAt: new Date(),
+            needsManualReview: error.needsManualReview || true,
+            errorCode: error.errorCode
+          };
         }
       });
   }

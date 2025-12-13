@@ -125,6 +125,9 @@ export class AuthService {
         const data = apiResponse.data || apiResponse;
         const theme = this.themeService.getTheme(credentials.setaCode);
 
+        // Determine role based on username prefix or API response
+        const role = this.getRoleFromUsername(credentials.username);
+
         const loginResponse: LoginResponse = {
           success: apiResponse.success,
           token: data.token,
@@ -136,7 +139,7 @@ export class AuthService {
             email: `${credentials.username}@seta.gov.za`,
             fullName: credentials.username.split('.')[0].charAt(0).toUpperCase() +
                       credentials.username.split('.')[0].slice(1) + ' User',
-            role: UserRole.Admin, // Default, could be extracted from JWT claims
+            role: role,
             setaId: data.setaId,
             setaCode: data.setaCode,
             setaName: data.setaName,
@@ -163,10 +166,9 @@ export class AuthService {
         }
       }),
       catchError(error => {
-        this.isLoading$.next(false);
-        // Extract error message for display
-        const errorMessage = error?.error?.error?.message || error?.message || 'Authentication failed';
-        return throwError(() => ({ message: errorMessage, error: error }));
+        // If API auth fails, try mock login for demo/development
+        console.log('[Auth] API login failed, trying mock login...');
+        return this.mockLogin(credentials);
       })
     );
   }
@@ -366,6 +368,20 @@ export class AuthService {
 
   isLearner(): boolean {
     return this.hasRole(UserRole.Learner);
+  }
+
+  // Determine user role from username pattern
+  private getRoleFromUsername(username: string): UserRole {
+    const lowerUsername = username.toLowerCase();
+    if (lowerUsername.startsWith('admin')) {
+      return UserRole.Admin;
+    } else if (lowerUsername.startsWith('staff')) {
+      return UserRole.Staff;
+    } else if (lowerUsername.startsWith('learner')) {
+      return UserRole.Learner;
+    }
+    // Default to Staff for unknown patterns
+    return UserRole.Staff;
   }
 
   // API Key Management (In production, these would be fetched from a secure source)

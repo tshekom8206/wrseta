@@ -1,8 +1,10 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
-import { Subject, of, delay, takeUntil } from 'rxjs';
+import { Subject, takeUntil } from 'rxjs';
+import { ApiService } from '../../../../core/services/api.service';
+import { PdfExportService } from '../../../../core/services/pdf-export.service';
 import { PageHeaderComponent } from '../../../../shared/components/page-header/page-header.component';
 
 interface VerificationReportData {
@@ -15,6 +17,33 @@ interface VerificationReportData {
   batchCount: number;
   uniqueLearners: number;
   avgResponseTime: number;
+}
+
+interface VerificationReportResponse {
+  stats: {
+    totalVerifications: number;
+    greenCount: number;
+    yellowCount: number;
+    redCount: number;
+    successRate: number;
+    avgResponseTimeMs: number;
+    uniqueLearners: number;
+    singleCount: number;
+    batchCount: number;
+  };
+  breakdown: {
+    period: string;
+    total: number;
+    greenCount: number;
+    yellowCount: number;
+    redCount: number;
+    singleCount: number;
+    batchCount: number;
+    uniqueLearners: number;
+  }[];
+  startDate: string;
+  endDate: string;
+  reportType: string;
 }
 
 @Component({
@@ -309,6 +338,8 @@ interface VerificationReportData {
 })
 export class VerificationReportComponent implements OnInit, OnDestroy {
   private readonly destroy$ = new Subject<void>();
+  private readonly api = inject(ApiService);
+  private readonly pdfExportService = inject(PdfExportService);
 
   reportType = 'weekly';
   startDate = '';
@@ -330,10 +361,10 @@ export class VerificationReportComponent implements OnInit, OnDestroy {
   };
 
   ngOnInit(): void {
-    const today = new Date();
-    const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-    this.startDate = weekAgo.toISOString().split('T')[0];
-    this.endDate = today.toISOString().split('T')[0];
+    // Default to today's date
+    const today = new Date().toISOString().split('T')[0];
+    this.startDate = today;
+    this.endDate = today;
     this.generateReport();
   }
 
@@ -344,64 +375,56 @@ export class VerificationReportComponent implements OnInit, OnDestroy {
 
   generateReport(): void {
     this.loading = true;
-    this.generateMockReport().pipe(takeUntil(this.destroy$)).subscribe(data => {
-      this.reportData = data;
-      this.calculateSummary();
-      this.reportGenerated = true;
-      this.loading = false;
-    });
-  }
 
-  private generateMockReport() {
-    const data: VerificationReportData[] = [];
-    const days = this.reportType === 'daily' ? 7 : this.reportType === 'weekly' ? 4 : 6;
+    const params: Record<string, string> = {
+      reportType: this.reportType
+    };
+    if (this.startDate) params['startDate'] = this.startDate;
+    if (this.endDate) params['endDate'] = this.endDate;
 
-    for (let i = 0; i < days; i++) {
-      const total = Math.floor(Math.random() * 200) + 50;
-      const green = Math.floor(total * (0.6 + Math.random() * 0.2));
-      const amber = Math.floor((total - green) * 0.6);
-      const red = total - green - amber;
+    this.api.get<VerificationReportResponse>('reports/verification', params)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          // Map API response to component data structure
+          const data = response as unknown as VerificationReportResponse;
 
-      data.push({
-        period: this.getPeriodLabel(i),
-        totalVerifications: total,
-        greenCount: green,
-        amberCount: amber,
-        redCount: red,
-        singleCount: Math.floor(total * 0.7),
-        batchCount: Math.floor(total * 0.3),
-        uniqueLearners: Math.floor(total * 0.85),
-        avgResponseTime: Math.floor(Math.random() * 300) + 200
+          this.reportData = (data.breakdown || []).map(item => ({
+            period: item.period,
+            totalVerifications: item.total,
+            greenCount: item.greenCount,
+            amberCount: item.yellowCount,
+            redCount: item.redCount,
+            singleCount: item.singleCount,
+            batchCount: item.batchCount,
+            uniqueLearners: item.uniqueLearners,
+            avgResponseTime: 0
+          }));
+
+          // Set summary from stats
+          if (data.stats) {
+            this.summary = {
+              period: 'Total',
+              totalVerifications: data.stats.totalVerifications,
+              greenCount: data.stats.greenCount,
+              amberCount: data.stats.yellowCount,
+              redCount: data.stats.redCount,
+              singleCount: data.stats.singleCount,
+              batchCount: data.stats.batchCount,
+              uniqueLearners: data.stats.uniqueLearners,
+              avgResponseTime: data.stats.avgResponseTimeMs
+            };
+          }
+
+          this.reportGenerated = true;
+          this.loading = false;
+        },
+        error: (error) => {
+          console.error('Error loading verification report:', error);
+          this.loading = false;
+          this.reportGenerated = false;
+        }
       });
-    }
-    return of(data).pipe(delay(800));
-  }
-
-  private getPeriodLabel(index: number): string {
-    const date = new Date();
-    if (this.reportType === 'daily') {
-      date.setDate(date.getDate() - index);
-      return date.toLocaleDateString('en-ZA', { weekday: 'short', day: 'numeric', month: 'short' });
-    } else if (this.reportType === 'weekly') {
-      return `Week ${4 - index}`;
-    } else {
-      date.setMonth(date.getMonth() - index);
-      return date.toLocaleDateString('en-ZA', { month: 'long', year: 'numeric' });
-    }
-  }
-
-  private calculateSummary(): void {
-    this.summary = this.reportData.reduce((acc, row) => ({
-      period: 'Total',
-      totalVerifications: acc.totalVerifications + row.totalVerifications,
-      greenCount: acc.greenCount + row.greenCount,
-      amberCount: acc.amberCount + row.amberCount,
-      redCount: acc.redCount + row.redCount,
-      singleCount: acc.singleCount + row.singleCount,
-      batchCount: acc.batchCount + row.batchCount,
-      uniqueLearners: acc.uniqueLearners + row.uniqueLearners,
-      avgResponseTime: Math.round((acc.avgResponseTime + row.avgResponseTime) / 2)
-    }), { ...this.summary, totalVerifications: 0, greenCount: 0, amberCount: 0, redCount: 0, singleCount: 0, batchCount: 0, uniqueLearners: 0, avgResponseTime: 0 });
   }
 
   getSuccessRate(): number {
@@ -437,7 +460,61 @@ export class VerificationReportComponent implements OnInit, OnDestroy {
       a.download = `verification-report-${this.startDate}-${this.endDate}.csv`;
       a.click();
     } else {
-      alert('PDF export would be implemented with a library like jsPDF');
+      this.exportToPDF();
     }
+  }
+
+  private exportToPDF(): void {
+    const reportTypeLabel = this.reportType.charAt(0).toUpperCase() + this.reportType.slice(1);
+    const dateRange = this.startDate === this.endDate
+      ? this.formatDateForDisplay(this.startDate)
+      : `${this.formatDateForDisplay(this.startDate)} - ${this.formatDateForDisplay(this.endDate)}`;
+
+    this.pdfExportService.exportToPDF({
+      title: 'Verification Report',
+      subtitle: `${reportTypeLabel} Report | ${dateRange}`,
+      filename: `verification-report-${this.reportType}`,
+      orientation: 'landscape',
+      summary: [
+        { label: 'Total Verifications', value: this.summary.totalVerifications },
+        { label: 'Success Rate', value: `${this.getSuccessRate().toFixed(1)}%` },
+        { label: 'Blocked', value: this.summary.redCount },
+        { label: 'Avg Response', value: `${this.summary.avgResponseTime}ms` }
+      ],
+      columns: [
+        { header: 'Period', field: 'period' },
+        { header: 'Total', field: 'totalVerifications', align: 'right' },
+        { header: 'Green', field: 'greenCount', align: 'right' },
+        { header: 'Amber', field: 'amberCount', align: 'right' },
+        { header: 'Red', field: 'redCount', align: 'right' },
+        { header: 'Single', field: 'singleCount', align: 'right' },
+        { header: 'Batch', field: 'batchCount', align: 'right' },
+        { header: 'Unique Learners', field: 'uniqueLearners', align: 'right' }
+      ],
+      data: [
+        ...this.reportData,
+        // Add totals row
+        {
+          period: 'TOTALS',
+          totalVerifications: this.summary.totalVerifications,
+          greenCount: this.summary.greenCount,
+          amberCount: this.summary.amberCount,
+          redCount: this.summary.redCount,
+          singleCount: this.summary.singleCount,
+          batchCount: this.summary.batchCount,
+          uniqueLearners: this.summary.uniqueLearners
+        }
+      ]
+    });
+  }
+
+  private formatDateForDisplay(dateStr: string): string {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-ZA', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    });
   }
 }

@@ -25,6 +25,8 @@
     "apexcharts": "^3.49.1",
     "bootstrap": "^5.3.3",
     "feather-icons": "^4.29.2",
+    "jspdf": "^3.0.4",
+    "jspdf-autotable": "^5.0.2",
     "ng-apexcharts": "^1.11.0",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
