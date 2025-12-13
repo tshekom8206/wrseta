@@ -202,6 +202,70 @@
         }
       }
     },
+    "/api/verification/verify-bulk": {
+      "post": {
+        "tags": [
+          "Verification"
+        ],
+        "summary": "Bulk Verify ID Numbers (Full Verification)",
+        "description": "Performs full verification of up to 100 South African ID numbers including format validation, Luhn checksum, demographics extraction, cross-SETA duplicate detection, and DHA verification. Each ID is processed with the complete verification workflow.",
+        "operationId": "verifyBulk",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkVerificationRequest"
+              },
+              "example": {
+                "idNumbers": [
+                  {
+                    "idNumber": "8506155012089",
+                    "firstName": "Thabo",
+                    "surname": "Mokoena",
+                    "reference": "LMS-001"
+                  },
+                  {
+                    "idNumber": "9001015026087",
+                    "firstName": "Sipho",
+                    "surname": "Nkosi",
+                    "reference": "LMS-002"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Bulk verification completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/BulkVerificationResponse"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request or batch too large (max 100 IDs)"
+          }
+        }
+      }
+    },
     "/api/verification/validate-format": {
       "post": {
         "tags": [
@@ -1121,6 +1185,116 @@
           },
           "conflictingSeta": {
             "$ref": "#/components/schemas/ConflictInfo"
+          }
+        }
+      },
+      "BulkVerificationRequest": {
+        "type": "object",
+        "required": [
+          "idNumbers"
+        ],
+        "properties": {
+          "idNumbers": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "$ref": "#/components/schemas/BulkVerificationItem"
+            },
+            "description": "Array of ID numbers to verify (max 100)"
+          }
+        }
+      },
+      "BulkVerificationItem": {
+        "type": "object",
+        "required": [
+          "idNumber"
+        ],
+        "properties": {
+          "idNumber": {
+            "type": "string",
+            "minLength": 13,
+            "maxLength": 13,
+            "pattern": "^[0-9]{13}$",
+            "description": "South African ID number (13 digits)"
+          },
+          "firstName": {
+            "type": "string",
+            "description": "Learner's first name (optional, for logging)"
+          },
+          "surname": {
+            "type": "string",
+            "description": "Learner's surname (optional, for logging)"
+          },
+          "reference": {
+            "type": "string",
+            "description": "Client reference for tracking this verification"
+          }
+        }
+      },
+      "BulkVerificationResponse": {
+        "type": "object",
+        "properties": {
+          "totalProcessed": {
+            "type": "integer",
+            "description": "Total number of IDs processed"
+          },
+          "successCount": {
+            "type": "integer",
+            "description": "Number of successful verifications (GREEN or YELLOW)"
+          },
+          "failedCount": {
+            "type": "integer",
+            "description": "Number of failed verifications (RED)"
+          },
+          "processingTimeMs": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Total processing time in milliseconds"
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BulkVerificationResult"
+            },
+            "description": "Individual verification results"
+          }
+        }
+      },
+      "BulkVerificationResult": {
+        "type": "object",
+        "properties": {
+          "idNumber": {
+            "type": "string",
+            "description": "Masked ID number for privacy"
+          },
+          "reference": {
+            "type": "string",
+            "description": "Client reference if provided"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "GREEN",
+              "YELLOW",
+              "RED"
+            ],
+            "description": "Verification status"
+          },
+          "message": {
+            "type": "string",
+            "description": "Status message"
+          },
+          "isValid": {
+            "type": "boolean",
+            "description": "Whether the ID is valid"
+          },
+          "duplicateFound": {
+            "type": "boolean",
+            "description": "Whether a duplicate was found"
+          },
+          "conflictingSeta": {
+            "type": "string",
+            "description": "SETA code where duplicate was found (if applicable)"
           }
         }
       },

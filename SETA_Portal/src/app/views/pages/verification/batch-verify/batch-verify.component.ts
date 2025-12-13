@@ -689,8 +689,8 @@ export class BatchVerifyComponent implements OnInit, OnDestroy {
     const message = status.status === 'COMPLETED'
       ? `Batch verification complete: ${status.greenCount} verified, ${status.yellowCount} need review, ${status.redCount} blocked`
       : status.status === 'PARTIAL'
-      ? `Batch verification partially complete: ${status.processedCount}/${status.totalItems} processed, ${status.failedCount} failed`
-      : `Batch verification failed. Please try again.`;
+        ? `Batch verification partially complete: ${status.processedCount}/${status.totalItems} processed, ${status.failedCount} failed`
+        : `Batch verification failed. Please try again.`;
 
     if (status.status === 'COMPLETED') {
       this.notificationService.success(message);
@@ -808,22 +808,29 @@ export class BatchVerifyComponent implements OnInit, OnDestroy {
   }
 
   async processVerification(): Promise<void> {
-    let idNumbers: string[] = [];
+    let verificationItems: Array<{ idNumber: string; firstName?: string; surname?: string; reference?: string }> = [];
 
     if (this.selectedFile) {
-      idNumbers = await this.parseFile(this.selectedFile);
+      verificationItems = await this.parseFile(this.selectedFile);
     } else if (this.manualInput) {
-      idNumbers = this.parseManualInput(this.manualInput);
+      verificationItems = this.parseManualInput(this.manualInput);
     }
 
-    if (idNumbers.length === 0) {
+    if (verificationItems.length === 0) {
       this.notificationService.warning('No valid ID numbers found');
       return;
     }
 
-    if (idNumbers.length > 500) {
+    // Check batch size limits
+    // Bulk API supports up to 100, fallback method supports up to 500
+    if (verificationItems.length > 500) {
       this.notificationService.error('Maximum 500 records per batch. Please split your file.');
       return;
+    }
+
+    // Warn if over bulk API limit (will use fallback)
+    if (verificationItems.length > 100) {
+      this.notificationService.info('Batch size exceeds 100 records. Will use fallback verification method if bulk API is unavailable.');
     }
 
     // Reset state
@@ -833,55 +840,15 @@ export class BatchVerifyComponent implements OnInit, OnDestroy {
     this.currentBatchId = null;
     this.activeFilter = 'all';
 
-    // Try async batch API first
+    // Use bulk verification API
     this.processing = true;
     this.asyncProcessing = false;
-
-    // Check if batch API is available
-    this.batchService.checkHealth()
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (health) => {
-          if (health.healthy) {
-            // Use async batch processing
-            this.submitAsyncBatch(idNumbers);
-          } else {
-            // Fall back to synchronous processing
-            this.processSynchronous(idNumbers);
-          }
-        },
-        error: () => {
-          // Fall back to synchronous processing
-          this.processSynchronous(idNumbers);
-        }
-      });
+    this.processBulkVerification(verificationItems);
   }
 
-  private submitAsyncBatch(idNumbers: string[]): void {
-    const batchItems: BatchIdItem[] = idNumbers.map((id, index) => ({
-      idNumber: id,
-      reference: `Item-${index + 1}`
-    }));
 
-    this.batchService.submitBatch(batchItems)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (response) => {
-          this.processing = false;
-          this.asyncProcessing = true;
-          this.currentBatchId = response.batchJobId;
-          this.notificationService.info(`Batch ${response.batchJobId} submitted for processing`);
-        },
-        error: (error) => {
-          console.error('Failed to submit async batch, falling back to sync:', error);
-          // Fall back to synchronous processing
-          this.processSynchronous(idNumbers);
-        }
-      });
-  }
-
-  private processSynchronous(idNumbers: string[]): void {
-    this.totalCount = idNumbers.length;
+  private processBulkVerification(verificationItems: Array<{ idNumber: string; firstName?: string; surname?: string; reference?: string }>): void {
+    this.totalCount = verificationItems.length;
     this.processedCount = 0;
 
     // Simulate progress
@@ -891,8 +858,9 @@ export class BatchVerifyComponent implements OnInit, OnDestroy {
       }
     }, 200);
 
+    // Try bulk verification API first
     this.verificationService
-      .verifyBatch(idNumbers)
+      .verifyBulk(verificationItems)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
@@ -908,6 +876,68 @@ export class BatchVerifyComponent implements OnInit, OnDestroy {
         },
         error: (error) => {
           clearInterval(progressInterval);
+
+          // Check if we should fall back to the previous method
+          const errorMessage = error.message || error.error?.error?.message || '';
+          const isBatchTooLarge = errorMessage.includes('Maximum 100') ||
+            errorMessage.includes('BATCH_TOO_LARGE') ||
+            error.error?.error?.code === 'BATCH_TOO_LARGE';
+          const isEndpointDown = error.status === 0 ||
+            error.status === 503 ||
+            error.status === 502 ||
+            error.status >= 500 ||
+            (error.error?.error?.code === 'SERVICE_UNAVAILABLE');
+
+          if (isEndpointDown || isBatchTooLarge) {
+            // Fall back to previous batch verification method
+            console.warn('Bulk verification unavailable or batch too large, falling back to batch verification:', error);
+            const fallbackMessage = isBatchTooLarge
+              ? 'Batch size exceeds bulk API limit, using fallback method...'
+              : 'Bulk verification endpoint unavailable, using fallback method...';
+            this.notificationService.warning(fallbackMessage);
+            this.processFallbackVerification(verificationItems);
+          } else {
+            // Other errors (validation, etc.) - show error
+            this.processing = false;
+            this.asyncProcessing = false;
+            this.notificationService.error(error.message || 'Batch verification failed');
+          }
+        }
+      });
+  }
+
+  private processFallbackVerification(verificationItems: Array<{ idNumber: string; firstName?: string; surname?: string; reference?: string }>): void {
+    // Extract just the ID numbers for the fallback method
+    const idNumbers = verificationItems.map(item => item.idNumber);
+
+    this.totalCount = idNumbers.length;
+    this.processedCount = 0;
+
+    // Simulate progress
+    const progressInterval = setInterval(() => {
+      if (this.processedCount < this.totalCount) {
+        this.processedCount = Math.min(this.processedCount + Math.floor(Math.random() * 20) + 5, this.totalCount);
+      }
+    }, 200);
+
+    // Use the previous batch verification method (verifyBatch)
+    this.verificationService
+      .verifyBatch(idNumbers)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          clearInterval(progressInterval);
+          this.processedCount = this.totalCount;
+          this.result = response;
+          this.processing = false;
+          this.asyncProcessing = false;
+
+          this.notificationService.success(
+            `Batch verification complete (fallback method): ${response.totalGreen} clear, ${response.totalAmber} warning, ${response.totalRed} blocked`
+          );
+        },
+        error: (error) => {
+          clearInterval(progressInterval);
           this.processing = false;
           this.asyncProcessing = false;
           this.notificationService.error(error.message || 'Batch verification failed');
@@ -915,14 +945,14 @@ export class BatchVerifyComponent implements OnInit, OnDestroy {
       });
   }
 
-  private async parseFile(file: File): Promise<string[]> {
+  private async parseFile(file: File): Promise<Array<{ idNumber: string; firstName?: string; surname?: string; reference?: string }>> {
     return new Promise((resolve) => {
       const reader = new FileReader();
 
       reader.onload = (e) => {
         const content = e.target?.result as string;
-        const idNumbers = this.extractIdNumbers(content);
-        resolve(idNumbers);
+        const items = this.extractVerificationItems(content, file.name);
+        resolve(items);
       };
 
       reader.onerror = () => {
@@ -930,31 +960,81 @@ export class BatchVerifyComponent implements OnInit, OnDestroy {
         resolve([]);
       };
 
-      reader.readAsText(file);
+      // Check if it's an Excel file
+      if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+        // For Excel files, we'll read as text and try to parse CSV-like structure
+        // In a production app, you'd use a library like xlsx to parse Excel files
+        reader.readAsText(file);
+      } else {
+        // CSV file
+        reader.readAsText(file);
+      }
     });
   }
 
-  private parseManualInput(input: string): string[] {
-    return this.extractIdNumbers(input);
+  private parseManualInput(input: string): Array<{ idNumber: string; firstName?: string; surname?: string; reference?: string }> {
+    return this.extractVerificationItems(input);
   }
 
-  private extractIdNumbers(content: string): string[] {
-    // Split by newlines, commas, semicolons, or tabs
-    const lines = content.split(/[\n\r,;\t]+/);
+  private extractVerificationItems(content: string, fileName?: string): Array<{ idNumber: string; firstName?: string; surname?: string; reference?: string }> {
+    // Split by newlines
+    const lines = content.split(/[\n\r]+/).filter(line => line.trim().length > 0);
 
-    const idNumbers: string[] = [];
-    for (const line of lines) {
-      // Extract only digits
-      const cleaned = line.replace(/\D/g, '');
+    const items: Array<{ idNumber: string; firstName?: string; surname?: string; reference?: string }> = [];
+    const seenIds = new Set<string>();
 
-      // Check if it's a valid 13-digit ID
-      if (cleaned.length === 13 && this.verificationService.isValidIdNumber(cleaned)) {
-        idNumbers.push(cleaned);
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+
+      // Try to parse as CSV (comma or tab separated)
+      const parts = line.split(/[,\t]/).map(p => p.trim());
+
+      if (parts.length >= 1) {
+        // Extract ID number (first column or extract from line)
+        let idNumber = parts[0].replace(/\D/g, '');
+
+        // If first part doesn't look like an ID, try to extract ID from the whole line
+        if (idNumber.length !== 13) {
+          idNumber = line.replace(/\D/g, '');
+        }
+
+        // Validate ID number
+        if (idNumber.length === 13 && this.verificationService.isValidIdNumber(idNumber)) {
+          // Skip duplicates
+          if (seenIds.has(idNumber)) continue;
+          seenIds.add(idNumber);
+
+          // Extract optional fields
+          const firstName = parts.length > 1 ? parts[1] : undefined;
+          const surname = parts.length > 2 ? parts[2] : undefined;
+          const reference = parts.length > 3 ? parts[3] : `Item-${items.length + 1}`;
+
+          items.push({
+            idNumber,
+            firstName: firstName || '',
+            surname: surname || '',
+            reference: reference || `Item-${items.length + 1}`
+          });
+        }
+      } else {
+        // No delimiters found, try to extract ID number from the line
+        const idNumber = line.replace(/\D/g, '');
+        if (idNumber.length === 13 && this.verificationService.isValidIdNumber(idNumber)) {
+          if (!seenIds.has(idNumber)) {
+            seenIds.add(idNumber);
+            items.push({
+              idNumber,
+              firstName: '',
+              surname: '',
+              reference: `Item-${items.length + 1}`
+            });
+          }
+        }
       }
     }
 
-    // Remove duplicates
-    return [...new Set(idNumbers)];
+    return items;
   }
 
   setFilter(filter: 'all' | 'GREEN' | 'YELLOW' | 'RED'): void {

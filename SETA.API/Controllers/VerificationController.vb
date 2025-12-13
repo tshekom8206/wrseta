@@ -464,6 +464,151 @@ Namespace SETA.API.Controllers
         End Function
 
         ''' <summary>
+        ''' Bulk verify multiple ID numbers with full verification (including DHA)
+        ''' Maximum 100 IDs per request
+        ''' </summary>
+        <Route("verify-bulk")>
+        <HttpPost>
+        Public Function VerifyBulk(request As BulkVerificationRequest) As IHttpActionResult
+            ' Validate request
+            If request Is Nothing OrElse request.IdNumbers Is Nothing OrElse request.IdNumbers.Count = 0 Then
+                Return Content(HttpStatusCode.BadRequest,
+                    ApiResponse(Of BulkVerificationResponse).ErrorResponse("INVALID_REQUEST", "At least one ID number is required"))
+            End If
+
+            ' Enforce maximum batch size of 100
+            Const MAX_BATCH_SIZE As Integer = 100
+            If request.IdNumbers.Count > MAX_BATCH_SIZE Then
+                Return Content(HttpStatusCode.BadRequest,
+                    ApiResponse(Of BulkVerificationResponse).ErrorResponse("BATCH_TOO_LARGE",
+                        $"Maximum {MAX_BATCH_SIZE} IDs per batch. You sent {request.IdNumbers.Count}."))
+            End If
+
+            ' Get SETA context
+            Dim setaId = CInt(Me.Request.Properties("SetaId"))
+            Dim setaCode = Me.Request.Properties("SetaCode").ToString()
+
+            ' Log audit entry
+            AuditLogService.LogAsync(setaId, AuditLogService.ACTION_VERIFY, "VerificationLog",
+                                     details:=$"Bulk verification (full): {request.IdNumbers.Count} IDs",
+                                     userId:=setaCode, ipAddress:=GetClientIp())
+
+            Dim sw = System.Diagnostics.Stopwatch.StartNew()
+            Dim results As New List(Of BulkVerificationResult)
+            Dim successCount As Integer = 0
+            Dim failedCount As Integer = 0
+
+            ' Process each ID with full verification logic
+            For Each item As BulkVerificationItem In request.IdNumbers
+                Dim result As New BulkVerificationResult With {
+                    .IdNumber = "",
+                    .Reference = item.Reference
+                }
+
+                Try
+                    ' Clean ID number
+                    Dim idNumber = item.IdNumber.Replace(" ", "").Replace("-", "")
+                    Dim idNumberMasked = MaskIdForResponse(idNumber)
+                    result.IdNumber = idNumberMasked
+
+                    ' Step 1: Format validation
+                    Dim formatValid = idNumber.Length = 13 AndAlso IsAllDigits(idNumber)
+                    Dim luhnValid = False
+                    Dim dhaVerified = False
+                    Dim duplicateFound = False
+                    Dim conflictingSetaId As Integer? = Nothing
+                    Dim demographics As DemographicsInfo = Nothing
+
+                    If Not formatValid Then
+                        result.Status = "RED"
+                        result.Message = "Invalid ID format. Must be exactly 13 digits."
+                        result.IsValid = False
+                        failedCount += 1
+                    Else
+                        ' Step 2: Luhn algorithm validation
+                        luhnValid = ValidateLuhn(idNumber)
+                        If Not luhnValid Then
+                            result.Status = "RED"
+                            result.Message = "Invalid ID number. Checksum validation failed."
+                            result.IsValid = False
+                            failedCount += 1
+                        Else
+                            ' Step 3: Extract demographics
+                            demographics = ExtractDemographics(idNumber)
+
+                            ' Step 4: Check for cross-SETA duplicates
+                            Dim duplicateInfo = CheckCrossSETADuplicate(idNumber, setaId)
+
+                            If duplicateInfo IsNot Nothing Then
+                                result.Status = "RED"
+                                result.Message = "Learner already registered at another SETA"
+                                result.IsValid = True
+                                result.DuplicateFound = True
+                                result.ConflictingSeta = duplicateInfo.SetaCode
+                                duplicateFound = True
+                                conflictingSetaId = duplicateInfo.SetaId
+                                failedCount += 1
+                            Else
+                                ' Step 5: DHA verification (full verification)
+                                dhaVerified = SimulateDHAVerification(idNumber)
+
+                                If dhaVerified Then
+                                    result.Status = "GREEN"
+                                    result.Message = "Identity verified successfully"
+                                    result.IsValid = True
+                                    result.DuplicateFound = False
+                                    successCount += 1
+                                Else
+                                    result.Status = "YELLOW"
+                                    result.Message = "ID format valid but DHA verification pending"
+                                    result.IsValid = True
+                                    result.DuplicateFound = False
+                                    successCount += 1
+                                End If
+                            End If
+                        End If
+                    End If
+
+                    ' Log individual verification with detailed information
+                    LogVerification(setaId, idNumber, result.Status, result.Message,
+                                    formatValid:=formatValid, luhnValid:=luhnValid, dhaVerified:=dhaVerified,
+                                    duplicateFound:=duplicateFound, conflictingSetaId:=conflictingSetaId,
+                                    firstName:=item.FirstName, surname:=item.Surname)
+
+                Catch ex As Exception
+                    result.Status = "RED"
+                    result.Message = "Verification error: " & ex.Message
+                    result.IsValid = False
+                    result.DuplicateFound = False
+                    failedCount += 1
+                    ' Log error case
+                    Try
+                        Dim idNumber = item.IdNumber.Replace(" ", "").Replace("-", "")
+                        LogVerification(setaId, idNumber, "RED", "Verification error: " & ex.Message,
+                                        formatValid:=False, luhnValid:=False, dhaVerified:=False, duplicateFound:=False,
+                                        firstName:=item.FirstName, surname:=item.Surname)
+                    Catch
+                        ' Ignore logging errors
+                    End Try
+                End Try
+
+                results.Add(result)
+            Next
+
+            sw.Stop()
+
+            Dim response As New BulkVerificationResponse With {
+                .TotalProcessed = request.IdNumbers.Count,
+                .SuccessCount = successCount,
+                .FailedCount = failedCount,
+                .Results = results,
+                .ProcessingTimeMs = sw.ElapsedMilliseconds
+            }
+
+            Return Ok(ApiResponse(Of BulkVerificationResponse).SuccessResponse(response))
+        End Function
+
+        ''' <summary>
         ''' Get DHA service status including circuit breaker state
         ''' </summary>
         <Route("dha-status")>

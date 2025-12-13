@@ -359,7 +359,91 @@ export class VerificationService {
   }
 
   /**
+   * Bulk verify multiple ID numbers using the verify-bulk endpoint
+   * Supports up to 100 IDs per request with full verification (format, Luhn, duplicate, DHA)
+   */
+  verifyBulk(idNumbers: Array<{ idNumber: string; firstName?: string; surname?: string; reference?: string }>): Observable<BatchVerificationResponse> {
+    // Filter valid ID numbers
+    const validItems = idNumbers.filter(item => this.isValidIdNumber(item.idNumber));
+
+    if (validItems.length === 0) {
+      return throwError(() => ({
+        success: false,
+        message: 'No valid ID numbers provided'
+      }));
+    }
+
+    if (validItems.length > 100) {
+      return throwError(() => ({
+        success: false,
+        message: 'Maximum 100 IDs per batch. Please split your request.'
+      }));
+    }
+
+    // Prepare request body
+    const requestBody = {
+      idNumbers: validItems.map(item => ({
+        idNumber: item.idNumber,
+        firstName: item.firstName || '',
+        surname: item.surname || '',
+        reference: item.reference || ''
+      }))
+    };
+
+    // Call bulk verification API endpoint
+    return this.api.post<any>('verification/verify-bulk', requestBody).pipe(
+      map(response => {
+        if (!response.success || !response.data) {
+          throw {
+            success: false,
+            message: response.error?.message || 'Bulk verification failed'
+          };
+        }
+
+        const data = response.data;
+
+        // Map API response to BatchVerificationResponse
+        const verificationResults: VerificationResult[] = (data.results || []).map((r: any) => ({
+          idNumber: r.idNumber || '',
+          status: this.mapStatusToVerificationStatus(r.status),
+          message: r.message || '',
+          isDuplicate: r.duplicateFound || false,
+          enrolledSetas: r.conflictingSeta ? [r.conflictingSeta] : undefined
+        }));
+
+        return {
+          success: true,
+          totalProcessed: data.totalProcessed || 0,
+          totalGreen: verificationResults.filter(r => r.status === 'GREEN').length,
+          totalAmber: verificationResults.filter(r => r.status === 'AMBER').length,
+          totalRed: verificationResults.filter(r => r.status === 'RED').length,
+          results: verificationResults,
+          processedAt: new Date()
+        } as BatchVerificationResponse;
+      }),
+      catchError(error => {
+        console.error('Bulk verification error:', error);
+        return throwError(() => ({
+          success: false,
+          message: error.error?.error?.message || error.message || 'Bulk verification failed'
+        }));
+      })
+    );
+  }
+
+  /**
+   * Map API status to verification status
+   */
+  private mapStatusToVerificationStatus(status: string): 'GREEN' | 'AMBER' | 'RED' {
+    if (status === 'GREEN') return 'GREEN';
+    if (status === 'YELLOW' || status === 'AMBER') return 'AMBER';
+    return 'RED';
+  }
+
+  /**
    * Verify multiple ID numbers in batch - calls real DHA API for each ID
+   * Used as fallback when verifyBulk endpoint is unavailable or batch size exceeds 100
+   * @deprecated Use verifyBulk instead for better performance. This method is kept as fallback.
    */
   verifyBatch(idNumbers: string[]): Observable<BatchVerificationResponse> {
     // Filter valid ID numbers
