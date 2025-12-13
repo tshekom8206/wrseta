@@ -290,7 +290,7 @@ import {
                       </td>
                       <td class="text-end">
                         <div class="btn-group btn-group-sm">
-                          <a [routerLink]="['/learners', learner.id]" class="btn btn-outline-primary" title="View Details">
+                          <a [routerLink]="['/learners', learner.id]" class="btn btn-outline-primary" title="View Details" (click)="viewLearnerDetails(learner)">
                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                               <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                               <circle cx="12" cy="12" r="3"></circle>
@@ -419,19 +419,19 @@ import {
       height: 20px;
     }
 
-    .stat-card-primary .stat-icon { 
+    .stat-card-primary .stat-icon {
       background: rgba(0, 133, 80, 0.1);
       color: #008550;
     }
-    .stat-card-success .stat-icon { 
+    .stat-card-success .stat-icon {
       background: rgba(25, 135, 84, 0.1);
       color: #198754;
     }
-    .stat-card-info .stat-icon { 
+    .stat-card-info .stat-icon {
       background: rgba(13, 202, 240, 0.1);
       color: #0dcaf0;
     }
-    .stat-card-warning .stat-icon { 
+    .stat-card-warning .stat-icon {
       background: rgba(255, 193, 7, 0.1);
       color: #ffc107;
     }
@@ -761,7 +761,11 @@ export class LearnerListComponent implements OnInit, OnDestroy {
   }
 
   maskIdNumber(idNumber: string): string {
+    // If already masked (contains asterisks), return as-is
+    if (idNumber.includes('*')) return idNumber;
+    // If not 13 digits, return as-is
     if (idNumber.length !== 13) return idNumber;
+    // Mask the ID number
     return idNumber.substring(0, 6) + '*****' + idNumber.substring(11);
   }
 
@@ -774,6 +778,11 @@ export class LearnerListComponent implements OnInit, OnDestroy {
       'Blocked': 'bg-danger'
     };
     return classes[status] || 'bg-secondary';
+  }
+
+  viewLearnerDetails(learner: Learner): void {
+    // Store learner in service for detail component to retrieve
+    this.learnerService.setCurrentLearner(learner);
   }
 
   editLearner(learner: Learner): void {
