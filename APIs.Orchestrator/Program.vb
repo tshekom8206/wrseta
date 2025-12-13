@@ -87,7 +87,7 @@ Module Program
             Console.ForegroundColor = ConsoleColor.Green
             Console.Write("[DHA.API] ")
             Console.ResetColor()
-            Console.WriteLine("Starting on http://localhost:5000...")
+            Console.WriteLine("Starting on http://localhost:5001...")
 
             Dim solutionRoot As String = GetSolutionRoot()
             Dim dhaApiPath As String = Path.Combine(
@@ -136,7 +136,7 @@ Module Program
             Console.ForegroundColor = ConsoleColor.Green
             Console.Write("[SETA.API] ")
             Console.ResetColor()
-            Console.WriteLine("Starting on http://localhost:5001...")
+            Console.WriteLine("Starting on http://localhost:5000...")
 
             Dim solutionRoot As String = GetSolutionRoot()
             Dim setaApiPath As String = Path.Combine(
@@ -188,14 +188,14 @@ Module Program
         Console.ResetColor()
         Console.WriteLine()
         Console.WriteLine("DHA.API:")
-        Console.WriteLine("  URL: http://localhost:5000")
-        Console.WriteLine("  Swagger: http://localhost:5000/swagger")
-        Console.WriteLine("  Health: http://localhost:5000/api/health")
-        Console.WriteLine()
-        Console.WriteLine("SETA.API:")
         Console.WriteLine("  URL: http://localhost:5001")
         Console.WriteLine("  Swagger: http://localhost:5001/swagger")
         Console.WriteLine("  Health: http://localhost:5001/api/health")
+        Console.WriteLine()
+        Console.WriteLine("SETA.API:")
+        Console.WriteLine("  URL: http://localhost:5000")
+        Console.WriteLine("  Swagger: http://localhost:5000/swagger")
+        Console.WriteLine("  Health: http://localhost:5000/api/health")
         Console.WriteLine()
         Console.ForegroundColor = ConsoleColor.Cyan
         Console.WriteLine("================================================")

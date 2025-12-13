@@ -126,8 +126,13 @@ Namespace SETA.API.Controllers
         ''' Search for a learner by ID number
         ''' </summary>
         <Route("search")>
-        <HttpGet>
-        Public Function SearchLearner(<FromUri> request As LearnerSearchRequest) As IHttpActionResult
+        <HttpPost>
+        Public Function SearchLearner(request As LearnerSearchRequest) As IHttpActionResult
+            If request Is Nothing Then
+                Return Content(HttpStatusCode.BadRequest,
+                    ApiResponse(Of Object).ErrorResponse("INVALID_REQUEST", "Request body is required"))
+            End If
+
             Dim apiKeySetaId = CInt(Me.Request.Properties("SetaId"))
 
             ' If SetaId specified, validate access
@@ -351,16 +356,16 @@ Namespace SETA.API.Controllers
 
                         Dim learner As New LearnerInfo With {
                             .LearnerId = reader.GetInt32(0),
-                            .IdNumberMasked = MaskIdNumber(reader.GetString(1)),
-                            .FirstName = reader.GetString(2),
-                            .Surname = reader.GetString(3),
+                            .IdNumberMasked = MaskIdNumber(If(reader.IsDBNull(1), "", reader.GetString(1))),
+                            .FirstName = If(reader.IsDBNull(2), "", reader.GetString(2)),
+                            .Surname = If(reader.IsDBNull(3), "", reader.GetString(3)),
                             .DateOfBirth = If(reader.IsDBNull(4), Nothing, reader.GetDateTime(4)),
                             .Gender = If(reader.IsDBNull(5), Nothing, reader.GetString(5)),
                             .LearnershipCode = If(reader.IsDBNull(6), Nothing, reader.GetString(6)),
                             .ProgrammeName = If(reader.IsDBNull(7), Nothing, reader.GetString(7)),
                             .Province = If(reader.IsDBNull(8), Nothing, reader.GetString(8)),
-                            .RegistrationDate = reader.GetDateTime(9),
-                            .Status = reader.GetString(10)
+                            .RegistrationDate = If(reader.IsDBNull(9), DateTime.MinValue, reader.GetDateTime(9)),
+                            .Status = If(reader.IsDBNull(10), "", reader.GetString(10))
                         }
 
                         Return Ok(ApiResponse(Of LearnerInfo).SuccessResponse(learner))
@@ -578,14 +583,14 @@ Namespace SETA.API.Controllers
                         While reader.Read()
                             learners.Add(New LearnerInfo With {
                                 .LearnerId = reader.GetInt32(0),
-                                .IdNumberMasked = MaskIdNumber(reader.GetString(1)),
-                                .FirstName = reader.GetString(2),
-                                .Surname = reader.GetString(3),
-                                .LearnershipCode = reader.GetString(4),
+                                .IdNumberMasked = MaskIdNumber(If(reader.IsDBNull(1), "", reader.GetString(1))),
+                                .FirstName = If(reader.IsDBNull(2), "", reader.GetString(2)),
+                                .Surname = If(reader.IsDBNull(3), "", reader.GetString(3)),
+                                .LearnershipCode = If(reader.IsDBNull(4), "", reader.GetString(4)),
                                 .ProgrammeName = If(reader.IsDBNull(5), "", reader.GetString(5)),
-                                .Province = reader.GetString(6),
-                                .RegistrationDate = reader.GetDateTime(7),
-                                .Status = reader.GetString(8)
+                                .Province = If(reader.IsDBNull(6), "", reader.GetString(6)),
+                                .RegistrationDate = If(reader.IsDBNull(7), DateTime.MinValue, reader.GetDateTime(7)),
+                                .Status = If(reader.IsDBNull(8), "", reader.GetString(8))
                             })
                         End While
                     End Using
@@ -622,14 +627,14 @@ Namespace SETA.API.Controllers
                         While reader.Read()
                             learners.Add(New LearnerInfo With {
                                 .LearnerId = reader.GetInt32(0),
-                                .IdNumberMasked = MaskIdNumber(reader.GetString(1)),
-                                .FirstName = reader.GetString(2),
-                                .Surname = reader.GetString(3),
-                                .LearnershipCode = reader.GetString(4),
+                                .IdNumberMasked = MaskIdNumber(If(reader.IsDBNull(1), "", reader.GetString(1))),
+                                .FirstName = If(reader.IsDBNull(2), "", reader.GetString(2)),
+                                .Surname = If(reader.IsDBNull(3), "", reader.GetString(3)),
+                                .LearnershipCode = If(reader.IsDBNull(4), "", reader.GetString(4)),
                                 .ProgrammeName = If(reader.IsDBNull(5), "", reader.GetString(5)),
-                                .Province = reader.GetString(6),
-                                .RegistrationDate = reader.GetDateTime(7),
-                                .Status = reader.GetString(8)
+                                .Province = If(reader.IsDBNull(6), "", reader.GetString(6)),
+                                .RegistrationDate = If(reader.IsDBNull(7), DateTime.MinValue, reader.GetDateTime(7)),
+                                .Status = If(reader.IsDBNull(8), "", reader.GetString(8))
                             })
                         End While
                     End Using
@@ -667,14 +672,14 @@ Namespace SETA.API.Controllers
                         While reader.Read()
                             learners.Add(New LearnerInfo With {
                                 .LearnerId = reader.GetInt32(0),
-                                .IdNumberMasked = MaskIdNumber(reader.GetString(1)),
-                                .FirstName = reader.GetString(2),
-                                .Surname = reader.GetString(3),
-                                .LearnershipCode = reader.GetString(4),
+                                .IdNumberMasked = MaskIdNumber(If(reader.IsDBNull(1), "", reader.GetString(1))),
+                                .FirstName = If(reader.IsDBNull(2), "", reader.GetString(2)),
+                                .Surname = If(reader.IsDBNull(3), "", reader.GetString(3)),
+                                .LearnershipCode = If(reader.IsDBNull(4), "", reader.GetString(4)),
                                 .ProgrammeName = If(reader.IsDBNull(5), "", reader.GetString(5)),
-                                .Province = reader.GetString(6),
-                                .RegistrationDate = reader.GetDateTime(7),
-                                .Status = reader.GetString(8)
+                                .Province = If(reader.IsDBNull(6), "", reader.GetString(6)),
+                                .RegistrationDate = If(reader.IsDBNull(7), DateTime.MinValue, reader.GetDateTime(7)),
+                                .Status = If(reader.IsDBNull(8), "", reader.GetString(8))
                             })
                         End While
                     End Using

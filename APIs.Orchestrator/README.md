@@ -11,8 +11,8 @@ This project orchestrates both APIs (DHA.API and SETA.API) to run simultaneously
 
 ## Ports
 
-- **DHA.API**: http://localhost:5000
-- **SETA.API**: http://localhost:5001
+- **DHA.API**: http://localhost:5001
+- **SETA.API**: http://localhost:5000
 
 ## Usage
 
@@ -39,8 +39,8 @@ This project orchestrates both APIs (DHA.API and SETA.API) to run simultaneously
 ## How It Works
 
 The orchestrator:
-1. Launches DHA.API.exe in its own console window on port 5000
-2. Launches SETA.API.exe in its own console window on port 5001
+1. Launches DHA.API.exe in its own console window on port 5001
+2. Launches SETA.API.exe in its own console window on port 5000
 3. Displays status information
 4. Waits for you to press ENTER
 5. Gracefully shuts down both APIs when you press ENTER
