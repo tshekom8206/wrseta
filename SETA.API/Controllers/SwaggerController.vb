@@ -226,6 +226,65 @@ Namespace Controllers
         }
       }
     },
+    ""/api/auth/register"": {
+      ""post"": {
+        ""tags"": [""Authentication""],
+        ""summary"": ""Register new user"",
+        ""description"": ""Register a new user account. No API key required."",
+        ""requestBody"": {
+          ""content"": {
+            ""application/json"": {
+              ""schema"": {
+                ""type"": ""object"",
+                ""required"": [""username"", ""password"", ""name"", ""surname"", ""email"", ""setaId""],
+                ""properties"": {
+                  ""username"": { ""type"": ""string"" },
+                  ""password"": { ""type"": ""string"", ""minLength"": 6 },
+                  ""name"": { ""type"": ""string"" },
+                  ""surname"": { ""type"": ""string"" },
+                  ""email"": { ""type"": ""string"", ""format"": ""email"" },
+                  ""setaId"": { ""type"": ""integer"" },
+                  ""userType"": { ""type"": ""string"" },
+                  ""idNumber"": { ""type"": ""string"" },
+                  ""learnerId"": { ""type"": ""integer"", ""nullable"": true }
+                }
+              }
+            }
+          }
+        },
+        ""responses"": {
+          ""200"": { ""description"": ""User registered successfully"" },
+          ""400"": { ""description"": ""Invalid request"" },
+          ""409"": { ""description"": ""Username already exists"" }
+        }
+      }
+    },
+    ""/api/auth/login"": {
+      ""post"": {
+        ""tags"": [""Authentication""],
+        ""summary"": ""User login"",
+        ""description"": ""Authenticate user with username and password. No API key required."",
+        ""requestBody"": {
+          ""content"": {
+            ""application/json"": {
+              ""schema"": {
+                ""type"": ""object"",
+                ""required"": [""username"", ""password""],
+                ""properties"": {
+                  ""username"": { ""type"": ""string"" },
+                  ""password"": { ""type"": ""string"" }
+                }
+              }
+            }
+          }
+        },
+        ""responses"": {
+          ""200"": { ""description"": ""Login successful"" },
+          ""401"": { ""description"": ""Invalid credentials"" },
+          ""403"": { ""description"": ""Account is inactive"" }
+        }
+      }
+    },
     ""/api/verification/verify"": {
       ""post"": {
         ""tags"": [""Verification""],

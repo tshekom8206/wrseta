@@ -46,7 +46,6 @@ export class SidebarComponent {
       children: [
         { label: 'nav.singleVerify', icon: 'check', route: '/verification/single', roles: [UserRole.Admin, UserRole.Staff] },
         { label: 'nav.batchVerify', icon: 'upload', route: '/verification/batch', roles: [UserRole.Admin, UserRole.Staff] },
-        { label: 'nav.batchQueue', icon: 'layers', route: '/verification/queue', roles: [UserRole.Admin, UserRole.Staff] },
         { label: 'nav.recentVerifications', icon: 'clock', route: '/verification/history', roles: [UserRole.Admin, UserRole.Staff] }
       ]
     },
@@ -56,9 +55,9 @@ export class SidebarComponent {
       route: '/learners',
       roles: [UserRole.Admin, UserRole.Staff],
       children: [
-        { label: 'nav.learnerList', icon: 'list', route: '/learners/list', roles: [UserRole.Admin, UserRole.Staff] },
-        { label: 'nav.enrollLearner', icon: 'user-plus', route: '/learners/enroll', roles: [UserRole.Admin, UserRole.Staff] },
-        { label: 'nav.searchLearner', icon: 'search', route: '/learners/search', roles: [UserRole.Admin, UserRole.Staff] }
+        { label: 'nav.learnerList', icon: 'list', route: '/learners/list', roles: [UserRole.Admin, UserRole.Staff] }
+        // { label: 'nav.enrollLearner', icon: 'user-plus', route: '/learners/enroll', roles: [UserRole.Admin, UserRole.Staff] },
+        // { label: 'nav.searchLearner', icon: 'search', route: '/learners/search', roles: [UserRole.Admin, UserRole.Staff] }
       ]
     },
     {
@@ -78,9 +77,9 @@ export class SidebarComponent {
       route: '/admin',
       roles: [UserRole.Admin],
       children: [
-        { label: 'nav.userManagement', icon: 'user', route: '/admin/users', roles: [UserRole.Admin] },
-        { label: 'nav.setaManagement', icon: 'briefcase', route: '/admin/setas', roles: [UserRole.Admin] },
-        { label: 'nav.settings', icon: 'sliders', route: '/admin/settings', roles: [UserRole.Admin] }
+        // { label: 'nav.userManagement', icon: 'user', route: '/admin/users', roles: [UserRole.Admin] },
+        { label: 'nav.setaManagement', icon: 'briefcase', route: '/admin/setas', roles: [UserRole.Admin] }
+        // { label: 'nav.settings', icon: 'sliders', route: '/admin/settings', roles: [UserRole.Admin] }
       ]
     },
     {

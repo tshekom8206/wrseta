@@ -132,7 +132,11 @@ export class LoginComponent implements OnInit, OnDestroy {
         },
         error: (error) => {
           this.isLoading = false;
-          this.errorMessage = error.message || this.translate.instant('auth.invalidCredentials');
+          // Extract error message from API response
+          const apiError = error?.error?.error || error?.error || error;
+          this.errorMessage = apiError?.message ||
+            error?.message ||
+            this.translate.instant('auth.invalidCredentials');
           this.notification.error(this.errorMessage);
         }
       });

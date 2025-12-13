@@ -88,6 +88,78 @@ Namespace Models
         Public Property RefreshToken As String
     End Class
 
+    ''' <summary>
+    ''' Request model for user registration
+    ''' </summary>
+    Public Class RegistrationRequest
+        <Required>
+        Public Property Username As String
+
+        <Required>
+        <StringLength(100, MinimumLength:=6, ErrorMessage:="Password must be at least 6 characters")>
+        Public Property Password As String
+
+        <Required>
+        Public Property Name As String
+
+        <Required>
+        Public Property Surname As String
+
+        <Required>
+        <EmailAddress(ErrorMessage:="Invalid email address")>
+        Public Property Email As String
+
+        <Required>
+        Public Property SetaId As Integer
+
+        Public Property UserType As String
+
+        Public Property IdNumber As String
+
+        Public Property LearnerId As Integer?
+    End Class
+
+    ''' <summary>
+    ''' Response model for user registration
+    ''' </summary>
+    Public Class RegistrationResponse
+        Public Property UserId As Integer
+        Public Property Username As String
+        Public Property Message As String
+        Public Property SetaId As Integer
+        Public Property SetaCode As String
+        Public Property SetaName As String
+    End Class
+
+    ''' <summary>
+    ''' Request model for user login
+    ''' </summary>
+    Public Class LoginRequest
+        <Required>
+        Public Property Username As String
+
+        <Required>
+        Public Property Password As String
+    End Class
+
+    ''' <summary>
+    ''' Response model for user login
+    ''' </summary>
+    Public Class LoginResponse
+        Public Property Token As String
+        Public Property ExpiresAt As DateTime
+        Public Property RefreshToken As String
+        Public Property UserId As Integer
+        Public Property Username As String
+        Public Property Name As String
+        Public Property Surname As String
+        Public Property Email As String
+        Public Property SetaId As Integer
+        Public Property SetaCode As String
+        Public Property SetaName As String
+        Public Property UserType As String
+    End Class
+
 #End Region
 
 #Region "Verification Models"

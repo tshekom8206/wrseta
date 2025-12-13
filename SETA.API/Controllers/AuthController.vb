@@ -14,11 +14,134 @@ Namespace SETA.API.Controllers
     ''' Authentication controller for JWT token generation
     ''' </summary>
     <RoutePrefix("api/auth")>
-    <ApiKeyAuth>
     Public Class AuthController
         Inherits ApiController
 
         Private ReadOnly _tokenService As New JwtTokenService()
+
+        ''' <summary>
+        ''' Register a new user
+        ''' </summary>
+        <Route("register")>
+        <HttpPost>
+        Public Function Register(request As RegistrationRequest) As IHttpActionResult
+            ' Validate request
+            If request Is Nothing Then
+                Return Content(HttpStatusCode.BadRequest,
+                    ApiResponse(Of RegistrationResponse).ErrorResponse("INVALID_REQUEST", "Request body is required"))
+            End If
+
+            ' Validate required fields
+            If String.IsNullOrWhiteSpace(request.Username) OrElse
+               String.IsNullOrWhiteSpace(request.Password) OrElse
+               String.IsNullOrWhiteSpace(request.Name) OrElse
+               String.IsNullOrWhiteSpace(request.Surname) OrElse
+               String.IsNullOrWhiteSpace(request.Email) OrElse
+               request.SetaId <= 0 Then
+                Return Content(HttpStatusCode.BadRequest,
+                    ApiResponse(Of RegistrationResponse).ErrorResponse("INVALID_REQUEST", "All required fields must be provided"))
+            End If
+
+            ' Validate email format
+            Try
+                Dim emailAddr As New System.Net.Mail.MailAddress(request.Email)
+            Catch
+                Return Content(HttpStatusCode.BadRequest,
+                    ApiResponse(Of RegistrationResponse).ErrorResponse("INVALID_EMAIL", "Invalid email address format"))
+            End Try
+
+            ' Check if username already exists
+            If UsernameExists(request.Username) Then
+                Return Content(HttpStatusCode.Conflict,
+                    ApiResponse(Of RegistrationResponse).ErrorResponse("USERNAME_EXISTS", "Username already exists"))
+            End If
+
+            ' Validate SETA exists and is active
+            Dim setaInfo = GetSetaInfo(request.SetaId)
+            If setaInfo Is Nothing Then
+                Return Content(HttpStatusCode.BadRequest,
+                    ApiResponse(Of RegistrationResponse).ErrorResponse("INVALID_SETA", "Invalid or inactive SETA"))
+            End If
+
+            ' Register the user
+            Dim userId = RegisterUser(request)
+            If userId <= 0 Then
+                Return Content(HttpStatusCode.InternalServerError,
+                    ApiResponse(Of RegistrationResponse).ErrorResponse("REGISTRATION_FAILED", "Failed to register user"))
+            End If
+
+            Dim response = New RegistrationResponse With {
+                .UserId = userId,
+                .Username = request.Username,
+                .Message = "User registered successfully",
+                .SetaId = request.SetaId,
+                .SetaCode = setaInfo.SetaCode,
+                .SetaName = setaInfo.SetaName
+            }
+
+            Return Ok(ApiResponse(Of RegistrationResponse).SuccessResponse(response))
+        End Function
+
+        ''' <summary>
+        ''' Login with username and password
+        ''' </summary>
+        <Route("login")>
+        <HttpPost>
+        Public Function Login(request As LoginRequest) As IHttpActionResult
+            ' Validate request
+            If request Is Nothing Then
+                Return Content(HttpStatusCode.BadRequest,
+                    ApiResponse(Of LoginResponse).ErrorResponse("INVALID_REQUEST", "Request body is required"))
+            End If
+
+            If String.IsNullOrWhiteSpace(request.Username) OrElse String.IsNullOrWhiteSpace(request.Password) Then
+                Return Content(HttpStatusCode.BadRequest,
+                    ApiResponse(Of LoginResponse).ErrorResponse("INVALID_CREDENTIALS", "Username and password are required"))
+            End If
+
+            ' Validate credentials and get user info
+            Dim userInfo = ValidateLoginCredentials(request.Username, request.Password)
+            If userInfo Is Nothing Then
+                Return Content(HttpStatusCode.Unauthorized,
+                    ApiResponse(Of LoginResponse).ErrorResponse("INVALID_CREDENTIALS", "Invalid username or password"))
+            End If
+
+            ' Check if user is active
+            If Not userInfo.IsActive Then
+                Return Content(HttpStatusCode.Forbidden,
+                    ApiResponse(Of LoginResponse).ErrorResponse("ACCOUNT_INACTIVE", "User account is inactive"))
+            End If
+
+            ' Generate JWT token
+            Dim tokenResult = _tokenService.GenerateToken(
+                userInfo.SetaId,
+                userInfo.SetaCode,
+                userInfo.SetaName,
+                request.Username)
+
+            ' Store refresh token in database
+            StoreRefreshToken(userInfo.SetaId, request.Username, tokenResult.RefreshToken, tokenResult.ExpiresAt.AddDays(7))
+
+            ' Update last login
+            UpdateLastLogin(userInfo.UserId)
+
+            Dim response = New LoginResponse With {
+                .Token = tokenResult.Token,
+                .ExpiresAt = tokenResult.ExpiresAt,
+                .RefreshToken = tokenResult.RefreshToken,
+                .UserId = userInfo.UserId,
+                .Username = userInfo.Username,
+                .Name = userInfo.Name,
+                .Surname = userInfo.Surname,
+                .Email = userInfo.Email,
+                .SetaId = userInfo.SetaId,
+                .SetaCode = userInfo.SetaCode,
+                .SetaName = userInfo.SetaName,
+                .UserType = userInfo.UserType
+            }
+
+            Return Ok(ApiResponse(Of LoginResponse).SuccessResponse(response))
+        End Function
 
         ''' <summary>
         ''' Generate JWT token using credentials
@@ -28,6 +151,7 @@ Namespace SETA.API.Controllers
         ''' </remarks>
         <Route("token")>
         <HttpPost>
+        <ApiKeyAuth>
         Public Function GetToken(request As AuthTokenRequest) As IHttpActionResult
             ' Validate request
             If request Is Nothing Then
@@ -84,6 +208,7 @@ Namespace SETA.API.Controllers
         ''' </summary>
         <Route("refresh")>
         <HttpPost>
+        <ApiKeyAuth>
         Public Function RefreshToken(request As RefreshTokenRequest) As IHttpActionResult
             If request Is Nothing OrElse String.IsNullOrWhiteSpace(request.RefreshToken) Then
                 Return Content(HttpStatusCode.BadRequest,
@@ -128,6 +253,7 @@ Namespace SETA.API.Controllers
         ''' </remarks>
         <Route("logout")>
         <HttpPost>
+        <ApiKeyAuth>
         Public Function Logout() As IHttpActionResult
             ' Get SETA info from API Key (set by ApiKeyAuthAttribute)
             Dim setaId = CInt(Me.Request.Properties("SetaId"))
@@ -171,6 +297,7 @@ Namespace SETA.API.Controllers
         ''' </summary>
         <Route("revoke")>
         <HttpPost>
+        <ApiKeyAuth>
         Public Function RevokeToken(request As RevokeTokenRequest) As IHttpActionResult
             If request Is Nothing OrElse String.IsNullOrWhiteSpace(request.RefreshToken) Then
                 Return Content(HttpStatusCode.BadRequest,
@@ -205,6 +332,7 @@ Namespace SETA.API.Controllers
         ''' </summary>
         <Route("revoke-all/{username}")>
         <HttpPost>
+        <ApiKeyAuth>
         Public Function RevokeAllUserTokens(username As String) As IHttpActionResult
             If String.IsNullOrWhiteSpace(username) Then
                 Return Content(HttpStatusCode.BadRequest,
@@ -235,6 +363,7 @@ Namespace SETA.API.Controllers
         ''' </summary>
         <Route("session")>
         <HttpGet>
+        <ApiKeyAuth>
         Public Function GetSessionInfo() As IHttpActionResult
             Dim setaId = CInt(Me.Request.Properties("SetaId"))
             Dim setaCode = Me.Request.Properties("SetaCode").ToString()
@@ -268,6 +397,171 @@ Namespace SETA.API.Controllers
                 .timestamp = DateTime.UtcNow
             }))
         End Function
+
+        ''' <summary>
+        ''' Check if username already exists
+        ''' </summary>
+        Private Function UsernameExists(username As String) As Boolean
+            Dim connectionString As String = ConfigurationManager.ConnectionStrings("SETAConnection").ConnectionString
+
+            Using conn As New SqlConnection(connectionString)
+                conn.Open()
+
+                Dim sql As String = "SELECT COUNT(*) FROM ApiUsers WHERE Username = @Username"
+
+                Using cmd As New SqlCommand(sql, conn)
+                    cmd.Parameters.AddWithValue("@Username", username)
+                    Dim count As Integer = CInt(cmd.ExecuteScalar())
+                    Return count > 0
+                End Using
+            End Using
+        End Function
+
+        ''' <summary>
+        ''' Get SETA information
+        ''' </summary>
+        Private Function GetSetaInfo(setaId As Integer) As Models.SetaInfo
+            Dim connectionString As String = ConfigurationManager.ConnectionStrings("SETAConnection").ConnectionString
+
+            Using conn As New SqlConnection(connectionString)
+                conn.Open()
+
+                Dim sql As String = "
+                    SELECT SETAID, SETACode, SETAName
+                    FROM SETAs
+                    WHERE SETAID = @SETAID
+                      AND IsActive = 1"
+
+                Using cmd As New SqlCommand(sql, conn)
+                    cmd.Parameters.AddWithValue("@SETAID", setaId)
+
+                    Using reader As SqlDataReader = cmd.ExecuteReader()
+                        If reader.Read() Then
+                            Return New Models.SetaInfo With {
+                                .SetaId = reader.GetInt32(0),
+                                .SetaCode = reader.GetString(1),
+                                .SetaName = reader.GetString(2)
+                            }
+                        End If
+                    End Using
+                End Using
+            End Using
+
+            Return Nothing
+        End Function
+
+        ''' <summary>
+        ''' Register a new user in the database
+        ''' </summary>
+        Private Function RegisterUser(request As RegistrationRequest) As Integer
+            Dim connectionString As String = ConfigurationManager.ConnectionStrings("SETAConnection").ConnectionString
+            Dim passwordHash As String = ComputeSha256Hash(request.Password)
+
+            Try
+                Using conn As New SqlConnection(connectionString)
+                    conn.Open()
+
+                    Dim sql As String = "
+                        INSERT INTO ApiUsers (
+                            Username, PasswordHash, SETAID, IsActive, CreatedDate,
+                            Name, Surname, Email, UserType, IDNumber, LearnerID
+                        )
+                        VALUES (
+                            @Username, @PasswordHash, @SETAID, 1, GETDATE(),
+                            @Name, @Surname, @Email, @UserType, @IDNumber, @LearnerID
+                        );
+                        SELECT CAST(SCOPE_IDENTITY() AS INT);"
+
+                    Using cmd As New SqlCommand(sql, conn)
+                        cmd.Parameters.AddWithValue("@Username", request.Username)
+                        cmd.Parameters.AddWithValue("@PasswordHash", passwordHash)
+                        cmd.Parameters.AddWithValue("@SETAID", request.SetaId)
+                        cmd.Parameters.AddWithValue("@Name", request.Name)
+                        cmd.Parameters.AddWithValue("@Surname", request.Surname)
+                        cmd.Parameters.AddWithValue("@Email", request.Email)
+                        cmd.Parameters.AddWithValue("@UserType", If(String.IsNullOrWhiteSpace(request.UserType), DBNull.Value, CObj(request.UserType)))
+                        cmd.Parameters.AddWithValue("@IDNumber", If(String.IsNullOrWhiteSpace(request.IdNumber), DBNull.Value, CObj(request.IdNumber)))
+                        cmd.Parameters.AddWithValue("@LearnerID", If(request.LearnerId.HasValue, CObj(request.LearnerId.Value), DBNull.Value))
+
+                        Dim userId As Object = cmd.ExecuteScalar()
+                        If userId IsNot Nothing AndAlso IsNumeric(userId) Then
+                            Return CInt(userId)
+                        End If
+                    End Using
+                End Using
+            Catch ex As Exception
+                System.Diagnostics.Debug.WriteLine("Failed to register user: " & ex.Message)
+            End Try
+
+            Return 0
+        End Function
+
+        ''' <summary>
+        ''' Validate login credentials and return user info
+        ''' </summary>
+        Private Function ValidateLoginCredentials(username As String, password As String) As LoginUserInfo
+            Dim connectionString As String = ConfigurationManager.ConnectionStrings("SETAConnection").ConnectionString
+            Dim passwordHash As String = ComputeSha256Hash(password)
+
+            Using conn As New SqlConnection(connectionString)
+                conn.Open()
+
+                Dim sql As String = "
+                    SELECT u.UserID, u.Username, u.Name, u.Surname, u.Email, u.UserType, u.IsActive,
+                           s.SETAID, s.SETACode, s.SETAName
+                    FROM ApiUsers u
+                    INNER JOIN SETAs s ON u.SETAID = s.SETAID
+                    WHERE u.Username = @Username
+                      AND u.PasswordHash = @PasswordHash
+                      AND s.IsActive = 1"
+
+                Using cmd As New SqlCommand(sql, conn)
+                    cmd.Parameters.AddWithValue("@Username", username)
+                    cmd.Parameters.AddWithValue("@PasswordHash", passwordHash)
+
+                    Using reader As SqlDataReader = cmd.ExecuteReader()
+                        If reader.Read() Then
+                            Return New LoginUserInfo With {
+                                .UserId = reader.GetInt32(0),
+                                .Username = reader.GetString(1),
+                                .Name = If(reader.IsDBNull(2), "", reader.GetString(2)),
+                                .Surname = If(reader.IsDBNull(3), "", reader.GetString(3)),
+                                .Email = If(reader.IsDBNull(4), "", reader.GetString(4)),
+                                .UserType = If(reader.IsDBNull(5), "", reader.GetString(5)),
+                                .IsActive = reader.GetBoolean(6),
+                                .SetaId = reader.GetInt32(7),
+                                .SetaCode = reader.GetString(8),
+                                .SetaName = reader.GetString(9)
+                            }
+                        End If
+                    End Using
+                End Using
+            End Using
+
+            Return Nothing
+        End Function
+
+        ''' <summary>
+        ''' Update last login timestamp
+        ''' </summary>
+        Private Sub UpdateLastLogin(userId As Integer)
+            Dim connectionString As String = ConfigurationManager.ConnectionStrings("SETAConnection").ConnectionString
+
+            Try
+                Using conn As New SqlConnection(connectionString)
+                    conn.Open()
+
+                    Dim sql As String = "UPDATE ApiUsers SET LastLogin = GETDATE() WHERE UserID = @UserID"
+
+                    Using cmd As New SqlCommand(sql, conn)
+                        cmd.Parameters.AddWithValue("@UserID", userId)
+                        cmd.ExecuteNonQuery()
+                    End Using
+                End Using
+            Catch ex As Exception
+                System.Diagnostics.Debug.WriteLine("Failed to update last login: " & ex.Message)
+            End Try
+        End Sub
 
         ''' <summary>
         ''' Validate user credentials against database
@@ -463,6 +757,22 @@ Namespace SETA.API.Controllers
         Private Class UserInfo
             Public Property UserId As Integer
             Public Property Username As String
+            Public Property SetaId As Integer
+            Public Property SetaCode As String
+            Public Property SetaName As String
+        End Class
+
+        ''' <summary>
+        ''' Extended user information for login response
+        ''' </summary>
+        Private Class LoginUserInfo
+            Public Property UserId As Integer
+            Public Property Username As String
+            Public Property Name As String
+            Public Property Surname As String
+            Public Property Email As String
+            Public Property UserType As String
+            Public Property IsActive As Boolean
             Public Property SetaId As Integer
             Public Property SetaCode As String
             Public Property SetaName As String

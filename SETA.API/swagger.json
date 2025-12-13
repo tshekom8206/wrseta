@@ -94,6 +94,135 @@
         }
       }
     },
+    "/api/auth/register": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Register New User",
+        "description": "Register a new user account. No API key required. Creates a new user in the ApiUsers table with hashed password.",
+        "operationId": "registerUser",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegistrationRequest"
+              },
+              "example": {
+                "username": "newuser",
+                "password": "SecurePass123!",
+                "name": "John",
+                "surname": "Doe",
+                "email": "john.doe@example.com",
+                "setaId": 1,
+                "userType": "Clerk",
+                "idNumber": "8506155012089",
+                "learnerId": null
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User registered successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseRegistration"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request or validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Username already exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "User Login",
+        "description": "Authenticate user with username and password. No API key required. Returns JWT token and user information.",
+        "operationId": "loginUser",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              },
+              "example": {
+                "username": "newuser",
+                "password": "SecurePass123!"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseLogin"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Account is inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/verification/verify": {
       "post": {
         "tags": [
@@ -1120,6 +1249,154 @@
           }
         }
       },
+      "RegistrationRequest": {
+        "type": "object",
+        "required": [
+          "username",
+          "password",
+          "name",
+          "surname",
+          "email",
+          "setaId"
+        ],
+        "properties": {
+          "username": {
+            "type": "string",
+            "description": "Unique username for the user account"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 6,
+            "maxLength": 100,
+            "description": "User password (minimum 6 characters)"
+          },
+          "name": {
+            "type": "string",
+            "description": "User's first name"
+          },
+          "surname": {
+            "type": "string",
+            "description": "User's surname"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "User's email address"
+          },
+          "setaId": {
+            "type": "integer",
+            "description": "SETA ID the user belongs to"
+          },
+          "userType": {
+            "type": "string",
+            "description": "User type (e.g., Clerk, Admin, Auditor)"
+          },
+          "idNumber": {
+            "type": "string",
+            "description": "User's ID number (optional)"
+          },
+          "learnerId": {
+            "type": "integer",
+            "nullable": true,
+            "description": "Associated learner ID (optional)"
+          }
+        }
+      },
+      "RegistrationResponse": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "integer",
+            "description": "Newly created user ID"
+          },
+          "username": {
+            "type": "string",
+            "description": "Registered username"
+          },
+          "message": {
+            "type": "string",
+            "description": "Success message"
+          },
+          "setaId": {
+            "type": "integer"
+          },
+          "setaCode": {
+            "type": "string"
+          },
+          "setaName": {
+            "type": "string"
+          }
+        }
+      },
+      "LoginRequest": {
+        "type": "object",
+        "required": [
+          "username",
+          "password"
+        ],
+        "properties": {
+          "username": {
+            "type": "string",
+            "description": "User's username"
+          },
+          "password": {
+            "type": "string",
+            "description": "User's password"
+          }
+        }
+      },
+      "LoginResponse": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "JWT access token"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Token expiration timestamp"
+          },
+          "refreshToken": {
+            "type": "string",
+            "description": "Refresh token for obtaining new access tokens"
+          },
+          "userId": {
+            "type": "integer",
+            "description": "User ID"
+          },
+          "username": {
+            "type": "string",
+            "description": "Username"
+          },
+          "name": {
+            "type": "string",
+            "description": "User's first name"
+          },
+          "surname": {
+            "type": "string",
+            "description": "User's surname"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "User's email address"
+          },
+          "setaId": {
+            "type": "integer"
+          },
+          "setaCode": {
+            "type": "string"
+          },
+          "setaName": {
+            "type": "string"
+          },
+          "userType": {
+            "type": "string",
+            "description": "User type"
+          }
+        }
+      },
       "VerificationRequest": {
         "type": "object",
         "required": [
@@ -1613,6 +1890,42 @@
           },
           "data": {
             "$ref": "#/components/schemas/AuthTokenResponse"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "requestId": {
+            "type": "string"
+          }
+        }
+      },
+      "ApiResponseRegistration": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "data": {
+            "$ref": "#/components/schemas/RegistrationResponse"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "requestId": {
+            "type": "string"
+          }
+        }
+      },
+      "ApiResponseLogin": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "data": {
+            "$ref": "#/components/schemas/LoginResponse"
           },
           "timestamp": {
             "type": "string",

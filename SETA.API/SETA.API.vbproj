@@ -55,6 +55,9 @@
     <Reference Include="Microsoft.IdentityModel.Tokens">
       <HintPath>..\packages\Microsoft.IdentityModel.Tokens.6.32.0\lib\net472\Microsoft.IdentityModel.Tokens.dll</HintPath>
     </Reference>
+    <Reference Include="Microsoft.IdentityModel.JsonWebTokens">
+      <HintPath>..\packages\Microsoft.IdentityModel.JsonWebTokens.6.32.0\lib\net472\Microsoft.IdentityModel.JsonWebTokens.dll</HintPath>
+    </Reference>
     <Reference Include="Microsoft.IdentityModel.Logging">
       <HintPath>..\packages\Microsoft.IdentityModel.Logging.6.32.0\lib\net472\Microsoft.IdentityModel.Logging.dll</HintPath>
     </Reference>

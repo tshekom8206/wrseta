@@ -103,53 +103,50 @@ export class AuthService {
   login(credentials: LoginRequest): Observable<LoginResponse> {
     this.isLoading$.next(true);
 
-    // Get API key for the selected SETA
-    const apiKey = this.getApiKeyForSeta(credentials.setaCode);
-
     const headers = new HttpHeaders({
-      'Content-Type': 'application/json',
-      'X-API-Key': apiKey
+      'Content-Type': 'application/json'
+      // Note: /auth/login endpoint does not require X-API-Key header
     });
 
-    // Get SETA ID from the SETA_IDS mapping
-    const setaId = SETA_IDS[credentials.setaCode.toUpperCase()] || 0;
-
-    return this.http.post<any>(`${this.baseUrl}/auth/token`, {
-      setaId: setaId,
+    return this.http.post<any>(`${this.baseUrl}/auth/login`, {
       username: credentials.username,
       password: credentials.password
     }, { headers }).pipe(
       map(apiResponse => {
         // Transform API response to match LoginResponse interface
-        // API returns: { success, data: { token, expiresAt, refreshToken, setaId, setaCode, setaName } }
+        // API returns: { success, data: { token, expiresAt, refreshToken, userId, username, name, surname, email, setaId, setaCode, setaName, userType } }
         const data = apiResponse.data || apiResponse;
-        const theme = this.themeService.getTheme(credentials.setaCode);
+        const setaCode = data.setaCode || credentials.setaCode || 'WRSETA';
+        const setaName = data.setaName || 'Wholesale & Retail SETA';
+        const theme = this.themeService.getTheme(setaCode);
 
-        // Determine role based on username prefix or API response
-        const role = this.getRoleFromUsername(credentials.username);
+        // Determine role from userType or username prefix
+        const role = this.getRoleFromUserType(data.userType) || this.getRoleFromUsername(credentials.username);
 
         const loginResponse: LoginResponse = {
-          success: apiResponse.success,
+          success: apiResponse.success !== false,
           token: data.token,
           refreshToken: data.refreshToken,
           expiresAt: new Date(data.expiresAt),
           user: {
-            id: data.setaId,
-            username: credentials.username,
-            email: `${credentials.username}@seta.gov.za`,
-            fullName: credentials.username.split('.')[0].charAt(0).toUpperCase() +
-                      credentials.username.split('.')[0].slice(1) + ' User',
+            id: data.userId || data.id || 0,
+            username: data.username || credentials.username,
+            email: data.email || `${credentials.username}@seta.gov.za`,
+            fullName: data.name && data.surname
+              ? `${data.name} ${data.surname}`
+              : data.name || data.surname || credentials.username.split('.')[0].charAt(0).toUpperCase() +
+              credentials.username.split('.')[0].slice(1) + ' User',
             role: role,
-            setaId: data.setaId,
-            setaCode: data.setaCode,
-            setaName: data.setaName,
+            setaId: data.setaId || 0,
+            setaCode: setaCode,
+            setaName: setaName,
             isActive: true,
             createdAt: new Date()
           },
           seta: {
-            code: data.setaCode,
-            name: data.setaName,
-            logo: theme?.logo || `assets/images/setas/${credentials.setaCode.toLowerCase()}-logo.png`,
+            code: setaCode,
+            name: setaName,
+            logo: theme?.logo || `assets/images/setas/${setaCode.toLowerCase()}-logo.png`,
             colors: theme?.colors || {
               primary: '#008550',
               primaryDark: '#006640',
@@ -162,13 +159,33 @@ export class AuthService {
       }),
       tap(response => {
         if (response.success) {
-          this.handleLoginSuccess(response, credentials.setaCode);
+          this.handleLoginSuccess(response, response.seta.code);
         }
       }),
       catchError(error => {
-        // If API auth fails, try mock login for demo/development
-        console.log('[Auth] API login failed, trying mock login...');
-        return this.mockLogin(credentials);
+        this.isLoading$.next(false);
+
+        // Extract error message from API response
+        const errorMessage = error?.error?.error?.message ||
+          error?.error?.message ||
+          error?.message ||
+          'Invalid username or password';
+
+        // If API auth fails, try mock login for demo/development (only in development)
+        if (!environment.production) {
+          console.log('[Auth] API login failed, trying mock login...', error);
+          return this.mockLogin(credentials);
+        }
+
+        // In production, return the error
+        return throwError(() => ({
+          error: {
+            error: {
+              code: error?.error?.error?.code || 'LOGIN_FAILED',
+              message: errorMessage
+            }
+          }
+        }));
       })
     );
   }
@@ -184,10 +201,15 @@ export class AuthService {
       }));
     }
 
-    const setaId = SETA_IDS[credentials.setaCode.toUpperCase()] || 1;
+    // Provide default SETA code if not specified
+    const setaCode = credentials.setaCode || 'WRSETA';
+    const setaId = SETA_IDS[setaCode.toUpperCase()] || 1;
 
     // Generate mock JWT token
-    const mockToken = this.generateMockToken(credentials.username, credentials.setaCode, setaId);
+    const mockToken = this.generateMockToken(credentials.username, setaCode, setaId);
+
+    const theme = this.themeService.getTheme(setaCode);
+    const setaName = theme?.name || setaCode;
 
     const response: LoginResponse = {
       success: true,
@@ -201,16 +223,16 @@ export class AuthService {
         fullName: mockUser.fullName,
         role: mockUser.role,
         setaId: setaId,
-        setaCode: credentials.setaCode.toUpperCase(),
-        setaName: this.themeService.getTheme(credentials.setaCode)?.name || credentials.setaCode,
+        setaCode: setaCode.toUpperCase(),
+        setaName: setaName,
         isActive: true,
         createdAt: new Date()
       },
       seta: {
-        code: credentials.setaCode.toUpperCase(),
-        name: this.themeService.getTheme(credentials.setaCode)?.name || credentials.setaCode,
-        logo: `assets/images/setas/${credentials.setaCode.toLowerCase()}-logo.png`,
-        colors: {
+        code: setaCode.toUpperCase(),
+        name: setaName,
+        logo: theme?.logo || `assets/images/setas/${setaCode.toLowerCase()}-logo.png`,
+        colors: theme?.colors || {
           primary: '#008550',
           primaryDark: '#006640',
           secondary: '#666666',
@@ -219,7 +241,7 @@ export class AuthService {
       }
     };
 
-    this.handleLoginSuccess(response, credentials.setaCode);
+    this.handleLoginSuccess(response, setaCode);
     return of(response);
   }
 
@@ -368,6 +390,20 @@ export class AuthService {
 
   isLearner(): boolean {
     return this.hasRole(UserRole.Learner);
+  }
+
+  // Determine user role from userType field
+  private getRoleFromUserType(userType: string | null | undefined): UserRole | null {
+    if (!userType) return null;
+    const lowerType = userType.toLowerCase();
+    if (lowerType.includes('admin') || lowerType === 'admin') {
+      return UserRole.Admin;
+    } else if (lowerType.includes('staff') || lowerType === 'staff' || lowerType === 'clerk') {
+      return UserRole.Staff;
+    } else if (lowerType.includes('learner') || lowerType === 'learner') {
+      return UserRole.Learner;
+    }
+    return null;
   }
 
   // Determine user role from username pattern

@@ -21,8 +21,8 @@ export enum UserRole {
 export interface LoginRequest {
   username: string;
   password: string;
-  setaCode: string;
-  setaId: number;
+  setaCode?: string;  // Optional - user's SETA is determined from their account
+  setaId?: number;    // Optional - not needed for new login endpoint
 }
 
 export interface LoginResponse {
