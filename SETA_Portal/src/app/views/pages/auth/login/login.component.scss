@@ -402,7 +402,9 @@
 }
 
 // Submit Button
-.btn-primary {
+form .btn-primary,
+#login-form .btn-primary,
+.login-form-wrapper .btn-primary {
   padding: 0.875rem 1.5rem !important;
   font-size: 1rem !important;
   font-weight: 600 !important;
@@ -419,7 +421,11 @@
   border: 2px solid var(--seta-primary) !important;
   width: 100% !important;
   min-height: 48px !important;
+  height: auto !important;
   visibility: visible !important;
+  opacity: 1 !important;
+  position: relative !important;
+  z-index: 1 !important;
 
   &:hover:not(:disabled) {
     background-color: var(--seta-primary-dark);
@@ -451,11 +457,19 @@
     flex-shrink: 0;
     display: inline-block !important;
     opacity: 1 !important;
+    visibility: visible !important;
   }
 
   span {
     display: inline-block !important;
     opacity: 1 !important;
+    visibility: visible !important;
+    color: white !important;
+  }
+
+  .spinner-border {
+    display: inline-block !important;
+    visibility: visible !important;
   }
 }
 
