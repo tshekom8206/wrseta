@@ -10,6 +10,7 @@ import { ThemeService } from '../../../core/services/theme.service';
 import { DashboardService } from '../../../core/services/dashboard.service';
 import { IconService } from '../../../core/services/icon.service';
 import { StatCardComponent } from '../../../shared/components/stat-card/stat-card.component';
+import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { RecentVerificationsComponent } from './components/recent-verifications.component';
 import { BlockedLearnersComponent } from './components/blocked-learners.component';
 import { VerificationChartComponent } from './components/verification-chart.component';
@@ -29,38 +30,19 @@ import {
     RouterLink,
     TranslateModule,
     StatCardComponent,
+    PageHeaderComponent,
     RecentVerificationsComponent,
     BlockedLearnersComponent,
     VerificationChartComponent
   ],
   template: `
     <div class="dashboard">
-      <div class="page-header">
-        <h1 class="page-title">
-          <span class="page-title__icon">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              [innerHTML]="getSafeIcon('layout')"
-            ></svg>
-          </span>
-          {{ 'dashboard.title' | translate }}
-        </h1>
-        <p class="page-subtitle">
-          {{ 'dashboard.overview' | translate }}
-          @if (currentUser) {
-            <span class="subtitle-divider"></span>
-            <span>{{ currentUser.setaName }}</span>
-          }
-        </p>
-      </div>
+      <app-page-header
+        titleKey="dashboard.title"
+        subtitleKey="dashboard.overview"
+        icon="layout"
+        [showSetaName]="true"
+      ></app-page-header>
 
       <!-- Stats Cards Row -->
       <div class="row g-3 mb-4">
@@ -136,8 +118,25 @@ import {
       <div class="row g-4 mt-4">
         <div class="col-12">
           <div class="card">
-            <div class="card-header">
-              <h5 class="card-title mb-0">{{ 'dashboard.quickActions' | translate }}</h5>
+            <div class="card-header quick-actions-header">
+              <h5 class="card-title mb-0">
+                <span class="card-title__icon">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    [innerHTML]="getSafeIcon('zap')"
+                  ></svg>
+                </span>
+                {{ 'dashboard.quickActions' | translate }}
+              </h5>
+              <div class="quick-actions-underline"></div>
             </div>
             <div class="card-body">
               <div class="row g-3">
@@ -339,27 +338,62 @@ import {
       font-size: 1rem;
       font-weight: 600;
       color: var(--seta-text-primary, #212529);
-    }
-
-    .quick-action-card {
       display: flex;
       align-items: center;
-      padding: 1.25rem;
-      background: var(--bs-white);
-      border-radius: 0.75rem;
-      border: 1px solid rgba(0, 0, 0, 0.06);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-      transition: all 0.2s ease;
-      text-decoration: none;
-      color: inherit;
-      height: 100%;
-      position: relative;
-      gap: 1rem;
+      gap: 0.625rem;
 
-      &:hover {
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-        transform: translateY(-2px);
-        border-color: var(--seta-primary, #003366);
+      &__icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border-radius: 0.5rem;
+        background: rgba(0, 51, 102, 0.1);
+        color: var(--seta-primary, #003366);
+        flex-shrink: 0;
+
+        svg {
+          width: 18px;
+          height: 18px;
+        }
+      }
+    }
+
+    .quick-actions-header {
+      border-bottom: none;
+      padding-bottom: 1.5rem;
+      position: relative;
+    }
+
+    .quick-actions-underline {
+      position: absolute;
+      bottom: 0;
+      left: 1.25rem;
+      right: 1.25rem;
+      height: 1px;
+      background: var(--seta-primary, #003366);
+    }
+
+        .quick-action-card {
+          display: flex;
+          align-items: center;
+          padding: 1.25rem;
+          background: var(--bs-white);
+          border-radius: 0.75rem;
+          border: 2px solid var(--seta-primary, #003366);
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+          transition: all 0.2s ease;
+          text-decoration: none;
+          color: inherit;
+          height: 100%;
+          position: relative;
+          gap: 1rem;
+
+          &:hover {
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+            border-color: var(--seta-primary-dark, #002244);
 
         .quick-action-card__arrow {
           transform: translateX(4px);

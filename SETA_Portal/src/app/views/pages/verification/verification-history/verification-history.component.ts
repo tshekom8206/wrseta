@@ -7,6 +7,7 @@ import { Subject, takeUntil, debounceTime, distinctUntilChanged } from 'rxjs';
 
 import { VerificationService } from '../../../../core/services/verification.service';
 import { AuthService } from '../../../../core/auth/auth.service';
+import { PageHeaderComponent } from '../../../../shared/components/page-header/page-header.component';
 import {
   VerificationHistoryRequest,
   VerificationHistoryResponse
@@ -26,14 +27,15 @@ interface HistoryItem {
 @Component({
   selector: 'app-verification-history',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, TranslateModule],
+  imports: [CommonModule, FormsModule, RouterLink, TranslateModule, PageHeaderComponent],
   template: `
     <div class="verification-history">
-      <div class="page-header d-flex justify-content-between align-items-start flex-wrap gap-3">
-        <div>
-          <h1 class="page-title">{{ 'verification.history' | translate }}</h1>
-          <p class="page-subtitle">{{ 'verification.historySubtitle' | translate }}</p>
-        </div>
+      <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+        <app-page-header
+          titleKey="verification.history"
+          subtitleKey="verification.historySubtitle"
+          icon="clock"
+        ></app-page-header>
         <div class="d-flex gap-2">
           <a routerLink="/verification/single" class="btn btn-primary">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="me-2">

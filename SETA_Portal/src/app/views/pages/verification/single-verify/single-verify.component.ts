@@ -8,16 +8,18 @@ import { Subject, takeUntil } from 'rxjs';
 import { VerificationService } from '../../../../core/services/verification.service';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { VerificationResponse } from '../../../../interfaces/verification.interface';
+import { PageHeaderComponent } from '../../../../shared/components/page-header/page-header.component';
 
 @Component({
   selector: 'app-single-verify',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, TranslateModule],
+  imports: [CommonModule, FormsModule, RouterLink, TranslateModule, PageHeaderComponent],
   template: `
-    <div class="page-header">
-      <h1 class="page-title">{{ 'verification.singleVerification' | translate }}</h1>
-      <p class="page-subtitle">{{ 'verification.enterIdNumber' | translate }}</p>
-    </div>
+    <app-page-header
+      titleKey="verification.singleVerification"
+      subtitleKey="verification.enterIdNumber"
+      icon="check-circle"
+    ></app-page-header>
 
     <div class="row">
       <!-- Input Section -->

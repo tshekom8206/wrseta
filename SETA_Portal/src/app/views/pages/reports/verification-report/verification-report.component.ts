@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
 import { Subject, of, delay, takeUntil } from 'rxjs';
+import { PageHeaderComponent } from '../../../../shared/components/page-header/page-header.component';
 
 interface VerificationReportData {
   period: string;
@@ -19,14 +20,15 @@ interface VerificationReportData {
 @Component({
   selector: 'app-verification-report',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslateModule],
+  imports: [CommonModule, FormsModule, TranslateModule, PageHeaderComponent],
   template: `
     <div class="verification-report">
-      <div class="page-header d-flex justify-content-between align-items-start flex-wrap gap-3">
-        <div>
-          <h1 class="page-title">{{ 'reports.verificationReport' | translate }}</h1>
-          <p class="page-subtitle">{{ 'reports.verificationReportSubtitle' | translate }}</p>
-        </div>
+      <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+        <app-page-header
+          titleKey="reports.verificationReport"
+          subtitleKey="reports.verificationReportSubtitle"
+          icon="bar-chart-2"
+        ></app-page-header>
         <div class="d-flex gap-2">
           <button class="btn btn-outline-primary" (click)="exportReport('csv')" [disabled]="loading">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="me-2">

@@ -12,7 +12,7 @@ import { BlockedLearner } from '../../../../interfaces/dashboard.interface';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="card">
-      <div class="card-header">
+      <div class="card-header blocked-learners-header">
         <h5 class="card-title">
           <span class="card-title__icon">
             <svg
@@ -30,6 +30,7 @@ import { BlockedLearner } from '../../../../interfaces/dashboard.interface';
           </span>
           {{ 'dashboard.failedVerifications' | translate }}
         </h5>
+        <div class="blocked-learners-underline"></div>
       </div>
       <div class="card-body p-0">
         @if (loading) {
@@ -61,20 +62,7 @@ import { BlockedLearner } from '../../../../interfaces/dashboard.interface';
           <div class="failed-verifications-list">
             @for (learner of blockedLearners; track learner.idNumber) {
               <div class="failed-verification-item">
-                <div class="failed-verification-item__icon">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    [innerHTML]="getSafeIcon('ban')"
-                  ></svg>
-                </div>
+                <div class="failed-verification-item__dot"></div>
                 <div class="failed-verification-item__content">
                   <div class="failed-verification-item__name">{{ learner.learnerName }}</div>
                   <div class="failed-verification-item__id">{{ learner.maskedIdNumber }}</div>
@@ -104,8 +92,22 @@ import { BlockedLearner } from '../../../../interfaces/dashboard.interface';
 
     .card-header {
       background: transparent;
-      border-bottom: 1px solid var(--seta-bg-tertiary, #e9ecef);
+      border-bottom: none;
       padding: 1rem 1.25rem;
+      position: relative;
+    }
+
+    .blocked-learners-header {
+      padding-bottom: 1.5rem;
+    }
+
+    .blocked-learners-underline {
+      position: absolute;
+      bottom: 0;
+      left: 1.25rem;
+      right: 1.25rem;
+      height: 1px;
+      background: var(--seta-bg-tertiary, #e9ecef);
     }
 
     .card-title {
@@ -160,22 +162,14 @@ import { BlockedLearner } from '../../../../interfaces/dashboard.interface';
         margin-bottom: 0;
       }
 
-      &__icon {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 40px;
-        height: 40px;
-        border-radius: 0.5rem;
-        background: rgba(220, 53, 69, 0.1);
-        color: #dc3545;
+      &__dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--bs-danger, #dc3545);
         flex-shrink: 0;
-        margin-top: 0.125rem;
-
-        svg {
-          width: 20px;
-          height: 20px;
-        }
+        margin-right: 1rem;
+        margin-top: 0.5rem;
       }
 
       &__content {

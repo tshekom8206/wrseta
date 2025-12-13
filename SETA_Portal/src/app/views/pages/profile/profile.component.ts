@@ -2,16 +2,18 @@ import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslateModule } from '@ngx-translate/core';
 import { AuthService } from '../../../core/auth/auth.service';
+import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 
 @Component({
   selector: 'app-profile',
   standalone: true,
-  imports: [CommonModule, TranslateModule],
+  imports: [CommonModule, TranslateModule, PageHeaderComponent],
   template: `
-    <div class="page-header">
-      <h1 class="page-title">{{ 'profile.title' | translate }}</h1>
-      <p class="page-subtitle">Manage your profile information</p>
-    </div>
+    <app-page-header
+      titleKey="profile.title"
+      subtitle="Manage your profile information"
+      icon="user"
+    ></app-page-header>
     <div class="row">
       <div class="col-lg-8">
         <div class="card">

@@ -7,6 +7,7 @@ import { Subject, takeUntil, debounceTime, distinctUntilChanged } from 'rxjs';
 
 import { LearnerService, LearnerStats } from '../../../../core/services/learner.service';
 import { AuthService } from '../../../../core/auth/auth.service';
+import { PageHeaderComponent } from '../../../../shared/components/page-header/page-header.component';
 import {
   Learner,
   LearnerStatus,
@@ -17,14 +18,15 @@ import {
 @Component({
   selector: 'app-learner-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, TranslateModule],
+  imports: [CommonModule, FormsModule, RouterLink, TranslateModule, PageHeaderComponent],
   template: `
     <div class="learner-list">
-      <div class="page-header d-flex justify-content-between align-items-start flex-wrap gap-3">
-        <div>
-          <h1 class="page-title">{{ 'learner.list' | translate }}</h1>
-          <p class="page-subtitle">{{ 'learner.subtitle' | translate }}</p>
-        </div>
+      <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+        <app-page-header
+          titleKey="learner.list"
+          subtitleKey="learner.subtitle"
+          icon="list"
+        ></app-page-header>
         <a routerLink="/learners/enroll" class="btn btn-primary">
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="me-2">
             <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>

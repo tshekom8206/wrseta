@@ -27,7 +27,7 @@ declare const ApexCharts: any;
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="card">
-      <div class="card-header d-flex justify-content-between align-items-center">
+      <div class="card-header d-flex justify-content-between align-items-center verification-trends-header">
         <h5 class="card-title mb-0">{{ 'dashboard.verificationTrends' | translate }}</h5>
         <div class="btn-group btn-group-sm" role="group" aria-label="Time period">
           <button
@@ -58,6 +58,7 @@ declare const ApexCharts: any;
             30D
           </button>
         </div>
+        <div class="verification-trends-underline"></div>
       </div>
       <div class="card-body">
         @if (loading) {
@@ -79,7 +80,22 @@ declare const ApexCharts: any;
 
     .card-header {
       background: transparent;
-      border-bottom: 1px solid var(--bs-border-color);
+      border-bottom: none;
+      padding: 1rem 1.25rem;
+      position: relative;
+    }
+
+    .verification-trends-header {
+      padding-bottom: 1.5rem;
+    }
+
+    .verification-trends-underline {
+      position: absolute;
+      bottom: 0;
+      left: 1.25rem;
+      right: 1.25rem;
+      height: 1px;
+      background: var(--seta-bg-tertiary, #e9ecef);
     }
 
     .card-title {
