@@ -2,11 +2,13 @@ import { Component, inject, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { Subject, takeUntil, forkJoin } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/auth.service';
 import { ThemeService } from '../../../core/services/theme.service';
 import { DashboardService } from '../../../core/services/dashboard.service';
+import { IconService } from '../../../core/services/icon.service';
 import { StatCardComponent } from '../../../shared/components/stat-card/stat-card.component';
 import { RecentVerificationsComponent } from './components/recent-verifications.component';
 import { BlockedLearnersComponent } from './components/blocked-learners.component';
@@ -34,11 +36,28 @@ import {
   template: `
     <div class="dashboard">
       <div class="page-header">
-        <h1 class="page-title">{{ 'dashboard.title' | translate }}</h1>
+        <h1 class="page-title">
+          <span class="page-title__icon">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              [innerHTML]="getSafeIcon('layout')"
+            ></svg>
+          </span>
+          {{ 'dashboard.title' | translate }}
+        </h1>
         <p class="page-subtitle">
           {{ 'dashboard.overview' | translate }}
           @if (currentUser) {
-            <span class="ms-2">- {{ currentUser.setaName }}</span>
+            <span class="subtitle-divider"></span>
+            <span>{{ currentUser.setaName }}</span>
           }
         </p>
       </div>
@@ -114,47 +133,154 @@ import {
       </div>
 
       <!-- Quick Actions Row -->
-      <div class="row g-4 mt-2">
+      <div class="row g-4 mt-4">
         <div class="col-12">
           <div class="card">
             <div class="card-header">
               <h5 class="card-title mb-0">{{ 'dashboard.quickActions' | translate }}</h5>
             </div>
             <div class="card-body">
-              <div class="d-flex flex-wrap gap-2">
-                <a routerLink="/verification/single" class="btn btn-primary">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="me-2">
-                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
-                  </svg>
-                  {{ 'nav.singleVerify' | translate }}
-                </a>
-                <a routerLink="/verification/batch" class="btn btn-outline-primary">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="me-2">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                    <polyline points="14 2 14 8 20 8"></polyline>
-                    <line x1="16" y1="13" x2="8" y2="13"></line>
-                    <line x1="16" y1="17" x2="8" y2="17"></line>
-                  </svg>
-                  {{ 'nav.batchVerify' | translate }}
-                </a>
-                <a routerLink="/learners/enroll" class="btn btn-outline-primary">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="me-2">
-                    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                    <circle cx="8.5" cy="7" r="4"></circle>
-                    <line x1="20" y1="8" x2="20" y2="14"></line>
-                    <line x1="23" y1="11" x2="17" y2="11"></line>
-                  </svg>
-                  {{ 'nav.enrollLearner' | translate }}
-                </a>
-                <a routerLink="/reports/verification" class="btn btn-outline-secondary">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="me-2">
-                    <line x1="12" y1="20" x2="12" y2="10"></line>
-                    <line x1="18" y1="20" x2="18" y2="4"></line>
-                    <line x1="6" y1="20" x2="6" y2="16"></line>
-                  </svg>
-                  {{ 'nav.verificationReport' | translate }}
-                </a>
+              <div class="row g-3">
+                <div class="col-sm-6 col-md-4 col-lg-3">
+                  <a routerLink="/verification/single" class="quick-action-card">
+                    <div class="quick-action-card__icon">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        [innerHTML]="getSafeIcon('check-circle')"
+                      ></svg>
+                    </div>
+                    <div class="quick-action-card__content">
+                      <span class="quick-action-card__title">{{ 'nav.singleVerify' | translate }}</span>
+                      <span class="quick-action-card__description">Verify a single learner</span>
+                    </div>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      class="quick-action-card__arrow"
+                      [innerHTML]="getSafeIcon('chevron-right')"
+                    ></svg>
+                  </a>
+                </div>
+                <div class="col-sm-6 col-md-4 col-lg-3">
+                  <a routerLink="/verification/batch" class="quick-action-card">
+                    <div class="quick-action-card__icon">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        [innerHTML]="getSafeIcon('upload')"
+                      ></svg>
+                    </div>
+                    <div class="quick-action-card__content">
+                      <span class="quick-action-card__title">{{ 'nav.batchVerify' | translate }}</span>
+                      <span class="quick-action-card__description">Upload multiple verifications</span>
+                    </div>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      class="quick-action-card__arrow"
+                      [innerHTML]="getSafeIcon('chevron-right')"
+                    ></svg>
+                  </a>
+                </div>
+                <div class="col-sm-6 col-md-4 col-lg-3">
+                  <a routerLink="/learners/enroll" class="quick-action-card">
+                    <div class="quick-action-card__icon">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        [innerHTML]="getSafeIcon('user-plus')"
+                      ></svg>
+                    </div>
+                    <div class="quick-action-card__content">
+                      <span class="quick-action-card__title">{{ 'nav.enrollLearner' | translate }}</span>
+                      <span class="quick-action-card__description">Add a new learner</span>
+                    </div>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      class="quick-action-card__arrow"
+                      [innerHTML]="getSafeIcon('chevron-right')"
+                    ></svg>
+                  </a>
+                </div>
+                <div class="col-sm-6 col-md-4 col-lg-3">
+                  <a routerLink="/reports/verification" class="quick-action-card">
+                    <div class="quick-action-card__icon">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        [innerHTML]="getSafeIcon('bar-chart-2')"
+                      ></svg>
+                    </div>
+                    <div class="quick-action-card__content">
+                      <span class="quick-action-card__title">{{ 'nav.verificationReport' | translate }}</span>
+                      <span class="quick-action-card__description">View verification reports</span>
+                    </div>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      class="quick-action-card__arrow"
+                      [innerHTML]="getSafeIcon('chevron-right')"
+                    ></svg>
+                  </a>
+                </div>
               </div>
             </div>
           </div>
@@ -205,18 +331,92 @@ import {
 
     .card-header {
       background: transparent;
-      border-bottom: 1px solid var(--bs-border-color);
+      border-bottom: 1px solid var(--seta-bg-tertiary, #e9ecef);
       padding: 1rem 1.25rem;
     }
 
     .card-title {
       font-size: 1rem;
       font-weight: 600;
-      color: var(--bs-dark);
+      color: var(--seta-text-primary, #212529);
     }
 
-    .btn svg {
-      vertical-align: -0.125em;
+    .quick-action-card {
+      display: flex;
+      align-items: center;
+      padding: 1.25rem;
+      background: var(--bs-white);
+      border-radius: 0.75rem;
+      border: 1px solid rgba(0, 0, 0, 0.06);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      transition: all 0.2s ease;
+      text-decoration: none;
+      color: inherit;
+      height: 100%;
+      position: relative;
+      gap: 1rem;
+
+      &:hover {
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+        transform: translateY(-2px);
+        border-color: var(--seta-primary, #003366);
+
+        .quick-action-card__arrow {
+          transform: translateX(4px);
+          color: var(--seta-primary, #003366);
+        }
+      }
+
+      &:focus {
+        outline: 2px solid var(--seta-primary, #003366);
+        outline-offset: 2px;
+      }
+
+      &__icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 48px;
+        height: 48px;
+        border-radius: 0.625rem;
+        background: var(--seta-primary, #003366);
+        color: white;
+        flex-shrink: 0;
+
+        svg {
+          width: 24px;
+          height: 24px;
+        }
+      }
+
+      &__content {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+        flex: 1;
+        min-width: 0;
+      }
+
+      &__title {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--seta-text-primary, #212529);
+        line-height: 1.3;
+      }
+
+      &__description {
+        font-size: 0.8125rem;
+        color: var(--seta-text-secondary, #6c757d);
+        line-height: 1.4;
+      }
+
+      &__arrow {
+        width: 20px;
+        height: 20px;
+        color: var(--seta-text-secondary, #6c757d);
+        transition: all 0.2s ease;
+        flex-shrink: 0;
+      }
     }
   `]
 })
@@ -224,6 +424,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private readonly authService = inject(AuthService);
   private readonly themeService = inject(ThemeService);
   private readonly dashboardService = inject(DashboardService);
+  private readonly iconService = inject(IconService);
+  private readonly sanitizer = inject(DomSanitizer);
   private readonly destroy$ = new Subject<void>();
 
   // Data
@@ -243,6 +445,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   get currentUser() {
     return this.authService.currentUser;
+  }
+
+  getSafeIcon(iconName: string): SafeHtml {
+    const iconPath = this.iconService.getIconPath(iconName);
+    return this.sanitizer.bypassSecurityTrustHtml(iconPath);
   }
 
   ngOnInit(): void {

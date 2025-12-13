@@ -10,7 +10,7 @@
       @if (theme?.logo) {
         <img [src]="theme!.logo" [alt]="theme!.name + ' Logo'" class="brand-logo" />
       } @else {
-        <span class="brand-text">SETA Portal</span>
+        <img src="/assets/images/logos/WRSETA.jpg" alt="WRSETA Logo" class="brand-logo" />
       }
     } @else {
       <span class="brand-icon">S</span>
@@ -44,7 +44,7 @@
                   stroke-linecap="round"
                   stroke-linejoin="round"
                   class="nav-icon"
-                  [innerHTML]="getIcon(item.icon)"
+                  [innerHTML]="getSafeIcon(item.icon)"
                 ></svg>
                 @if (!collapsed) {
                   <span class="nav-text">{{ item.label | translate }}</span>
@@ -78,6 +78,19 @@
                           routerLinkActive="active"
                           role="menuitem"
                         >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            class="nav-icon"
+                            [innerHTML]="getSafeIcon(child.icon)"
+                          ></svg>
                           <span class="nav-text">{{ child.label | translate }}</span>
                         </a>
                       </li>
@@ -105,7 +118,7 @@
                   stroke-linecap="round"
                   stroke-linejoin="round"
                   class="nav-icon"
-                  [innerHTML]="getIcon(item.icon)"
+                  [innerHTML]="getSafeIcon(item.icon)"
                 ></svg>
                 @if (!collapsed) {
                   <span class="nav-text">{{ item.label | translate }}</span>

@@ -22,6 +22,8 @@ export class NavbarComponent {
   @Input() theme: SetaTheme | null = null;
   @Output() toggleSidebar = new EventEmitter<void>();
 
+  searchQuery: string = '';
+
   private readonly authService = inject(AuthService);
   private readonly translateService = inject(TranslateService);
   private readonly storageService = inject(StorageService);
@@ -67,5 +69,17 @@ export class NavbarComponent {
       return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase();
     }
     return names[0][0].toUpperCase();
+  }
+
+  onSearchInput(event: Event): void {
+    const target = event.target as HTMLInputElement;
+    this.searchQuery = target.value;
+  }
+
+  onSearch(): void {
+    if (this.searchQuery.trim()) {
+      // TODO: Implement search functionality
+      console.log('Searching for:', this.searchQuery);
+    }
   }
 }

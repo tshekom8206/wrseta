@@ -40,11 +40,44 @@
   }
 }
 
-.navbar-brand {
-  .seta-name {
-    font-weight: 500;
-    color: var(--seta-text-secondary);
-    font-size: 0.875rem;
+.navbar-search {
+  flex: 1;
+  max-width: 400px;
+  margin: 0 2rem;
+
+  .search-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+
+    .search-icon {
+      position: absolute;
+      left: 0.75rem;
+      color: var(--seta-text-secondary, #6c757d);
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 0.5rem 0.75rem 0.5rem 2.5rem;
+      border: 1px solid var(--seta-bg-tertiary, #e9ecef);
+      border-radius: var(--border-radius, 0.5rem);
+      background-color: var(--seta-bg-primary, #ffffff);
+      color: var(--seta-text-primary, #212529);
+      font-size: 0.875rem;
+      transition: all var(--transition-fast, 150ms ease);
+
+      &:focus {
+        outline: none;
+        border-color: var(--seta-primary, #003366);
+        box-shadow: 0 0 0 3px rgba(0, 51, 102, 0.1);
+      }
+
+      &::placeholder {
+        color: var(--seta-text-secondary, #6c757d);
+      }
+    }
   }
 }
 
