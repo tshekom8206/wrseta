@@ -5,6 +5,7 @@
 ' =============================================
 
 Imports System.Windows.Forms
+Imports SETA.Core
 Imports SETA.Core.Data
 Imports SETA.Core.Models
 Imports SETA.Core.Services
@@ -259,7 +260,7 @@ Public Class frmSETASelector
 
             ' Success!
             AuthenticatedUser = user
-            SelectedSETA = selectedSeta
+            selectedSeta = selectedSeta
 
             ' Update last login
             _dbHelper.UpdateLastLogin(user.UserID)

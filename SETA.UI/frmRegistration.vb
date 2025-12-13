@@ -5,6 +5,7 @@
 ' =============================================
 
 Imports System.Windows.Forms
+Imports SETA.Core
 Imports SETA.Core.Models
 Imports SETA.Core.Services
 

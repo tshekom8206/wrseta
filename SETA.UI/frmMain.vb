@@ -8,6 +8,7 @@ Imports System.Windows.Forms
 Imports SETA.Core.Models
 Imports SETA.Core.Services
 Imports SETA.Core.Data
+Imports SETA.Core
 
 Public Class frmMain
     Inherits Form

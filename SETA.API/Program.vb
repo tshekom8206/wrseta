@@ -12,7 +12,7 @@ Imports Owin
 
 Module Program
 
-    Private Const BaseUrl As String = "http://localhost:5000"
+    Private Const BaseUrl As String = "http://localhost:5001"
 
     Sub Main()
         Console.ForegroundColor = ConsoleColor.Cyan

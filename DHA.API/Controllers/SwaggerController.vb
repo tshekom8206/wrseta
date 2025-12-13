@@ -122,8 +122,11 @@ Namespace DHA.API.Controllers
     <script src=""https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-standalone-preset.js""></script>
     <script>
         window.onload = function() {
+            // Get the current origin to build absolute URLs
+            const baseUrl = window.location.origin;
+
             const ui = SwaggerUIBundle({
-                url: '/swagger/json',
+                url: baseUrl + '/swagger/json',
                 dom_id: '#swagger-ui',
                 deepLinking: true,
                 presets: [
@@ -144,7 +147,14 @@ Namespace DHA.API.Controllers
                     if (!request.headers['X-API-Key']) {
                         request.headers['X-API-Key'] = 'dha-api-key-2025';
                     }
+                    // Ensure request URL is absolute
+                    if (request.url && !request.url.startsWith('http://') && !request.url.startsWith('https://')) {
+                        request.url = baseUrl + request.url;
+                    }
                     return request;
+                },
+                responseInterceptor: (response) => {
+                    return response;
                 }
             });
             window.ui = ui;

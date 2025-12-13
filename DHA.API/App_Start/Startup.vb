@@ -27,7 +27,12 @@ Public Class Startup
             corsOrigins = "*" ' Allow all origins in development
         End If
 
-        Dim corsPolicy As New EnableCorsAttribute(corsOrigins, "*", "GET, POST, PUT, DELETE, OPTIONS")
+        ' Enable CORS with all methods and headers
+        Dim corsPolicy As New EnableCorsAttribute(
+            origins:=corsOrigins,
+            headers:="*",
+            methods:="GET, POST, PUT, DELETE, PATCH, OPTIONS"
+        )
         config.EnableCors(corsPolicy)
 
         ' =============================================
