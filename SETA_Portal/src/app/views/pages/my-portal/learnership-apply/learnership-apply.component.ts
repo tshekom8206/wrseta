@@ -257,7 +257,22 @@ type EnrollmentStep = 'verify' | 'details' | 'confirm';
                   @if (verificationResult.status === 'RED') {
                     <div class="alert alert-danger mt-3 mb-0">
                       <strong>Cannot Proceed</strong>
-                      <p class="mb-0 mt-1">Your ID could not be verified. Please check the number and try again, or contact support for assistance.</p>
+                      <p class="mb-0 mt-1">{{ verificationResult.message || 'Your ID could not be verified. Please check the number and try again, or contact support for assistance.' }}</p>
+                      @if (verificationResult.duplicateInfo) {
+                        <div class="mt-2">
+                          <strong>Existing Enrollment Details:</strong>
+                          <ul class="mb-0 mt-1">
+                            @for (enrollment of verificationResult.duplicateInfo.enrolledSetas; track enrollment.setaCode) {
+                              <li>
+                                {{ enrollment.setaName }} - {{ enrollment.status }}
+                                @if (enrollment.enrollmentDate) {
+                                  (Enrolled: {{ enrollment.enrollmentDate | date:'dd MMM yyyy' }})
+                                }
+                              </li>
+                            }
+                          </ul>
+                        </div>
+                      }
                     </div>
                   }
                 </div>
@@ -490,6 +505,127 @@ type EnrollmentStep = 'verify' | 'details' | 'confirm';
                   Submit Application
                 }
               </button>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Duplicate Enrollment Modal -->
+      @if (showDuplicateModal) {
+        <div class="modal-backdrop show"></div>
+        <div class="modal show d-block" tabindex="-1" role="dialog">
+          <div class="modal-dialog modal-dialog-centered duplicate-enrollment-modal">
+            <div class="modal-content">
+              <div class="modal-header duplicate-modal-header">
+                <div class="d-flex align-items-center w-100">
+                  <div class="duplicate-icon-wrapper me-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <line x1="15" y1="9" x2="9" y2="15"></line>
+                      <line x1="9" y1="9" x2="15" y2="15"></line>
+                    </svg>
+                  </div>
+                  <div class="flex-grow-1">
+                    <h4 class="modal-title mb-0">Enrollment Already Exists</h4>
+                    <p class="text-muted mb-0 small">Unable to proceed with application</p>
+                  </div>
+                  <button type="button" class="btn-close btn-close-white" (click)="closeDuplicateModal()" aria-label="Close"></button>
+                </div>
+              </div>
+              <div class="modal-body duplicate-modal-body">
+                <div class="warning-message-box">
+                  <div class="d-flex align-items-start">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="me-2 flex-shrink-0 mt-1">
+                      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                      <line x1="12" y1="9" x2="12" y2="13"></line>
+                      <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                    </svg>
+                    <p class="mb-0">{{ duplicateMessage }}</p>
+                  </div>
+                </div>
+
+                @if (duplicateEnrollmentInfo) {
+                  <div class="enrollment-details-section">
+                    <h6 class="section-title">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="me-2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                      </svg>
+                      Existing Enrollment Details
+                    </h6>
+                    <div class="enrollment-info-card">
+                      <div class="info-row">
+                        @if (duplicateEnrollmentInfo.setaName) {
+                          <div class="info-item">
+                            <span class="info-label">SETA</span>
+                            <span class="info-value">{{ duplicateEnrollmentInfo.setaName }}</span>
+                          </div>
+                        }
+                        @if (duplicateEnrollmentInfo.learnershipCode) {
+                          <div class="info-item">
+                            <span class="info-label">Learnership Code</span>
+                            <span class="info-value">{{ duplicateEnrollmentInfo.learnershipCode }}</span>
+                          </div>
+                        }
+                      </div>
+                      <div class="info-row">
+                        @if (duplicateEnrollmentInfo.province) {
+                          <div class="info-item">
+                            <span class="info-label">Province</span>
+                            <span class="info-value">{{ duplicateEnrollmentInfo.province }}</span>
+                          </div>
+                        }
+                        @if (duplicateEnrollmentInfo.enrollmentYear) {
+                          <div class="info-item">
+                            <span class="info-label">Enrollment Year</span>
+                            <span class="info-value">{{ duplicateEnrollmentInfo.enrollmentYear }}</span>
+                          </div>
+                        }
+                      </div>
+                    </div>
+                  </div>
+                }
+
+                <div class="dispute-info-box">
+                  <div class="d-flex align-items-start">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="me-2 flex-shrink-0 mt-1">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <line x1="12" y1="16" x2="12" y2="12"></line>
+                      <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                    </svg>
+                    <div>
+                      <p class="mb-1"><strong>Don't agree with this information?</strong></p>
+                      <p class="mb-0 small text-muted">If you believe this enrollment record is incorrect, you can log a dispute with WRSETA. Our team will review your case and contact you within 5-7 business days.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="modal-footer duplicate-modal-footer">
+                <button type="button" class="btn btn-outline-secondary" (click)="closeDuplicateModal()">
+                  Close
+                </button>
+                <button 
+                  type="button" 
+                  class="btn btn-primary btn-dispute" 
+                  (click)="logDispute()"
+                  [disabled]="loggingDispute"
+                >
+                  @if (loggingDispute) {
+                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                    Logging Dispute...
+                  } @else {
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="me-2">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                      <polyline points="14 2 14 8 20 8"></polyline>
+                      <line x1="16" y1="13" x2="8" y2="13"></line>
+                      <line x1="16" y1="17" x2="8" y2="17"></line>
+                    </svg>
+                    Log Dispute with WRSETA
+                  }
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -801,6 +937,160 @@ type EnrollmentStep = 'verify' | 'details' | 'confirm';
       background: rgba(0, 0, 0, 0.5);
     }
 
+    /* Duplicate Enrollment Modal Styles */
+    .duplicate-enrollment-modal {
+      max-width: 600px;
+    }
+
+    .duplicate-modal-header {
+      background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+      color: white;
+      padding: 1.5rem;
+      border-radius: 0.5rem 0.5rem 0 0;
+    }
+
+    .duplicate-icon-wrapper {
+      width: 48px;
+      height: 48px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      flex-shrink: 0;
+    }
+
+    .duplicate-modal-body {
+      padding: 2rem;
+    }
+
+    .warning-message-box {
+      background: #fff3cd;
+      border: 1px solid #ffc107;
+      border-left: 4px solid #ffc107;
+      border-radius: 0.5rem;
+      padding: 1rem 1.25rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .warning-message-box p {
+      color: #856404;
+      font-weight: 500;
+      margin: 0;
+    }
+
+    .enrollment-details-section {
+      margin-bottom: 1.5rem;
+    }
+
+    .section-title {
+      font-size: 0.875rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #6c757d;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+    }
+
+    .enrollment-info-card {
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 0.5rem;
+      padding: 1.25rem;
+    }
+
+    .info-row {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1.25rem;
+      margin-bottom: 1rem;
+    }
+
+    .info-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .info-item {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .info-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #6c757d;
+      margin-bottom: 0.375rem;
+    }
+
+    .info-value {
+      font-size: 0.9375rem;
+      font-weight: 500;
+      color: #212529;
+    }
+
+    .dispute-info-box {
+      background: #e7f3ff;
+      border: 1px solid #b3d9ff;
+      border-left: 4px solid #0d6efd;
+      border-radius: 0.5rem;
+      padding: 1rem 1.25rem;
+      margin-top: 1.5rem;
+    }
+
+    .dispute-info-box p {
+      margin: 0;
+      color: #004085;
+    }
+
+    .dispute-info-box p strong {
+      color: #002752;
+    }
+
+    .duplicate-modal-footer {
+      padding: 1.25rem 2rem;
+      border-top: 1px solid #dee2e6;
+      background: #f8f9fa;
+    }
+
+    .btn-dispute {
+      min-width: 200px;
+      font-weight: 600;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .btn-dispute:hover:not(:disabled) {
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+      transform: translateY(-1px);
+      transition: all 0.2s ease;
+    }
+
+    @media (max-width: 576px) {
+      .duplicate-modal-body {
+        padding: 1.5rem;
+      }
+
+      .info-row {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+      }
+
+      .duplicate-modal-footer {
+        padding: 1rem;
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+
+      .btn-dispute {
+        width: 100%;
+        min-width: auto;
+      }
+    }
+
     @media (max-width: 576px) {
       .steps {
         flex-direction: column;
@@ -856,6 +1146,12 @@ export class LearnershipApplyComponent implements OnInit, OnDestroy {
   // Step 3: Confirm
   submitting = false;
   applicationSuccess = false;
+  
+  // Duplicate enrollment modal
+  showDuplicateModal = false;
+  duplicateEnrollmentInfo: any = null;
+  duplicateMessage = '';
+  loggingDispute = false;
 
   // Extracted from ID
   extractedDob: Date | null = null;
@@ -936,24 +1232,40 @@ export class LearnershipApplyComponent implements OnInit, OnDestroy {
     this.verifying = true;
     this.verificationResult = null;
 
-    this.verificationService.verifySingle(this.idNumber)
+    // Get names from form if available, otherwise use empty strings
+    // DHA verification will use these for name matching
+    const firstName = this.detailsForm.get('firstName')?.value || '';
+    const lastName = this.detailsForm.get('lastName')?.value || '';
+
+    // Call verification service which connects to DHA endpoint
+    this.verificationService.verifySingle(this.idNumber, firstName, lastName)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (result) => {
           this.verificationResult = result;
           this.verifying = false;
 
-          // Pre-fill details from verification result
+          // Pre-fill details from verification result if not already filled
           if (result.learnerInfo) {
+            const currentFirstName = this.detailsForm.get('firstName')?.value || '';
+            const currentLastName = this.detailsForm.get('lastName')?.value || '';
+            
             this.detailsForm.patchValue({
-              firstName: result.learnerInfo.firstName || '',
-              lastName: result.learnerInfo.lastName || ''
+              firstName: currentFirstName || result.learnerInfo.firstName || '',
+              lastName: currentLastName || result.learnerInfo.lastName || ''
             });
           }
         },
         error: (error) => {
           console.error('Verification error:', error);
           this.verifying = false;
+          
+          // Show error message to user
+          if (error.message) {
+            alert(`Verification failed: ${error.message}`);
+          } else {
+            alert('ID verification failed. Please check the ID number and try again.');
+          }
         }
       });
   }
@@ -999,14 +1311,141 @@ export class LearnershipApplyComponent implements OnInit, OnDestroy {
       return;
     }
 
+    if (!this.idNumber || !this.verificationResult) {
+      alert('Please verify your ID number first');
+      return;
+    }
+
+    // Check if verification shows learner already exists (RED status with duplicate)
+    if (this.verificationResult.status === 'RED' && this.verificationResult.duplicateInfo?.isDuplicate) {
+      this.showDuplicateEnrollmentModal(
+        this.verificationResult.message || 'You cannot apply because you are already enrolled in other courses.',
+        this.verificationResult.duplicateInfo
+      );
+      return;
+    }
+
+    if (this.detailsForm.invalid) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
     this.submitting = true;
 
-    // TODO: Replace with actual API call
-    setTimeout(() => {
-      this.submitting = false;
-      this.completedSteps.push('confirm');
-      this.applicationSuccess = true;
-    }, 1500);
+    // Get form values
+    const firstName = this.detailsForm.get('firstName')?.value || '';
+    const lastName = this.detailsForm.get('lastName')?.value || '';
+    
+    // Get current year for enrollment
+    const enrollmentYear = new Date().getFullYear();
+    
+    // Get province (default to 'GP' if not available - should be added to form)
+    const province = 'GP'; // TODO: Add province selection to form
+
+    // Register the learner
+    this.learnerService.registerLearner({
+      idNumber: this.idNumber,
+      firstName: firstName,
+      surname: lastName,
+      learnershipCode: this.selectedLearnership.code || '',
+      learnershipName: this.selectedLearnership.title || '',
+      enrollmentYear: enrollmentYear,
+      province: province
+    }).pipe(takeUntil(this.destroy$)).subscribe({
+      next: (result) => {
+        this.submitting = false;
+
+        if (result.success && result.decision === 'ALLOWED') {
+          // Registration successful
+          this.completedSteps.push('confirm');
+          this.applicationSuccess = true;
+        } else if (result.decision === 'BLOCKED') {
+          // Learner already exists - show modal dialog
+          this.showDuplicateEnrollmentModal(
+            result.message || 'You cannot apply because you are already enrolled in other courses.',
+            result.existingEnrollment
+          );
+        } else {
+          // Other error
+          alert(result.message || 'Registration failed. Please try again.');
+        }
+      },
+      error: (error) => {
+        console.error('Registration error:', error);
+        this.submitting = false;
+        
+        // Check if it's a duplicate error
+        if (error.decision === 'BLOCKED' || error.message?.toLowerCase().includes('already enrolled') || error.message?.toLowerCase().includes('duplicate')) {
+          this.showDuplicateEnrollmentModal(
+            error.message || 'You cannot apply because you are already enrolled in other courses.',
+            error.existingEnrollment
+          );
+        } else {
+          alert(error.message || 'Registration failed. Please try again later.');
+        }
+      }
+    });
+  }
+
+  /**
+   * Show duplicate enrollment modal dialog
+   */
+  showDuplicateEnrollmentModal(message: string, enrollmentInfo?: any): void {
+    this.duplicateMessage = message;
+    this.duplicateEnrollmentInfo = enrollmentInfo;
+    this.showDuplicateModal = true;
+  }
+
+  /**
+   * Close duplicate enrollment modal
+   */
+  closeDuplicateModal(): void {
+    this.showDuplicateModal = false;
+    this.duplicateEnrollmentInfo = null;
+    this.duplicateMessage = '';
+  }
+
+  /**
+   * Log a dispute with WRSETA
+   */
+  logDispute(): void {
+    if (!this.idNumber || !this.selectedLearnership) {
+      alert('Missing information to log dispute');
+      return;
+    }
+
+    this.loggingDispute = true;
+
+    // Get form values
+    const firstName = this.detailsForm.get('firstName')?.value || '';
+    const lastName = this.detailsForm.get('lastName')?.value || '';
+
+    // Prepare dispute data
+    const disputeData = {
+      idNumber: this.idNumber,
+      firstName: firstName,
+      lastName: lastName,
+      learnershipCode: this.selectedLearnership.code || '',
+      learnershipName: this.selectedLearnership.title || '',
+      reason: 'Dispute existing enrollment record',
+      existingEnrollment: this.duplicateEnrollmentInfo,
+      disputeDate: new Date().toISOString()
+    };
+
+    // Call API to log dispute
+    this.learnerService.logDispute(disputeData).pipe(takeUntil(this.destroy$)).subscribe({
+      next: (result: { success: boolean; disputeId?: string; message: string }) => {
+        this.loggingDispute = false;
+        this.closeDuplicateModal();
+        
+        alert('Your dispute has been logged successfully. WRSETA will review your case and contact you within 5-7 business days.');
+      },
+      error: (error: any) => {
+        console.error('Dispute logging error:', error);
+        this.loggingDispute = false;
+        alert('Failed to log dispute. Please contact WRSETA support directly.');
+      }
+    });
   }
 
   private loadLearnership(learnershipId: string): void {

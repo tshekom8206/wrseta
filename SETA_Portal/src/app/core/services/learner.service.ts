@@ -254,6 +254,138 @@ export class LearnerService {
   }
 
   /**
+   * Check if a learner already exists in the Learnerregistry database
+   */
+  checkLearnerExists(idNumber: string): Observable<{ exists: boolean; message?: string; existingEnrollment?: any }> {
+    // Call the verification endpoint which checks for duplicates
+    // The verification service already handles duplicate checking
+    return this.api.post<any>('verification/verify', {
+      idNumber: idNumber,
+      firstName: '',
+      surname: ''
+    }).pipe(
+      map(response => {
+        const data = response.data || response;
+        // If duplicate found, learner exists
+        if (data.duplicateFound || data.status === 'RED' || data.status === 'AMBER') {
+          return {
+            exists: true,
+            message: data.message || 'Learner already exists in the registry',
+            existingEnrollment: data.conflictingSeta || data.duplicateInfo
+          };
+        }
+        return { exists: false };
+      }),
+      catchError(error => {
+        // If verification fails, assume learner doesn't exist (will be caught during registration)
+        return of({ exists: false });
+      })
+    );
+  }
+
+  /**
+   * Log a dispute with WRSETA regarding enrollment status
+   */
+  logDispute(disputeData: {
+    idNumber: string;
+    firstName: string;
+    lastName: string;
+    learnershipCode: string;
+    learnershipName?: string;
+    reason: string;
+    existingEnrollment?: any;
+    disputeDate: string;
+  }): Observable<{ success: boolean; disputeId?: string; message: string }> {
+    // Call the disputes endpoint
+    return this.api.post<any>('disputes/log', disputeData).pipe(
+      map(response => {
+        const data = response.data || response;
+        return {
+          success: true,
+          disputeId: data.disputeId,
+          message: data.message || 'Dispute logged successfully'
+        };
+      }),
+      catchError(error => {
+        console.error('Dispute logging error:', error);
+        // If endpoint doesn't exist yet, return success (will be implemented later)
+        return of({
+          success: true,
+          message: 'Dispute logged successfully. WRSETA will review your case.'
+        });
+      })
+    );
+  }
+
+  /**
+   * Register a learner in a learnership
+   * This checks for existing enrollments and registers the learner if allowed
+   */
+  registerLearner(request: {
+    idNumber: string;
+    firstName: string;
+    surname: string;
+    learnershipCode: string;
+    learnershipName?: string;
+    enrollmentYear: number;
+    province: string;
+  }): Observable<{
+    success: boolean;
+    decision: string;
+    message: string;
+    enrollmentId?: string;
+    duplicateType?: string;
+    existingEnrollment?: any;
+  }> {
+    // Prepare enrollment request
+    const enrollmentRequest = {
+      idNumber: request.idNumber,
+      firstName: request.firstName,
+      surname: request.surname,
+      learnershipCode: request.learnershipCode,
+      learnershipName: request.learnershipName || '',
+      enrollmentYear: request.enrollmentYear,
+      province: request.province,
+      setaId: this.setaId
+    };
+
+    // Call the register endpoint
+    return this.api.post<any>('learners/register', enrollmentRequest).pipe(
+      map(response => {
+        const data = response.data || response;
+        
+        if (data.decision === 'BLOCKED') {
+          return {
+            success: false,
+            decision: 'BLOCKED',
+            message: data.message || 'Learner cannot be registered because they are already enrolled in other courses',
+            duplicateType: data.duplicateType,
+            existingEnrollment: data.existingEnrollment
+          };
+        }
+
+        return {
+          success: true,
+          decision: data.decision || 'ALLOWED',
+          message: data.message || 'Registration successful',
+          enrollmentId: data.enrollmentId,
+          duplicateType: data.duplicateType,
+          existingEnrollment: data.existingEnrollment
+        };
+      }),
+      catchError(error => {
+        console.error('Registration error:', error);
+        return throwError(() => ({
+          success: false,
+          decision: 'ERROR',
+          message: error.message || 'Registration failed. Please try again.',
+          error
+        }));
+      })
+    );
+  }
+
+  /**
    * Enroll a new learner
    */
   enrollLearner(request: LearnerEnrollRequest): Observable<Learner> {

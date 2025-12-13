@@ -22,6 +22,7 @@ import {
 interface DHAPersonResponse {
   success: boolean;
   data?: {
+    personId?: number;
     idNumber: string;
     firstName: string;
     surname: string;
@@ -35,6 +36,8 @@ interface DHAPersonResponse {
     dateOfDeath?: string;
     isSuspended: boolean;
     needsManualReview: boolean;
+    createdAt?: string;
+    updatedAt?: string;
   };
   source?: string;
   requestId?: string;
@@ -88,6 +91,10 @@ export class VerificationService {
   private readonly authService = inject(AuthService);
   private readonly translate = inject(TranslateService);
   private readonly baseUrl = environment.apiUrl;
+  
+  // DHA API configuration from environment
+  private readonly dhaApiUrl = environment.dhaApiUrl || 'http://localhost:5001/api';
+  private readonly dhaApiKey = environment.dhaApiKey || 'dha-api-key-2025';
 
   private get setaCode(): string {
     return this.authService.currentUser?.setaCode ?? '';
@@ -95,6 +102,7 @@ export class VerificationService {
 
   /**
    * Verify a single ID number via Verification API
+   * This calls the SETA API verification endpoint which internally calls DHA API
    */
   verifySingle(idNumber: string, firstName: string = '', surname: string = ''): Observable<VerificationResponse> {
     // Validate ID format first
@@ -112,10 +120,38 @@ export class VerificationService {
       surname: surname || ''
     };
 
-    // Call verification API endpoint
+    // Call verification API endpoint (which internally calls DHA API)
     return this.api.post<VerificationApiResponse>('verification/verify', requestBody).pipe(
       map(response => this.mapVerificationApiResponseToVerification(idNumber, response)),
       catchError(error => this.handleVerificationApiError(error, idNumber))
+    );
+  }
+
+  /**
+   * Directly call DHA API to verify ID number
+   * This bypasses the SETA API and calls DHA directly
+   */
+  verifyWithDHA(idNumber: string): Observable<DHAPersonResponse> {
+    // Validate ID format first
+    if (!this.isValidIdNumber(idNumber)) {
+      return throwError(() => ({
+        success: false,
+        errorCode: 'INVALID_ID_FORMAT',
+        errorMessage: this.translate.instant('dha.errors.invalidIdFormat')
+      }));
+    }
+
+    // Call DHA API directly
+    return this.http.get<DHAPersonResponse>(
+      `${this.dhaApiUrl}/dha/data/person/${idNumber}`,
+      {
+        headers: {
+          'X-API-Key': this.dhaApiKey,
+          'Accept': 'application/json'
+        }
+      }
+    ).pipe(
+      catchError(error => this.handleDHAError(error, idNumber))
     );
   }
 
