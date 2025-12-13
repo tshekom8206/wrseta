@@ -29,7 +29,7 @@ export const publicGuard: CanActivateFn = () => {
     return true;
   }
 
-  // Already logged in, redirect to dashboard
-  router.navigate(['/dashboard']);
+  // Already logged in, redirect to app dashboard
+  router.navigate(['/app/dashboard']);
   return false;
 };

@@ -225,10 +225,12 @@
   .btn-primary {
     background-color: var(--seta-primary);
     border-color: var(--seta-primary);
+    color: #fff !important;
 
     &:hover, &:focus {
       background-color: var(--seta-primary-dark);
       border-color: var(--seta-primary-dark);
+      color: #fff !important;
     }
   }
 

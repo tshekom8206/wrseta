@@ -296,7 +296,7 @@ import { PageHeaderComponent } from '../../../../shared/components/page-header/p
             <div class="id-card-actions">
               <div class="action-buttons">
                 @if (result.status === 'GREEN') {
-                  <a routerLink="/learners/enroll" [queryParams]="{id: result.idNumber}" class="btn btn-success">
+                  <a routerLink="/app/learners/enroll" [queryParams]="{id: result.idNumber}" class="btn btn-success">
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="me-2">
                       <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
                       <circle cx="8.5" cy="7" r="4"></circle>

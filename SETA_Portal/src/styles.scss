@@ -50,6 +50,24 @@ h1, h2, h3, h4, h5, h6 {
   margin-bottom: 0.5rem;
 }
 
+// =============================================
+// Button Styles
+// =============================================
+
+// Ensure primary buttons always have white text
+.btn-primary {
+  color: #fff !important;
+
+  &:hover, &:focus, &:active {
+    color: #fff !important;
+  }
+
+  svg {
+    color: #fff !important;
+    stroke: #fff !important;
+  }
+}
+
 h1 { font-size: 2rem; }
 h2 { font-size: 1.75rem; }
 h3 { font-size: 1.5rem; }

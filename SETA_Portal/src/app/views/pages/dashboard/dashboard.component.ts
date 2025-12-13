@@ -141,7 +141,7 @@ import {
             <div class="card-body">
               <div class="row g-3">
                 <div class="col-sm-6 col-md-4 col-lg-3">
-                  <a routerLink="/verification/single" class="quick-action-card">
+                  <a routerLink="/app/verification/single" class="quick-action-card">
                     <div class="quick-action-card__icon">
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -176,7 +176,7 @@ import {
                   </a>
                 </div>
                 <div class="col-sm-6 col-md-4 col-lg-3">
-                  <a routerLink="/verification/batch" class="quick-action-card">
+                  <a routerLink="/app/verification/batch" class="quick-action-card">
                     <div class="quick-action-card__icon">
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -211,7 +211,7 @@ import {
                   </a>
                 </div>
                 <div class="col-sm-6 col-md-4 col-lg-3">
-                  <a routerLink="/learners/enroll" class="quick-action-card">
+                  <a routerLink="/app/learners/enroll" class="quick-action-card">
                     <div class="quick-action-card__icon">
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -246,7 +246,7 @@ import {
                   </a>
                 </div>
                 <div class="col-sm-6 col-md-4 col-lg-3">
-                  <a routerLink="/reports/verification" class="quick-action-card">
+                  <a routerLink="/app/reports/verification" class="quick-action-card">
                     <div class="quick-action-card__icon">
                       <svg
                         xmlns="http://www.w3.org/2000/svg"

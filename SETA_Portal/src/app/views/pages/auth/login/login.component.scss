@@ -488,6 +488,41 @@ form .btn-primary,
 }
 
 // Footer
+// Back to Home Link
+.back-to-home-link {
+  display: inline-flex;
+  align-items: center;
+  color: var(--seta-primary, #008550);
+  font-weight: 500;
+  font-size: 0.9375rem;
+  padding: 0.5rem 1rem;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  position: relative;
+  z-index: 10;
+
+  &:hover,
+  &:focus {
+    color: var(--seta-primary-dark, #006640);
+    text-decoration: underline;
+  }
+
+  &:active {
+    color: var(--seta-primary-dark, #006640);
+  }
+
+  svg {
+    transition: transform 0.2s ease;
+    flex-shrink: 0;
+  }
+
+  &:hover svg,
+  &:focus svg {
+    transform: translateX(-2px);
+  }
+}
+
 .login-footer {
   margin-top: 2rem;
   padding-top: 1.5rem;

@@ -646,7 +646,7 @@ export class LearnershipsComponent implements OnInit, OnDestroy {
   }
 
   applyForLearnership(learnership: AvailableLearnership): void {
-    this.router.navigate(['/my-portal/learnerships/apply', learnership.id], {
+    this.router.navigate(['/app/my-portal/learnerships/apply', learnership.id], {
       state: { learnership }
     });
   }

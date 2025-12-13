@@ -3,6 +3,14 @@ import { authGuard, authChildGuard, publicGuard } from './core/auth/auth.guard';
 import { adminGuard, staffGuard, learnerGuard, adminOrStaffGuard } from './core/auth/role.guard';
 
 export const routes: Routes = [
+  // Public Landing Page
+  {
+    path: '',
+    pathMatch: 'full',
+    loadComponent: () =>
+      import('./views/pages/landing/landing.component').then(m => m.LandingComponent)
+  },
+
   // Public Routes (Auth)
   {
     path: 'auth',
@@ -28,7 +36,7 @@ export const routes: Routes = [
 
   // Protected Routes - Main Layout
   {
-    path: '',
+    path: 'app',
     loadComponent: () =>
       import('./views/layout/base/base.component').then(m => m.BaseComponent),
     canActivate: [authGuard],

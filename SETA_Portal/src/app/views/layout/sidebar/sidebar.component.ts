@@ -35,62 +35,63 @@ export class SidebarComponent {
     {
       label: 'nav.dashboard',
       icon: 'home',
-      route: '/dashboard',
+      route: '/app/dashboard',
       roles: [UserRole.Admin, UserRole.Staff]
     },
     {
       label: 'nav.verification',
       icon: 'check-circle',
-      route: '/verification',
+      route: '/app/verification',
       roles: [UserRole.Admin, UserRole.Staff],
       children: [
-        { label: 'nav.singleVerify', icon: 'check', route: '/verification/single', roles: [UserRole.Admin, UserRole.Staff] },
-        { label: 'nav.batchVerify', icon: 'upload', route: '/verification/batch', roles: [UserRole.Admin, UserRole.Staff] },
-        { label: 'nav.recentVerifications', icon: 'clock', route: '/verification/history', roles: [UserRole.Admin, UserRole.Staff] }
+        { label: 'nav.singleVerify', icon: 'check', route: '/app/verification/single', roles: [UserRole.Admin, UserRole.Staff] },
+        { label: 'nav.batchVerify', icon: 'upload', route: '/app/verification/batch', roles: [UserRole.Admin, UserRole.Staff] },
+        { label: 'nav.batchQueue', icon: 'layers', route: '/app/verification/queue', roles: [UserRole.Admin, UserRole.Staff] },
+        { label: 'nav.recentVerifications', icon: 'clock', route: '/app/verification/history', roles: [UserRole.Admin, UserRole.Staff] }
       ]
     },
     {
       label: 'nav.learners',
       icon: 'users',
-      route: '/learners',
+      route: '/app/learners',
       roles: [UserRole.Admin, UserRole.Staff],
       children: [
-        { label: 'nav.learnerList', icon: 'list', route: '/learners/list', roles: [UserRole.Admin, UserRole.Staff] }
-        // { label: 'nav.enrollLearner', icon: 'user-plus', route: '/learners/enroll', roles: [UserRole.Admin, UserRole.Staff] },
-        // { label: 'nav.searchLearner', icon: 'search', route: '/learners/search', roles: [UserRole.Admin, UserRole.Staff] }
+        { label: 'nav.learnerList', icon: 'list', route: '/app/learners/list', roles: [UserRole.Admin, UserRole.Staff] },
+        { label: 'nav.enrollLearner', icon: 'user-plus', route: '/app/learners/enroll', roles: [UserRole.Admin, UserRole.Staff] },
+        { label: 'nav.searchLearner', icon: 'search', route: '/app/learners/search', roles: [UserRole.Admin, UserRole.Staff] }
       ]
     },
     {
       label: 'nav.reports',
       icon: 'bar-chart-2',
-      route: '/reports',
+      route: '/app/reports',
       roles: [UserRole.Admin, UserRole.Staff],
       children: [
-        { label: 'nav.verificationReport', icon: 'file-text', route: '/reports/verification', roles: [UserRole.Admin, UserRole.Staff] },
-        { label: 'nav.enrollmentReport', icon: 'pie-chart', route: '/reports/enrollment', roles: [UserRole.Admin, UserRole.Staff] },
-        { label: 'nav.auditLog', icon: 'activity', route: '/reports/audit', roles: [UserRole.Admin, UserRole.Staff] }
+        { label: 'nav.verificationReport', icon: 'file-text', route: '/app/reports/verification', roles: [UserRole.Admin, UserRole.Staff] },
+        { label: 'nav.enrollmentReport', icon: 'pie-chart', route: '/app/reports/enrollment', roles: [UserRole.Admin, UserRole.Staff] },
+        { label: 'nav.auditLog', icon: 'activity', route: '/app/reports/audit', roles: [UserRole.Admin, UserRole.Staff] }
       ]
     },
     {
       label: 'nav.admin',
       icon: 'settings',
-      route: '/admin',
+      route: '/app/admin',
       roles: [UserRole.Admin],
       children: [
-        // { label: 'nav.userManagement', icon: 'user', route: '/admin/users', roles: [UserRole.Admin] },
-        { label: 'nav.setaManagement', icon: 'briefcase', route: '/admin/setas', roles: [UserRole.Admin] }
-        // { label: 'nav.settings', icon: 'sliders', route: '/admin/settings', roles: [UserRole.Admin] }
+        { label: 'nav.userManagement', icon: 'user', route: '/app/admin/users', roles: [UserRole.Admin] },
+        { label: 'nav.setaManagement', icon: 'briefcase', route: '/app/admin/setas', roles: [UserRole.Admin] },
+        { label: 'nav.settings', icon: 'sliders', route: '/app/admin/settings', roles: [UserRole.Admin] }
       ]
     },
     {
       label: 'nav.myPortal',
       icon: 'user',
-      route: '/my-portal',
+      route: '/app/my-portal',
       roles: [UserRole.Learner],
       children: [
-        { label: 'nav.myStatus', icon: 'info', route: '/my-portal/status', roles: [UserRole.Learner] },
-        { label: 'nav.myCertificates', icon: 'award', route: '/my-portal/certificates', roles: [UserRole.Learner] },
-        { label: 'nav.learnerships', icon: 'book-open', route: '/my-portal/learnerships', roles: [UserRole.Learner] }
+        { label: 'nav.myStatus', icon: 'info', route: '/app/my-portal/status', roles: [UserRole.Learner] },
+        { label: 'nav.myCertificates', icon: 'award', route: '/app/my-portal/certificates', roles: [UserRole.Learner] },
+        { label: 'nav.learnerships', icon: 'book-open', route: '/app/my-portal/learnerships', roles: [UserRole.Learner] }
       ]
     }
   ];
