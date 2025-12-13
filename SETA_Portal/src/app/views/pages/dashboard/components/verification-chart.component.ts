@@ -98,9 +98,9 @@ declare const ApexCharts: any;
     }
 
     .card-header {
-      background: transparent;
+      background: linear-gradient(135deg, rgba(0, 133, 80, 0.05) 0%, rgba(0, 133, 80, 0.02) 100%);
       border-bottom: none;
-      padding: 1rem 1.25rem;
+      padding: 1.5rem 1.5rem 1.25rem;
       position: relative;
     }
 
@@ -111,34 +111,96 @@ declare const ApexCharts: any;
     .verification-trends-underline {
       position: absolute;
       bottom: 0;
-      left: 1.25rem;
-      right: 1.25rem;
-      height: 1px;
-      background: var(--seta-bg-tertiary, #e9ecef);
+      left: 1.5rem;
+      right: 1.5rem;
+      height: 2px;
+      background: linear-gradient(90deg, var(--seta-primary, #008550) 0%, transparent 100%);
+      border-radius: 1px;
     }
 
     .card-title {
-      font-size: 1rem;
-      font-weight: 600;
+      font-size: 1.125rem;
+      font-weight: 700;
       display: flex;
       align-items: center;
-      gap: 0.625rem;
+      gap: 0.75rem;
 
       &__icon {
         display: flex;
         align-items: center;
         justify-content: center;
-        width: 32px;
-        height: 32px;
-        border-radius: 0.5rem;
-        background: rgba(0, 133, 80, 0.1);
-        color: var(--seta-primary, #008550);
+        width: 40px;
+        height: 40px;
+        border-radius: 0.75rem;
+        background: linear-gradient(135deg, var(--seta-primary, #008550) 0%, var(--seta-primary-dark, #006640) 100%);
+        color: white;
         flex-shrink: 0;
+        box-shadow: 0 4px 12px rgba(0, 133, 80, 0.25);
 
         svg {
-          width: 18px;
-          height: 18px;
+          width: 20px;
+          height: 20px;
         }
+      }
+    }
+
+    // Modernize ApexCharts tooltip
+    ::ng-deep {
+      .apexcharts-tooltip {
+        border: none !important;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15) !important;
+        border-radius: 0.75rem !important;
+        padding: 0 !important;
+        background: white !important;
+        backdrop-filter: blur(10px);
+      }
+
+      .apexcharts-tooltip.apexcharts-theme-light {
+        border: none !important;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15) !important;
+      }
+
+      .apexcharts-tooltip-title {
+        background: linear-gradient(135deg, var(--seta-primary, #008550) 0%, var(--seta-primary-dark, #006640) 100%) !important;
+        color: white !important;
+        font-weight: 600 !important;
+        font-size: 0.875rem !important;
+        padding: 0.75rem 1rem !important;
+        border-radius: 0.75rem 0.75rem 0 0 !important;
+        border-bottom: none !important;
+      }
+
+      .apexcharts-tooltip-series-group {
+        padding: 0.75rem 1rem !important;
+        background: white !important;
+      }
+
+      .apexcharts-tooltip-series-group:last-child {
+        border-radius: 0 0 0.75rem 0.75rem !important;
+      }
+
+      .apexcharts-tooltip-marker {
+        width: 12px !important;
+        height: 12px !important;
+        border-radius: 0.375rem !important;
+        margin-right: 0.625rem !important;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+      }
+
+      .apexcharts-tooltip-y-group {
+        padding: 0 !important;
+      }
+
+      .apexcharts-tooltip-text-y-label,
+      .apexcharts-tooltip-text-y-value {
+        font-size: 0.875rem !important;
+        font-weight: 500 !important;
+        color: #212529 !important;
+      }
+
+      .apexcharts-tooltip-text-y-value {
+        font-weight: 600 !important;
+        margin-left: 0.25rem !important;
       }
     }
 
@@ -314,6 +376,11 @@ export class VerificationChartComponent implements AfterViewInit, OnChanges, OnD
       tooltip: {
         shared: true,
         intersect: false,
+        theme: 'light',
+        style: {
+          fontSize: '14px',
+          fontFamily: 'inherit'
+        },
         y: {
           formatter: (val: number) => `${val} verifications`
         }

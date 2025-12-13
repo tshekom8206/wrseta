@@ -400,17 +400,25 @@ interface AvailableLearnership {
       display: flex;
       justify-content: space-between;
       align-items: center;
+      gap: 2rem;
+    }
+
+    .nav-logo {
+      flex-shrink: 0;
     }
 
     .nav-logo .logo-img {
       height: 50px;
       width: auto;
+      display: block;
     }
 
     .nav-links {
       display: flex;
       align-items: center;
       gap: 2rem;
+      flex: 1;
+      justify-content: flex-end;
     }
 
     .nav-link {
@@ -419,6 +427,11 @@ interface AvailableLearnership {
       font-weight: 500;
       font-size: 0.9375rem;
       transition: color 0.2s ease;
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      height: 100%;
+      line-height: 1.5;
 
       &:hover {
         color: var(--seta-primary, #008550);
@@ -428,13 +441,20 @@ interface AvailableLearnership {
     .nav-link-signin {
       background: linear-gradient(135deg, var(--seta-primary, #008550) 0%, var(--seta-primary-dark, #006640) 100%);
       color: white !important;
-      padding: 0.5rem 1.25rem;
+      padding: 0.625rem 1.5rem;
       border-radius: 0.5rem;
       font-weight: 600;
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-left: 0.5rem;
 
       &:hover {
         background: linear-gradient(135deg, var(--seta-primary-dark, #006640) 0%, #004d30 100%);
         color: white !important;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 133, 80, 0.3);
       }
     }
 
@@ -765,16 +785,35 @@ interface AvailableLearnership {
       justify-content: space-between;
       align-items: center;
       margin-top: auto;
+      gap: 1rem;
+      padding-top: 1rem;
     }
 
     .learnership-spots {
       font-size: 0.875rem;
       color: var(--seta-text-secondary, #6c757d);
+      display: flex;
+      align-items: center;
+      flex-shrink: 0;
 
       strong {
         color: var(--seta-primary, #008550);
         font-weight: 600;
       }
+    }
+
+    .learnership-footer-featured .btn,
+    .learnership-footer-hero .btn {
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      white-space: nowrap;
+      min-width: 120px;
+      padding: 0.625rem 1.5rem;
+      font-weight: 600;
+      border-radius: 0.5rem;
+      transition: all 0.2s ease;
     }
 
     .applications-footer {
@@ -1149,16 +1188,30 @@ interface AvailableLearnership {
       display: flex;
       justify-content: space-between;
       align-items: center;
+      gap: 1rem;
+      padding-top: 1rem;
     }
 
     .learnership-spots-hero {
       font-size: 0.875rem;
       color: var(--seta-text-secondary, #6c757d);
+      display: flex;
+      align-items: center;
+      flex-shrink: 0;
 
       strong {
         color: var(--seta-primary, #008550);
         font-weight: 600;
       }
+    }
+
+    .learnership-footer-hero .btn {
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      white-space: nowrap;
+      min-width: 120px;
     }
 
     @media (max-width: 768px) {

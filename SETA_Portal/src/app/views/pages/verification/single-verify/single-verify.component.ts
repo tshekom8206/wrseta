@@ -221,11 +221,11 @@ import { PageHeaderComponent } from '../../../../shared/components/page-header/p
                       @if (result.learnerInfo) {
                         <div class="id-info-row">
                           <span class="id-info-label">Surname</span>
-                          <span class="id-info-value">{{ (result.learnerInfo.lastName || 'N/A') | uppercase }}</span>
+                          <span class="id-info-value">{{ (result.learnerInfo.lastName || '*****') | uppercase }}</span>
                         </div>
                         <div class="id-info-row">
                           <span class="id-info-label">Names</span>
-                          <span class="id-info-value">{{ (result.learnerInfo.firstName || 'N/A') | uppercase }}</span>
+                          <span class="id-info-value">{{ (result.learnerInfo.firstName || '*****') | uppercase }}</span>
                         </div>
                     <div class="id-info-row">
                       <span class="id-info-label">Sex</span>
