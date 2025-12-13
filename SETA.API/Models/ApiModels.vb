@@ -99,15 +99,13 @@ Namespace Models
         <Required>
         <StringLength(13, MinimumLength:=13, ErrorMessage:="ID Number must be exactly 13 digits")>
         Public Property IdNumber As String
-
-        Public Property FirstName As String
-        Public Property Surname As String
     End Class
 
     ''' <summary>
     ''' Response model for ID verification
     ''' </summary>
     Public Class VerificationResponse
+        Public Property IdNumberMasked As String
         Public Property Status As String          ' GREEN, YELLOW, RED
         Public Property Message As String
         Public Property IsValid As Boolean
@@ -327,6 +325,73 @@ Namespace Models
         Public Property IsValid As Boolean
         Public Property DuplicateFound As Boolean
         Public Property ConflictingSeta As String
+    End Class
+
+#End Region
+
+#Region "Learner Verification Models"
+
+    ''' <summary>
+    ''' Request model for learner verification by ID number
+    ''' </summary>
+    Public Class LearnerVerificationRequest
+        <Required>
+        Public Property IdNumber As String
+        Public Property SetaId As Integer = 0  ' Optional: 0 means use API key SETA
+    End Class
+
+    ''' <summary>
+    ''' Response model for learner verification
+    ''' </summary>
+    Public Class LearnerVerificationResponse
+        Public Property Found As Boolean
+        Public Property LearnerId As Integer?
+        Public Property IdNumberMasked As String
+        Public Property FirstName As String
+        Public Property Surname As String
+        Public Property LearnershipCode As String
+        Public Property ProgrammeName As String
+        Public Property Province As String
+        Public Property Status As String
+        Public Property RegistrationDate As DateTime?
+        Public Property RegisteredSetaId As Integer?
+        Public Property RegisteredSetaCode As String
+        Public Property RegisteredSetaName As String
+        Public Property Message As String
+    End Class
+
+    ''' <summary>
+    ''' Request model for bulk learner verification
+    ''' </summary>
+    Public Class BulkLearnerVerificationRequest
+        <Required>
+        Public Property IdNumbers As List(Of String)
+        Public Property SetaId As Integer = 0  ' Optional: 0 means use API key SETA
+    End Class
+
+    ''' <summary>
+    ''' Response model for bulk learner verification
+    ''' </summary>
+    Public Class BulkLearnerVerificationResponse
+        Public Property TotalProcessed As Integer
+        Public Property FoundCount As Integer
+        Public Property NotFoundCount As Integer
+        Public Property Results As List(Of BulkLearnerVerificationResult)
+        Public Property ProcessingTimeMs As Long
+    End Class
+
+    ''' <summary>
+    ''' Individual result in bulk learner verification
+    ''' </summary>
+    Public Class BulkLearnerVerificationResult
+        Public Property IdNumber As String  ' Masked
+        Public Property Found As Boolean
+        Public Property LearnerId As Integer?
+        Public Property FirstName As String
+        Public Property Surname As String
+        Public Property Status As String
+        Public Property RegisteredSetaCode As String
+        Public Property Message As String
     End Class
 
 #End Region

@@ -21,6 +21,96 @@ Namespace SETA.API.Controllers
         Inherits ApiController
 
         ''' <summary>
+        ''' Register a learner in a learnership
+        ''' Checks for duplicate enrollments across all SETAs
+        ''' </summary>
+        <Route("register")>
+        <HttpPost>
+        Public Function Register(request As EnrollmentRequest) As IHttpActionResult
+            ' Validate request
+            If request Is Nothing Then
+                Return Content(HttpStatusCode.BadRequest,
+                    ApiResponse(Of EnrollmentResponse).ErrorResponse("INVALID_REQUEST", "Request body is required"))
+            End If
+
+            ' Validate required fields
+            If String.IsNullOrWhiteSpace(request.IdNumber) OrElse
+               String.IsNullOrWhiteSpace(request.FirstName) OrElse
+               String.IsNullOrWhiteSpace(request.Surname) OrElse
+               String.IsNullOrWhiteSpace(request.LearnershipCode) OrElse
+               String.IsNullOrWhiteSpace(request.Province) Then
+                Return Content(HttpStatusCode.BadRequest,
+                    ApiResponse(Of EnrollmentResponse).ErrorResponse("INVALID_REQUEST", "All required fields must be provided"))
+            End If
+
+            ' Get SETA context from API Key
+            Dim apiKeySetaId = CInt(Me.Request.Properties("SetaId"))
+            Dim apiKeySetaCode = Me.Request.Properties("SetaCode").ToString()
+
+            ' Validate that requested SETA matches API Key SETA
+            If request.SetaId <> apiKeySetaId Then
+                Return Content(HttpStatusCode.Forbidden,
+                    ApiResponse(Of EnrollmentResponse).ErrorResponse("SETA_MISMATCH", "Cannot register learners for other SETAs"))
+            End If
+
+            ' Clean ID number
+            Dim idNumber = request.IdNumber.Replace(" ", "").Replace("-", "")
+
+            ' Validate ID format
+            If idNumber.Length <> 13 OrElse Not IsAllDigits(idNumber) Then
+                Return Content(HttpStatusCode.BadRequest,
+                    ApiResponse(Of EnrollmentResponse).ErrorResponse("INVALID_ID", "ID number must be exactly 13 digits"))
+            End If
+
+            ' Check for enrollment duplicates using stored procedure
+            Dim duplicateResult = CheckEnrollmentDuplicate(
+                idNumber,
+                request.LearnershipCode,
+                request.SetaId,
+                request.EnrollmentYear,
+                request.Province)
+
+            If duplicateResult.Decision = "BLOCKED" Then
+                Return Ok(ApiResponse(Of EnrollmentResponse).SuccessResponse(New EnrollmentResponse With {
+                    .Decision = "BLOCKED",
+                    .DuplicateType = duplicateResult.DuplicateType,
+                    .Message = duplicateResult.Message,
+                    .ExistingEnrollment = duplicateResult.ExistingEnrollment
+                }))
+            End If
+
+            ' No blocking duplicate found - proceed with registration
+            Dim enrollmentResult = CreateEnrollment(request, idNumber)
+
+            If enrollmentResult Is Nothing OrElse enrollmentResult.LearnerId = 0 Then
+                Return Content(HttpStatusCode.InternalServerError,
+                    ApiResponse(Of EnrollmentResponse).ErrorResponse("REGISTRATION_FAILED", "Failed to create registration"))
+            End If
+
+            ' Log to LearnerVerificationHistory
+            LogLearnerVerification(
+                learnerId:=enrollmentResult.LearnerId,
+                verificationType:="REGISTRATION",
+                status:="SUCCESS",
+                dhaStatus:="PENDING",
+                verifiedBy:=apiKeySetaCode,
+                notes:=$"Registration successful. EnrollmentID: {enrollmentResult.EnrollmentId}")
+
+            Dim responseMessage = "Registration successful"
+            If duplicateResult.DuplicateType = "DIFFERENT_PROVINCE" Then
+                responseMessage = "Registration approved - learner has existing enrollment in different province"
+            End If
+
+            Return Ok(ApiResponse(Of EnrollmentResponse).SuccessResponse(New EnrollmentResponse With {
+                .Decision = "ALLOWED",
+                .DuplicateType = If(String.IsNullOrEmpty(duplicateResult.DuplicateType), "NEW_ENROLLMENT", duplicateResult.DuplicateType),
+                .Message = responseMessage,
+                .EnrollmentId = enrollmentResult.EnrollmentId,
+                .ExistingEnrollment = duplicateResult.ExistingEnrollment
+            }))
+        End Function
+
+        ''' <summary>
         ''' Enroll a learner in a learnership
         ''' Checks for duplicate enrollments across all SETAs
         ''' </summary>
@@ -57,7 +147,7 @@ Namespace SETA.API.Controllers
             Dim idNumber = request.IdNumber.Replace(" ", "").Replace("-", "")
 
             ' Validate ID format
-            If idNumber.Length <> 13 OrElse Not idNumber.All(Function(c) Char.IsDigit(c)) Then
+            If idNumber.Length <> 13 OrElse Not IsAllDigits(idNumber) Then
                 Return Content(HttpStatusCode.BadRequest,
                     ApiResponse(Of EnrollmentResponse).ErrorResponse("INVALID_ID", "ID number must be exactly 13 digits"))
             End If
@@ -80,12 +170,21 @@ Namespace SETA.API.Controllers
             End If
 
             ' No blocking duplicate found - proceed with enrollment
-            Dim enrollmentId = CreateEnrollment(request, idNumber)
+            Dim enrollmentResult = CreateEnrollment(request, idNumber)
 
-            If String.IsNullOrEmpty(enrollmentId) Then
+            If enrollmentResult Is Nothing OrElse enrollmentResult.LearnerId = 0 Then
                 Return Content(HttpStatusCode.InternalServerError,
                     ApiResponse(Of EnrollmentResponse).ErrorResponse("ENROLLMENT_FAILED", "Failed to create enrollment"))
             End If
+
+            ' Log to LearnerVerificationHistory
+            LogLearnerVerification(
+                learnerId:=enrollmentResult.LearnerId,
+                verificationType:="ENROLLMENT",
+                status:="SUCCESS",
+                dhaStatus:="PENDING",
+                verifiedBy:=apiKeySetaCode,
+                notes:=$"Enrollment successful. EnrollmentID: {enrollmentResult.EnrollmentId}")
 
             Dim responseMessage = "Enrollment successful"
             If duplicateResult.DuplicateType = "DIFFERENT_PROVINCE" Then
@@ -96,7 +195,7 @@ Namespace SETA.API.Controllers
                 .Decision = "ALLOWED",
                 .DuplicateType = If(String.IsNullOrEmpty(duplicateResult.DuplicateType), "NEW_ENROLLMENT", duplicateResult.DuplicateType),
                 .Message = responseMessage,
-                .EnrollmentId = enrollmentId,
+                .EnrollmentId = enrollmentResult.EnrollmentId,
                 .ExistingEnrollment = duplicateResult.ExistingEnrollment
             }))
         End Function
@@ -244,6 +343,14 @@ Namespace SETA.API.Controllers
                 AuditLogService.LogAsync(apiKeySetaId, AuditLogService.ACTION_UPDATE, "LearnerRegistry",
                                          recordId:=learnerId, details:=$"Updated fields: {String.Join(", ", updates)}",
                                          userId:=setaCode)
+
+                ' Log to LearnerVerificationHistory
+                LogLearnerVerification(
+                    learnerId:=learnerId,
+                    verificationType:="UPDATE",
+                    status:="SUCCESS",
+                    verifiedBy:=setaCode,
+                    notes:=$"Updated fields: {String.Join(", ", updates)}")
             End Using
 
             Return Ok(ApiResponse(Of Object).SuccessResponse(New With {
@@ -316,6 +423,14 @@ Namespace SETA.API.Controllers
                 AuditLogService.LogAsync(apiKeySetaId, AuditLogService.ACTION_DELETE, "LearnerRegistry",
                                          recordId:=learnerId, details:=$"Withdrawal reason: {request.Reason}",
                                          userId:=setaCode)
+
+                ' Log to LearnerVerificationHistory
+                LogLearnerVerification(
+                    learnerId:=learnerId,
+                    verificationType:="DEACTIVATION",
+                    status:="WITHDRAWN",
+                    verifiedBy:=setaCode,
+                    notes:=$"Learner withdrawn. Reason: {request.Reason}")
             End Using
 
             Return Ok(ApiResponse(Of Object).SuccessResponse(New With {
@@ -486,8 +601,9 @@ Namespace SETA.API.Controllers
 
         ''' <summary>
         ''' Create enrollment in database
+        ''' Returns enrollment result with both EnrollmentID and LearnerID
         ''' </summary>
-        Private Function CreateEnrollment(request As EnrollmentRequest, cleanIdNumber As String) As String
+        Private Function CreateEnrollment(request As EnrollmentRequest, cleanIdNumber As String) As EnrollmentResult
             Dim connectionString As String = ConfigurationManager.ConnectionStrings("SETAConnection").ConnectionString
             Dim enrollmentId As String = Guid.NewGuid().ToString("N").Substring(0, 12).ToUpper()
             Dim idHash = ComputeSha256HashBytes(cleanIdNumber)
@@ -514,17 +630,19 @@ Namespace SETA.API.Controllers
                                 cmd.ExecuteNonQuery()
                             End Using
 
-                            ' Insert into LearnerRegistry (partitioned by SETA)
+                            ' Insert into LearnerRegistry (partitioned by SETA) and get LearnerID
                             Dim sql2 As String = "
                                 INSERT INTO LearnerRegistry
                                     (EnrollmentID, IDNumber, IDNumberHash, FirstName, Surname, LearnershipCode,
                                      LearnershipName, RegisteredSETAID, ProvinceCode, EnrollmentYear,
                                      RegistrationDate, Status, CreatedAt)
+                                OUTPUT INSERTED.LearnerID
                                 VALUES
                                     (@EnrollmentID, @IDNumber, @IDHash, @FirstName, @Surname, @LearnershipCode,
                                      @LearnershipName, @SETAID, @Province, @Year,
                                      GETDATE(), 'Active', GETDATE())"
 
+                            Dim learnerId As Integer = 0
                             Using cmd As New SqlCommand(sql2, conn, tran)
                                 cmd.Parameters.AddWithValue("@EnrollmentID", enrollmentId)
                                 cmd.Parameters.AddWithValue("@IDNumber", cleanIdNumber)
@@ -536,11 +654,14 @@ Namespace SETA.API.Controllers
                                 cmd.Parameters.AddWithValue("@SETAID", request.SetaId)
                                 cmd.Parameters.AddWithValue("@Province", request.Province)
                                 cmd.Parameters.AddWithValue("@Year", request.EnrollmentYear)
-                                cmd.ExecuteNonQuery()
+                                learnerId = CInt(cmd.ExecuteScalar())
                             End Using
 
                             tran.Commit()
-                            Return enrollmentId
+                            Return New EnrollmentResult With {
+                                .EnrollmentId = enrollmentId,
+                                .LearnerId = learnerId
+                            }
 
                         Catch ex As Exception
                             tran.Rollback()
@@ -715,6 +836,18 @@ Namespace SETA.API.Controllers
         End Function
 
         ''' <summary>
+        ''' Check if all characters in a string are digits
+        ''' </summary>
+        Private Function IsAllDigits(input As String) As Boolean
+            For Each c As Char In input
+                If Not Char.IsDigit(c) Then
+                    Return False
+                End If
+            Next
+            Return True
+        End Function
+
+        ''' <summary>
         ''' Compute SHA256 hash as bytes
         ''' </summary>
         Private Function ComputeSha256HashBytes(input As String) As Byte()
@@ -724,6 +857,48 @@ Namespace SETA.API.Controllers
         End Function
 
         ''' <summary>
+        ''' Log learner verification to LearnerVerificationHistory table
+        ''' </summary>
+        Private Sub LogLearnerVerification(learnerId As Integer, verificationType As String, status As String,
+                                          Optional dhaStatus As String = Nothing,
+                                          Optional dhaReference As String = Nothing,
+                                          Optional verifiedBy As String = Nothing,
+                                          Optional expiresAt As DateTime? = Nothing,
+                                          Optional notes As String = Nothing)
+            Dim connectionString As String = ConfigurationManager.ConnectionStrings("SETAConnection").ConnectionString
+
+            Try
+                Using conn As New SqlConnection(connectionString)
+                    conn.Open()
+
+                    Dim sql As String = "
+                        INSERT INTO LearnerVerificationHistory (
+                            LearnerID, VerificationType, Status, DHAStatus, DHAReference,
+                            VerifiedAt, VerifiedBy, ExpiresAt, Notes
+                        )
+                        VALUES (
+                            @LearnerID, @VerificationType, @Status, @DHAStatus, @DHAReference,
+                            GETDATE(), @VerifiedBy, @ExpiresAt, @Notes
+                        )"
+
+                    Using cmd As New SqlCommand(sql, conn)
+                        cmd.Parameters.AddWithValue("@LearnerID", learnerId)
+                        cmd.Parameters.AddWithValue("@VerificationType", verificationType)
+                        cmd.Parameters.AddWithValue("@Status", status)
+                        cmd.Parameters.AddWithValue("@DHAStatus", If(String.IsNullOrEmpty(dhaStatus), DBNull.Value, dhaStatus))
+                        cmd.Parameters.AddWithValue("@DHAReference", If(String.IsNullOrEmpty(dhaReference), DBNull.Value, dhaReference))
+                        cmd.Parameters.AddWithValue("@VerifiedBy", If(String.IsNullOrEmpty(verifiedBy), DBNull.Value, verifiedBy))
+                        cmd.Parameters.AddWithValue("@ExpiresAt", If(expiresAt.HasValue, expiresAt.Value, DBNull.Value))
+                        cmd.Parameters.AddWithValue("@Notes", If(String.IsNullOrEmpty(notes), DBNull.Value, notes))
+                        cmd.ExecuteNonQuery()
+                    End Using
+                End Using
+            Catch ex As Exception
+                System.Diagnostics.Debug.WriteLine("Failed to log learner verification: " & ex.Message)
+            End Try
+        End Sub
+
+        ''' <summary>
         ''' Duplicate check result
         ''' </summary>
         Private Class DuplicateCheckResult
@@ -731,6 +906,14 @@ Namespace SETA.API.Controllers
             Public Property DuplicateType As String
             Public Property Message As String
             Public Property ExistingEnrollment As ExistingEnrollmentInfo
+        End Class
+
+        ''' <summary>
+        ''' Enrollment result containing both EnrollmentID and LearnerID
+        ''' </summary>
+        Private Class EnrollmentResult
+            Public Property EnrollmentId As String
+            Public Property LearnerId As Integer
         End Class
 
     End Class

@@ -66,11 +66,15 @@ Namespace SETA.API.Controllers
 
             ' Clean ID number
             Dim idNumber = request.IdNumber.Replace(" ", "").Replace("-", "")
+            Dim idNumberMasked = MaskIdForResponse(idNumber)
 
             ' Step 1: Format validation
-            If idNumber.Length <> 13 OrElse Not IsAllDigits(idNumber) Then
-                LogVerification(setaId, idNumber, "RED", "Invalid format")
+            Dim formatValid = idNumber.Length = 13 AndAlso IsAllDigits(idNumber)
+            If Not formatValid Then
+                LogVerification(setaId, idNumber, "RED", "Invalid ID format. Must be exactly 13 digits.",
+                                formatValid:=False, luhnValid:=False, dhaVerified:=False, duplicateFound:=False)
                 Return Ok(ApiResponse(Of VerificationResponse).SuccessResponse(New VerificationResponse With {
+                    .IdNumberMasked = idNumberMasked,
                     .Status = "RED",
                     .Message = "Invalid ID format. Must be exactly 13 digits.",
                     .IsValid = False,
@@ -84,8 +88,10 @@ Namespace SETA.API.Controllers
             ' Step 2: Luhn algorithm validation
             Dim luhnValid = ValidateLuhn(idNumber)
             If Not luhnValid Then
-                LogVerification(setaId, idNumber, "RED", "Luhn check failed")
+                LogVerification(setaId, idNumber, "RED", "Invalid ID number. Checksum validation failed.",
+                                formatValid:=True, luhnValid:=False, dhaVerified:=False, duplicateFound:=False)
                 Return Ok(ApiResponse(Of VerificationResponse).SuccessResponse(New VerificationResponse With {
+                    .IdNumberMasked = idNumberMasked,
                     .Status = "RED",
                     .Message = "Invalid ID number. Checksum validation failed.",
                     .IsValid = False,
@@ -103,8 +109,11 @@ Namespace SETA.API.Controllers
             Dim duplicateInfo = CheckCrossSETADuplicate(idNumber, setaId)
 
             If duplicateInfo IsNot Nothing Then
-                LogVerification(setaId, idNumber, "RED", "Duplicate found at " & duplicateInfo.SetaCode)
+                LogVerification(setaId, idNumber, "RED", "Learner already registered at another SETA",
+                                formatValid:=True, luhnValid:=True, dhaVerified:=False, duplicateFound:=True,
+                                conflictingSetaId:=duplicateInfo.SetaId)
                 Return Ok(ApiResponse(Of VerificationResponse).SuccessResponse(New VerificationResponse With {
+                    .IdNumberMasked = idNumberMasked,
                     .Status = "RED",
                     .Message = "Learner already registered at another SETA",
                     .IsValid = True,
@@ -121,8 +130,10 @@ Namespace SETA.API.Controllers
             Dim dhaVerified = SimulateDHAVerification(idNumber)
 
             If dhaVerified Then
-                LogVerification(setaId, idNumber, "GREEN", "Verified successfully")
+                LogVerification(setaId, idNumber, "GREEN", "Identity verified successfully",
+                                formatValid:=True, luhnValid:=True, dhaVerified:=True, duplicateFound:=False)
                 Return Ok(ApiResponse(Of VerificationResponse).SuccessResponse(New VerificationResponse With {
+                    .IdNumberMasked = idNumberMasked,
                     .Status = "GREEN",
                     .Message = "Identity verified successfully",
                     .IsValid = True,
@@ -133,8 +144,10 @@ Namespace SETA.API.Controllers
                     .Demographics = demographics
                 }))
             Else
-                LogVerification(setaId, idNumber, "YELLOW", "DHA verification pending")
+                LogVerification(setaId, idNumber, "YELLOW", "ID format valid but DHA verification pending",
+                                formatValid:=True, luhnValid:=True, dhaVerified:=False, duplicateFound:=False)
                 Return Ok(ApiResponse(Of VerificationResponse).SuccessResponse(New VerificationResponse With {
+                    .IdNumberMasked = idNumberMasked,
                     .Status = "YELLOW",
                     .Message = "ID format valid but DHA verification pending",
                     .IsValid = True,
@@ -159,6 +172,7 @@ Namespace SETA.API.Controllers
             End If
 
             Dim idNumber = request.IdNumber.Replace(" ", "").Replace("-", "")
+            Dim idNumberMasked = MaskIdForResponse(idNumber)
 
             ' Format check
             Dim formatValid = idNumber.Length = 13 AndAlso IsAllDigits(idNumber)
@@ -173,6 +187,7 @@ Namespace SETA.API.Controllers
             End If
 
             Return Ok(ApiResponse(Of VerificationResponse).SuccessResponse(New VerificationResponse With {
+                .IdNumberMasked = idNumberMasked,
                 .Status = If(formatValid AndAlso luhnValid, "GREEN", "RED"),
                 .Message = If(formatValid AndAlso luhnValid, "ID format is valid", "Invalid ID format or checksum"),
                 .IsValid = formatValid AndAlso luhnValid,
@@ -287,8 +302,8 @@ Namespace SETA.API.Controllers
                         If reader.Read() Then
                             Return New ConflictInfo With {
                                 .SetaId = reader.GetInt32(0),
-                                .SetaCode = reader.GetString(1),
-                                .SetaName = reader.GetString(2),
+                                .SetaCode = If(reader.IsDBNull(1), "", reader.GetString(1)),
+                                .SetaName = If(reader.IsDBNull(2), "", reader.GetString(2)),
                                 .RegistrationDate = If(reader.IsDBNull(3), Nothing, reader.GetDateTime(3))
                             }
                         End If
@@ -367,45 +382,68 @@ Namespace SETA.API.Controllers
                     Dim idNumber = item.IdNumber.Replace(" ", "").Replace("-", "")
 
                     ' Format validation
-                    If idNumber.Length <> 13 OrElse Not IsAllDigits(idNumber) Then
+                    Dim formatValid = idNumber.Length = 13 AndAlso IsAllDigits(idNumber)
+                    Dim luhnValid = False
+                    Dim dhaVerified = False
+                    Dim duplicateFound = False
+                    Dim conflictingSetaId As Integer? = Nothing
+
+                    If Not formatValid Then
                         result.Status = "RED"
                         result.Message = "Invalid ID format"
                         result.IsValid = False
                         failedCount += 1
-                    ElseIf Not ValidateLuhn(idNumber) Then
-                        result.Status = "RED"
-                        result.Message = "Luhn check failed"
-                        result.IsValid = False
-                        failedCount += 1
                     Else
-                        ' Check for duplicates
-                        Dim duplicateInfo = CheckCrossSETADuplicate(idNumber, setaId)
-
-                        If duplicateInfo IsNot Nothing Then
+                        luhnValid = ValidateLuhn(idNumber)
+                        If Not luhnValid Then
                             result.Status = "RED"
-                            result.Message = "Duplicate found"
-                            result.IsValid = True
-                            result.DuplicateFound = True
-                            result.ConflictingSeta = duplicateInfo.SetaCode
+                            result.Message = "Luhn check failed"
+                            result.IsValid = False
                             failedCount += 1
                         Else
-                            ' DHA verification (skip for bulk to improve performance)
-                            result.Status = "YELLOW"
-                            result.Message = "Format valid, DHA verification pending"
-                            result.IsValid = True
-                            result.DuplicateFound = False
-                            successCount += 1
+                            ' Check for duplicates
+                            Dim duplicateInfo = CheckCrossSETADuplicate(idNumber, setaId)
+
+                            If duplicateInfo IsNot Nothing Then
+                                result.Status = "RED"
+                                result.Message = "Duplicate found"
+                                result.IsValid = True
+                                result.DuplicateFound = True
+                                result.ConflictingSeta = duplicateInfo.SetaCode
+                                duplicateFound = True
+                                conflictingSetaId = duplicateInfo.SetaId
+                                failedCount += 1
+                            Else
+                                ' DHA verification (skip for bulk to improve performance)
+                                result.Status = "YELLOW"
+                                result.Message = "Format valid, DHA verification pending"
+                                result.IsValid = True
+                                result.DuplicateFound = False
+                                successCount += 1
+                            End If
                         End If
                     End If
 
-                    ' Log individual verification
-                    LogVerification(setaId, item.IdNumber, result.Status, result.Message)
+                    ' Log individual verification with detailed information
+                    LogVerification(setaId, idNumber, result.Status, result.Message,
+                                    formatValid:=formatValid, luhnValid:=luhnValid, dhaVerified:=dhaVerified,
+                                    duplicateFound:=duplicateFound, conflictingSetaId:=conflictingSetaId,
+                                    firstName:=item.FirstName, surname:=item.Surname)
 
                 Catch ex As Exception
                     result.Status = "RED"
-                    result.Message = "Verification error"
+                    result.Message = "Verification error: " & ex.Message
                     result.IsValid = False
                     failedCount += 1
+                    ' Log error case
+                    Try
+                        Dim idNumber = item.IdNumber.Replace(" ", "").Replace("-", "")
+                        LogVerification(setaId, idNumber, "RED", "Verification error: " & ex.Message,
+                                        formatValid:=False, luhnValid:=False, dhaVerified:=False, duplicateFound:=False,
+                                        firstName:=item.FirstName, surname:=item.Surname)
+                    Catch
+                        ' Ignore logging errors
+                    End Try
                 End Try
 
                 results.Add(result)
@@ -434,6 +472,151 @@ Namespace SETA.API.Controllers
         End Function
 
         ''' <summary>
+        ''' Verify if a learner exists by ID number
+        ''' Checks LearnerRegistry for the learner
+        ''' </summary>
+        <Route("verify-learner")>
+        <HttpPost>
+        Public Function VerifyLearner(request As LearnerVerificationRequest) As IHttpActionResult
+            ' Validate request
+            If request Is Nothing OrElse String.IsNullOrWhiteSpace(request.IdNumber) Then
+                Return Content(HttpStatusCode.BadRequest,
+                    ApiResponse(Of LearnerVerificationResponse).ErrorResponse("INVALID_REQUEST", "ID number is required"))
+            End If
+
+            ' Get SETA context from API Key
+            Dim apiKeySetaId = CInt(Me.Request.Properties("SetaId"))
+            Dim searchSetaId = If(request.SetaId > 0, request.SetaId, apiKeySetaId)
+
+            ' Validate SETA access if specific SETA requested
+            If request.SetaId > 0 AndAlso request.SetaId <> apiKeySetaId Then
+                Return Content(HttpStatusCode.Forbidden,
+                    ApiResponse(Of LearnerVerificationResponse).ErrorResponse("ACCESS_DENIED", "Cannot access other SETA's learners"))
+            End If
+
+            ' Clean ID number
+            Dim idNumber = request.IdNumber.Replace(" ", "").Replace("-", "")
+
+            ' Search for learner
+            Dim learner = FindLearnerByIdNumber(idNumber, searchSetaId)
+
+            If learner IsNot Nothing Then
+                Return Ok(ApiResponse(Of LearnerVerificationResponse).SuccessResponse(New LearnerVerificationResponse With {
+                    .Found = True,
+                    .LearnerId = learner.LearnerId,
+                    .IdNumberMasked = learner.IdNumberMasked,
+                    .FirstName = learner.FirstName,
+                    .Surname = learner.Surname,
+                    .LearnershipCode = learner.LearnershipCode,
+                    .ProgrammeName = learner.ProgrammeName,
+                    .Province = learner.Province,
+                    .Status = learner.Status,
+                    .RegistrationDate = learner.RegistrationDate,
+                    .RegisteredSetaId = learner.RegisteredSetaId,
+                    .RegisteredSetaCode = learner.RegisteredSetaCode,
+                    .RegisteredSetaName = learner.RegisteredSetaName,
+                    .Message = "Learner found"
+                }))
+            Else
+                Return Ok(ApiResponse(Of LearnerVerificationResponse).SuccessResponse(New LearnerVerificationResponse With {
+                    .Found = False,
+                    .Message = "Learner not found"
+                }))
+            End If
+        End Function
+
+        ''' <summary>
+        ''' Bulk verify learners by ID numbers
+        ''' Maximum 500 IDs per request
+        ''' </summary>
+        <Route("verify-learners-batch")>
+        <HttpPost>
+        Public Function VerifyLearnersBatch(request As BulkLearnerVerificationRequest) As IHttpActionResult
+            ' Validate request
+            If request Is Nothing OrElse request.IdNumbers Is Nothing OrElse request.IdNumbers.Count = 0 Then
+                Return Content(HttpStatusCode.BadRequest,
+                    ApiResponse(Of BulkLearnerVerificationResponse).ErrorResponse("INVALID_REQUEST", "At least one ID number is required"))
+            End If
+
+            ' Enforce maximum batch size
+            Const MAX_BATCH_SIZE As Integer = 500
+            If request.IdNumbers.Count > MAX_BATCH_SIZE Then
+                Return Content(HttpStatusCode.BadRequest,
+                    ApiResponse(Of BulkLearnerVerificationResponse).ErrorResponse("BATCH_TOO_LARGE",
+                        $"Maximum {MAX_BATCH_SIZE} IDs per batch. You sent {request.IdNumbers.Count}."))
+            End If
+
+            ' Get SETA context
+            Dim apiKeySetaId = CInt(Me.Request.Properties("SetaId"))
+            Dim searchSetaId = If(request.SetaId > 0, request.SetaId, apiKeySetaId)
+
+            ' Validate SETA access if specific SETA requested
+            If request.SetaId > 0 AndAlso request.SetaId <> apiKeySetaId Then
+                Return Content(HttpStatusCode.Forbidden,
+                    ApiResponse(Of BulkLearnerVerificationResponse).ErrorResponse("ACCESS_DENIED", "Cannot access other SETA's learners"))
+            End If
+
+            ' Log audit entry
+            Dim setaCode = Me.Request.Properties("SetaCode").ToString()
+            AuditLogService.LogAsync(apiKeySetaId, AuditLogService.ACTION_VERIFY, "LearnerVerificationLog",
+                                     details:=$"Bulk learner verification: {request.IdNumbers.Count} IDs",
+                                     userId:=setaCode, ipAddress:=GetClientIp())
+
+            Dim sw = System.Diagnostics.Stopwatch.StartNew()
+            Dim results As New List(Of BulkLearnerVerificationResult)
+            Dim foundCount As Integer = 0
+            Dim notFoundCount As Integer = 0
+
+            For Each idNumber As String In request.IdNumbers
+                Dim result As New BulkLearnerVerificationResult With {
+                    .IdNumber = MaskIdForResponse(idNumber)
+                }
+
+                Try
+                    ' Clean ID number
+                    Dim cleanId = idNumber.Replace(" ", "").Replace("-", "")
+
+                    ' Search for learner
+                    Dim learner = FindLearnerByIdNumber(cleanId, searchSetaId)
+
+                    If learner IsNot Nothing Then
+                        result.Found = True
+                        result.LearnerId = learner.LearnerId
+                        result.FirstName = learner.FirstName
+                        result.Surname = learner.Surname
+                        result.Status = learner.Status
+                        result.RegisteredSetaCode = learner.RegisteredSetaCode
+                        result.Message = "Learner found"
+                        foundCount += 1
+                    Else
+                        result.Found = False
+                        result.Message = "Learner not found"
+                        notFoundCount += 1
+                    End If
+
+                Catch ex As Exception
+                    result.Found = False
+                    result.Message = "Verification error: " & ex.Message
+                    notFoundCount += 1
+                End Try
+
+                results.Add(result)
+            Next
+
+            sw.Stop()
+
+            Dim response As New BulkLearnerVerificationResponse With {
+                .TotalProcessed = request.IdNumbers.Count,
+                .FoundCount = foundCount,
+                .NotFoundCount = notFoundCount,
+                .Results = results,
+                .ProcessingTimeMs = sw.ElapsedMilliseconds
+            }
+
+            Return Ok(ApiResponse(Of BulkLearnerVerificationResponse).SuccessResponse(response))
+        End Function
+
+        ''' <summary>
         ''' Mask ID number for response (privacy)
         ''' </summary>
         Private Function MaskIdForResponse(idNumber As String) As String
@@ -444,9 +627,17 @@ Namespace SETA.API.Controllers
         End Function
 
         ''' <summary>
-        ''' Log verification attempt
+        ''' Log verification attempt with detailed information
         ''' </summary>
-        Private Sub LogVerification(setaId As Integer, idNumber As String, status As String, message As String, Optional durationMs As Double = 0)
+        Private Sub LogVerification(setaId As Integer, idNumber As String, status As String, message As String,
+                                    Optional formatValid As Boolean = False,
+                                    Optional luhnValid As Boolean = False,
+                                    Optional dhaVerified As Boolean = False,
+                                    Optional duplicateFound As Boolean = False,
+                                    Optional conflictingSetaId As Integer? = Nothing,
+                                    Optional firstName As String = Nothing,
+                                    Optional surname As String = Nothing,
+                                    Optional durationMs As Double = 0)
             ' Record telemetry metrics
             Dim setaCode = If(Me.Request.Properties.ContainsKey("SetaCode"), Me.Request.Properties("SetaCode").ToString(), "UNKNOWN")
             TelemetryService.Instance.RecordVerification(status, setaCode, durationMs)
@@ -459,14 +650,32 @@ Namespace SETA.API.Controllers
                     conn.Open()
 
                     Dim sql As String = "
-                        INSERT INTO VerificationLog (RequestingSETAID, IDNumberHash, Status, Message, VerifiedAt)
-                        VALUES (@SETAID, @IDHash, @Status, @Message, GETDATE())"
+                        INSERT INTO VerificationLog (
+                            RequestingSETAID, IDNumber, FirstName, Surname, Status, StatusReason,
+                            FormatValid, LuhnValid, DHAVerified, DuplicateFound, ConflictingSETAID,
+                            VerifiedBy, Message, IDNumberHash, VerifiedAt
+                        )
+                        VALUES (
+                            @SETAID, @IDNumber, @FirstName, @Surname, @Status, @StatusReason,
+                            @FormatValid, @LuhnValid, @DHAVerified, @DuplicateFound, @ConflictingSETAID,
+                            @VerifiedBy, @Message, @IDHash, GETDATE()
+                        )"
 
                     Using cmd As New SqlCommand(sql, conn)
                         cmd.Parameters.AddWithValue("@SETAID", setaId)
-                        cmd.Parameters.AddWithValue("@IDHash", idHash)
+                        cmd.Parameters.AddWithValue("@IDNumber", idNumber)
+                        cmd.Parameters.AddWithValue("@FirstName", If(String.IsNullOrEmpty(firstName), DBNull.Value, firstName))
+                        cmd.Parameters.AddWithValue("@Surname", If(String.IsNullOrEmpty(surname), DBNull.Value, surname))
                         cmd.Parameters.AddWithValue("@Status", status)
-                        cmd.Parameters.AddWithValue("@Message", message)
+                        cmd.Parameters.AddWithValue("@StatusReason", If(String.IsNullOrEmpty(message), DBNull.Value, message))
+                        cmd.Parameters.AddWithValue("@FormatValid", formatValid)
+                        cmd.Parameters.AddWithValue("@LuhnValid", luhnValid)
+                        cmd.Parameters.AddWithValue("@DHAVerified", dhaVerified)
+                        cmd.Parameters.AddWithValue("@DuplicateFound", duplicateFound)
+                        cmd.Parameters.AddWithValue("@ConflictingSETAID", If(conflictingSetaId.HasValue, conflictingSetaId.Value, DBNull.Value))
+                        cmd.Parameters.AddWithValue("@VerifiedBy", setaCode)
+                        cmd.Parameters.AddWithValue("@Message", If(String.IsNullOrEmpty(message), DBNull.Value, message))
+                        cmd.Parameters.AddWithValue("@IDHash", idHash)
                         cmd.ExecuteNonQuery()
                     End Using
                 End Using
@@ -486,7 +695,7 @@ Namespace SETA.API.Controllers
                 conn.Open()
 
                 Dim sql As String = "
-                    SELECT TOP (@Limit) LogID, Status, Message, VerifiedAt
+                    SELECT TOP (@Limit) VerificationID, Status, Message, VerifiedAt
                     FROM VerificationLog
                     WHERE RequestingSETAID = @SETAID
                     ORDER BY VerifiedAt DESC"
@@ -498,10 +707,10 @@ Namespace SETA.API.Controllers
                     Using reader As SqlDataReader = cmd.ExecuteReader()
                         While reader.Read()
                             results.Add(New With {
-                                .LogId = reader.GetInt64(0),
-                                .Status = reader.GetString(1),
-                                .Message = reader.GetString(2),
-                                .VerifiedAt = reader.GetDateTime(3)
+                                .LogId = reader.GetInt32(0),
+                                .Status = If(reader.IsDBNull(1), "", reader.GetString(1)),
+                                .Message = If(reader.IsDBNull(2), "", reader.GetString(2)),
+                                .VerifiedAt = If(reader.IsDBNull(3), DateTime.MinValue, reader.GetDateTime(3))
                             })
                         End While
                     End Using
@@ -531,6 +740,71 @@ Namespace SETA.API.Controllers
             Next
             Return True
         End Function
+
+        ''' <summary>
+        ''' Find learner by ID number in LearnerRegistry
+        ''' </summary>
+        Private Function FindLearnerByIdNumber(idNumber As String, setaId As Integer) As LearnerVerificationInfo
+            Dim connectionString As String = ConfigurationManager.ConnectionStrings("SETAConnection").ConnectionString
+            Dim idHash = ComputeSha256Hash(idNumber)
+
+            Using conn As New SqlConnection(connectionString)
+                conn.Open()
+
+                Dim sql As String = "
+                    SELECT l.LearnerID, l.IDNumber, l.FirstName, l.Surname, l.LearnershipCode,
+                           l.LearnershipName, l.ProvinceCode, l.RegistrationDate, l.Status,
+                           l.RegisteredSETAID, s.SETACode, s.SETAName
+                    FROM LearnerRegistry l
+                    INNER JOIN SETAs s ON l.RegisteredSETAID = s.SETAID
+                    WHERE l.IDNumberHash = @IDHash
+                      AND l.RegisteredSETAID = @SETAID"
+
+                Using cmd As New SqlCommand(sql, conn)
+                    cmd.Parameters.AddWithValue("@IDHash", idHash)
+                    cmd.Parameters.AddWithValue("@SETAID", setaId)
+
+                    Using reader As SqlDataReader = cmd.ExecuteReader()
+                        If reader.Read() Then
+                            Return New LearnerVerificationInfo With {
+                                .LearnerId = reader.GetInt32(0),
+                                .IdNumberMasked = MaskIdForResponse(If(reader.IsDBNull(1), "", reader.GetString(1))),
+                                .FirstName = If(reader.IsDBNull(2), "", reader.GetString(2)),
+                                .Surname = If(reader.IsDBNull(3), "", reader.GetString(3)),
+                                .LearnershipCode = If(reader.IsDBNull(4), "", reader.GetString(4)),
+                                .ProgrammeName = If(reader.IsDBNull(5), "", reader.GetString(5)),
+                                .Province = If(reader.IsDBNull(6), "", reader.GetString(6)),
+                                .RegistrationDate = If(reader.IsDBNull(7), Nothing, reader.GetDateTime(7)),
+                                .Status = If(reader.IsDBNull(8), "", reader.GetString(8)),
+                                .RegisteredSetaId = reader.GetInt32(9),
+                                .RegisteredSetaCode = If(reader.IsDBNull(10), "", reader.GetString(10)),
+                                .RegisteredSetaName = If(reader.IsDBNull(11), "", reader.GetString(11))
+                            }
+                        End If
+                    End Using
+                End Using
+            End Using
+
+            Return Nothing
+        End Function
+
+        ''' <summary>
+        ''' Internal class for learner verification info
+        ''' </summary>
+        Private Class LearnerVerificationInfo
+            Public Property LearnerId As Integer
+            Public Property IdNumberMasked As String
+            Public Property FirstName As String
+            Public Property Surname As String
+            Public Property LearnershipCode As String
+            Public Property ProgrammeName As String
+            Public Property Province As String
+            Public Property Status As String
+            Public Property RegistrationDate As DateTime?
+            Public Property RegisteredSetaId As Integer
+            Public Property RegisteredSetaCode As String
+            Public Property RegisteredSetaName As String
+        End Class
 
     End Class
 
