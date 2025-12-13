@@ -13,7 +13,9 @@ import {
   ActivityLog,
   VerificationHistoryResponse,
   RecentVerificationHistoryResponse,
-  VerificationHistoryItem
+  VerificationHistoryItem,
+  EnrollmentReportResponse,
+  EnrollmentReportItem
 } from '../../interfaces/dashboard.interface';
 
 @Injectable({
@@ -294,6 +296,69 @@ export class DashboardService {
           verifications: [],
           count: 0,
           setaId: this.setaId
+        });
+      })
+    );
+  }
+
+  /**
+   * Get enrollment report with pagination and filters
+   */
+  getEnrollmentReport(
+    page: number = 1,
+    pageSize: number = 50,
+    status?: string,
+    learnershipCode?: string,
+    enrollmentYear?: number,
+    startDate?: string,
+    endDate?: string
+  ): Observable<EnrollmentReportResponse> {
+    const params: any = { page, pageSize };
+    if (status) params.status = status;
+    if (learnershipCode) params.learnershipCode = learnershipCode;
+    if (enrollmentYear) params.enrollmentYear = enrollmentYear;
+    if (startDate) params.startDate = startDate;
+    if (endDate) params.endDate = endDate;
+
+    const queryString = new URLSearchParams(params).toString();
+    const url = `${this.baseUrl}/dashboard/enrollment-report/${this.setaId}?${queryString}`;
+
+    return this.http.get<any>(url, {
+      headers: this.getHeaders()
+    }).pipe(
+      map(response => {
+        const data = response.data || response;
+        return {
+          enrollments: (data.enrollments || []).map((e: any) => ({
+            learnerId: e.learnerId || 0,
+            idNumber: e.idNumber || '',
+            firstName: e.firstName || '',
+            surname: e.surname || '',
+            dateOfBirth: e.dateOfBirth ? new Date(e.dateOfBirth) : undefined,
+            gender: e.gender || '',
+            learnershipCode: e.learnershipCode || '',
+            learnershipName: e.learnershipName || '',
+            enrollmentYear: e.enrollmentYear,
+            province: e.province || '',
+            registrationDate: new Date(e.registrationDate),
+            status: e.status || '',
+            enrollmentId: e.enrollmentId || '',
+            createdBy: e.createdBy || ''
+          })),
+          page: data.page || page,
+          pageSize: data.pageSize || pageSize,
+          totalCount: data.totalCount || 0,
+          totalPages: data.totalPages || 0
+        };
+      }),
+      catchError(error => {
+        console.error('Error fetching enrollment report:', error);
+        return of({
+          enrollments: [],
+          page: 1,
+          pageSize: 50,
+          totalCount: 0,
+          totalPages: 0
         });
       })
     );

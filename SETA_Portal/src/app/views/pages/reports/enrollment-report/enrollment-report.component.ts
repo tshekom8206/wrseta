@@ -3,8 +3,9 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
 import { Subject, takeUntil } from 'rxjs';
-import { ApiService } from '../../../../core/services/api.service';
+import { DashboardService } from '../../../../core/services/dashboard.service';
 import { PageHeaderComponent } from '../../../../shared/components/page-header/page-header.component';
+import { EnrollmentReportItem } from '../../../../interfaces/dashboard.interface';
 
 interface EnrollmentReportData {
   period: string;
@@ -13,28 +14,6 @@ interface EnrollmentReportData {
   completedCount: number;
   withdrawnCount: number;
   uniqueLearners: number;
-}
-
-interface EnrollmentReportResponse {
-  stats: {
-    totalEnrollments: number;
-    activeCount: number;
-    completedCount: number;
-    withdrawnCount: number;
-    uniqueLearners: number;
-    completionRate: number;
-  };
-  breakdown: {
-    period: string;
-    totalEnrollments: number;
-    activeCount: number;
-    completedCount: number;
-    withdrawnCount: number;
-    uniqueLearners: number;
-  }[];
-  startDate: string;
-  endDate: string;
-  reportType: string;
 }
 
 @Component({
@@ -317,7 +296,7 @@ interface EnrollmentReportResponse {
 })
 export class EnrollmentReportComponent implements OnInit, OnDestroy {
   private readonly destroy$ = new Subject<void>();
-  private readonly api = inject(ApiService);
+  private readonly dashboardService = inject(DashboardService);
 
   reportType = 'weekly';
   startDate = '';
@@ -350,40 +329,19 @@ export class EnrollmentReportComponent implements OnInit, OnDestroy {
 
   generateReport(): void {
     this.loading = true;
+    this.reportGenerated = false;
 
-    const params: Record<string, string> = {
-      reportType: this.reportType
-    };
-    if (this.startDate) params['startDate'] = this.startDate;
-    if (this.endDate) params['endDate'] = this.endDate;
+    // Calculate date range based on report type
+    const { startDate, endDate } = this.calculateDateRange();
+    const startDateFormatted = this.formatDateForAPI(startDate);
+    const endDateFormatted = this.formatDateForAPI(endDate);
 
-    this.api.get<EnrollmentReportResponse>('reports/enrollment', params)
+    // Load enrollment data with date filtering
+    this.dashboardService.getEnrollmentReport(1, 1000, undefined, undefined, undefined, startDateFormatted, endDateFormatted)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
-          const data = response as unknown as EnrollmentReportResponse;
-
-          this.reportData = (data.breakdown || []).map(item => ({
-            period: item.period,
-            totalEnrollments: item.totalEnrollments,
-            activeCount: item.activeCount,
-            completedCount: item.completedCount,
-            withdrawnCount: item.withdrawnCount,
-            uniqueLearners: item.uniqueLearners
-          }));
-
-          if (data.stats) {
-            this.summary = {
-              period: 'Total',
-              totalEnrollments: data.stats.totalEnrollments,
-              activeCount: data.stats.activeCount,
-              completedCount: data.stats.completedCount,
-              withdrawnCount: data.stats.withdrawnCount,
-              uniqueLearners: data.stats.uniqueLearners
-            };
-          }
-
-          this.reportGenerated = true;
+          this.processReportData(response.enrollments, startDate, endDate);
           this.loading = false;
         },
         error: (error) => {
@@ -394,6 +352,150 @@ export class EnrollmentReportComponent implements OnInit, OnDestroy {
       });
   }
 
+  private calculateDateRange(): { startDate: Date; endDate: Date } {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const endDate = this.endDate ? new Date(this.endDate) : today;
+    endDate.setHours(23, 59, 59, 999);
+
+    let startDate: Date;
+
+    if (this.startDate) {
+      startDate = new Date(this.startDate);
+      startDate.setHours(0, 0, 0, 0);
+    } else {
+      // Calculate based on report type
+      startDate = new Date(today);
+      switch (this.reportType) {
+        case 'daily':
+          startDate = new Date(today);
+          break;
+        case 'weekly':
+          startDate.setDate(today.getDate() - 7);
+          break;
+        case 'monthly':
+          startDate.setMonth(today.getMonth() - 1);
+          break;
+        default:
+          startDate = new Date(today);
+      }
+      startDate.setHours(0, 0, 0, 0);
+    }
+
+    return { startDate, endDate };
+  }
+
+  private processReportData(allEnrollments: EnrollmentReportItem[], startDate: Date, endDate: Date): void {
+    // Filter to date range (API should have already filtered, but double-check)
+    const filteredEnrollments = allEnrollments.filter(e => {
+      if (!e.registrationDate) return false;
+      const regDate = new Date(e.registrationDate);
+      return regDate >= startDate && regDate <= endDate;
+    });
+
+    // Group enrollments by period based on report type
+    const grouped: Map<string, EnrollmentReportItem[]> = new Map();
+
+    filteredEnrollments.forEach(enrollment => {
+      const regDate = new Date(enrollment.registrationDate);
+      let periodKey: string;
+
+      switch (this.reportType) {
+        case 'daily':
+          periodKey = regDate.toLocaleDateString('en-ZA', { day: '2-digit', month: 'short', year: 'numeric' });
+          break;
+        case 'weekly':
+          const weekStart = new Date(regDate);
+          weekStart.setDate(regDate.getDate() - regDate.getDay()); // Start of week (Sunday)
+          periodKey = `Week of ${weekStart.toLocaleDateString('en-ZA', { day: '2-digit', month: 'short', year: 'numeric' })}`;
+          break;
+        case 'monthly':
+          periodKey = regDate.toLocaleDateString('en-ZA', { month: 'long', year: 'numeric' });
+          break;
+        default:
+          periodKey = regDate.toLocaleDateString('en-ZA', { day: '2-digit', month: 'short', year: 'numeric' });
+      }
+
+      if (!grouped.has(periodKey)) {
+        grouped.set(periodKey, []);
+      }
+      grouped.get(periodKey)!.push(enrollment);
+    });
+
+    // Convert to report data format
+    this.reportData = Array.from(grouped.entries()).map(([period, periodEnrollments]) => {
+      const total = periodEnrollments.length;
+      const active = periodEnrollments.filter(e => e.status === 'Active').length;
+      const completed = periodEnrollments.filter(e => e.status === 'Completed').length;
+      const withdrawn = periodEnrollments.filter(e => e.status === 'Withdrawn').length;
+      const uniqueLearners = new Set(periodEnrollments.map(e => e.idNumber)).size;
+
+      return {
+        period,
+        totalEnrollments: total,
+        activeCount: active,
+        completedCount: completed,
+        withdrawnCount: withdrawn,
+        uniqueLearners: uniqueLearners
+      };
+    }).sort((a, b) => {
+      // Sort by period - try to parse as date, otherwise string compare
+      const dateA = this.parsePeriodToDate(a.period);
+      const dateB = this.parsePeriodToDate(b.period);
+      if (dateA && dateB) {
+        return dateA.getTime() - dateB.getTime();
+      }
+      return a.period.localeCompare(b.period);
+    });
+
+    // Calculate summary from all filtered enrollments
+    const uniqueLearners = new Set(filteredEnrollments.map(e => e.idNumber)).size;
+
+    this.summary = {
+      period: 'Total',
+      totalEnrollments: filteredEnrollments.length,
+      activeCount: filteredEnrollments.filter(e => e.status === 'Active').length,
+      completedCount: filteredEnrollments.filter(e => e.status === 'Completed').length,
+      withdrawnCount: filteredEnrollments.filter(e => e.status === 'Withdrawn').length,
+      uniqueLearners: uniqueLearners
+    };
+
+    this.reportGenerated = true;
+    this.loading = false;
+  }
+
+  private formatDateForAPI(date: Date): string {
+    if (!date) return '';
+    return date.toISOString().split('T')[0]; // Returns YYYY-MM-DD
+  }
+
+  private parsePeriodToDate(period: string): Date | null {
+    // Try to parse different period formats
+    try {
+      // Try standard date format first
+      const date = new Date(period);
+      if (!isNaN(date.getTime())) return date;
+
+      // Try "Week of DD MMM" format
+      if (period.startsWith('Week of ')) {
+        const weekDateStr = period.replace('Week of ', '');
+        const date = new Date(weekDateStr);
+        if (!isNaN(date.getTime())) return date;
+      }
+
+      // Try "Month Year" format (e.g., "December 2025")
+      const monthYearMatch = period.match(/(\w+)\s+(\d{4})/);
+      if (monthYearMatch) {
+        const date = new Date(period);
+        if (!isNaN(date.getTime())) return date;
+      }
+
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
   getCompletionRate(): number {
     if (this.summary.totalEnrollments === 0) return 0;
     return (this.summary.completedCount / this.summary.totalEnrollments) * 100;
@@ -402,8 +504,8 @@ export class EnrollmentReportComponent implements OnInit, OnDestroy {
   getPercentage(status: 'active' | 'completed' | 'withdrawn'): number {
     if (this.summary.totalEnrollments === 0) return 0;
     const count = status === 'active' ? this.summary.activeCount :
-                  status === 'completed' ? this.summary.completedCount :
-                  this.summary.withdrawnCount;
+      status === 'completed' ? this.summary.completedCount :
+        this.summary.withdrawnCount;
     return (count / this.summary.totalEnrollments) * 100;
   }
 

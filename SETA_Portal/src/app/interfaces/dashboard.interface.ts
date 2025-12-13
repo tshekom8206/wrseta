@@ -80,3 +80,28 @@ export interface RecentVerificationHistoryResponse {
   count: number;
   setaId: number;
 }
+
+export interface EnrollmentReportItem {
+  learnerId: number;
+  idNumber: string;
+  firstName?: string;
+  surname?: string;
+  dateOfBirth?: Date;
+  gender?: string;
+  learnershipCode?: string;
+  learnershipName?: string;
+  enrollmentYear?: number;
+  province?: string;
+  registrationDate: Date;
+  status: string;
+  enrollmentId?: string;
+  createdBy?: string;
+}
+
+export interface EnrollmentReportResponse {
+  enrollments: EnrollmentReportItem[];
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
+}

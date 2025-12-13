@@ -686,6 +686,194 @@
         }
       }
     },
+    "/api/dashboard/enrollment-report/{setaId}": {
+      "get": {
+        "tags": [
+          "Dashboard"
+        ],
+        "summary": "Get Enrollment Report",
+        "description": "Returns paginated enrollment/registration data for a specific SETA with optional filters.",
+        "operationId": "getEnrollmentReport",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "setaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "SETA ID"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1,
+              "minimum": 1
+            },
+            "description": "Page number (default: 1)"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "minimum": 1,
+              "maximum": 100
+            },
+            "description": "Number of records per page (default: 50, max: 100)"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by enrollment status (e.g., 'Active', 'Completed', 'Withdrawn')"
+          },
+          {
+            "name": "learnershipCode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by learnership code"
+          },
+          {
+            "name": "enrollmentYear",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Filter by enrollment year"
+          },
+          {
+            "name": "startDate",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Filter by registration date start (YYYY-MM-DD)"
+          },
+          {
+            "name": "endDate",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Filter by registration date end (YYYY-MM-DD)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Enrollment report data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "enrollments": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "learnerId": {
+                                "type": "integer"
+                              },
+                              "idNumber": {
+                                "type": "string",
+                                "description": "Masked ID number for privacy"
+                              },
+                              "firstName": {
+                                "type": "string"
+                              },
+                              "surname": {
+                                "type": "string"
+                              },
+                              "dateOfBirth": {
+                                "type": "string",
+                                "format": "date",
+                                "nullable": true
+                              },
+                              "gender": {
+                                "type": "string"
+                              },
+                              "learnershipCode": {
+                                "type": "string"
+                              },
+                              "learnershipName": {
+                                "type": "string"
+                              },
+                              "enrollmentYear": {
+                                "type": "integer",
+                                "nullable": true
+                              },
+                              "province": {
+                                "type": "string"
+                              },
+                              "registrationDate": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "status": {
+                                "type": "string"
+                              },
+                              "enrollmentId": {
+                                "type": "string"
+                              },
+                              "createdBy": {
+                                "type": "string"
+                              }
+                            }
+                          }
+                        },
+                        "page": {
+                          "type": "integer"
+                        },
+                        "pageSize": {
+                          "type": "integer"
+                        },
+                        "totalCount": {
+                          "type": "integer"
+                        },
+                        "totalPages": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Access denied - cannot access other SETA's data"
+          }
+        }
+      }
+    },
     "/api/setas": {
       "get": {
         "tags": [

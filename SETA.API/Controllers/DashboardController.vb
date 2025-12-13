@@ -136,6 +136,34 @@ Namespace SETA.API.Controllers
         End Function
 
         ''' <summary>
+        ''' Get enrollment report with pagination and optional filters
+        ''' </summary>
+        <Route("enrollment-report/{setaId:int}")>
+        <HttpGet>
+        Public Function GetEnrollmentReport(setaId As Integer,
+                                           Optional page As Integer = 1,
+                                           Optional pageSize As Integer = 50,
+                                           Optional status As String = Nothing,
+                                           Optional learnershipCode As String = Nothing,
+                                           Optional enrollmentYear As Integer = 0,
+                                           Optional startDate As String = Nothing,
+                                           Optional endDate As String = Nothing) As IHttpActionResult
+            ' Validate SETA access
+            Dim apiKeySetaId = CInt(Me.Request.Properties("SetaId"))
+            If apiKeySetaId <> setaId Then
+                Return Content(HttpStatusCode.Forbidden,
+                    ApiResponse(Of Object).ErrorResponse("ACCESS_DENIED", "Cannot access other SETA's data"))
+            End If
+
+            ' Validate pagination
+            If page < 1 Then page = 1
+            If pageSize < 1 OrElse pageSize > 100 Then pageSize = 50
+
+            Dim report = GetEnrollmentReportFromDB(setaId, page, pageSize, status, learnershipCode, enrollmentYear, startDate, endDate)
+            Return Ok(ApiResponse(Of Object).SuccessResponse(report))
+        End Function
+
+        ''' <summary>
         ''' Get dashboard statistics from database
         ''' </summary>
         Private Function GetDashboardStatsFromDB(setaId As Integer) As DashboardStats
@@ -546,6 +574,144 @@ Namespace SETA.API.Controllers
             End Using
 
             Return recentList
+        End Function
+
+        ''' <summary>
+        ''' Get enrollment report from database with pagination and filters
+        ''' </summary>
+        Private Function GetEnrollmentReportFromDB(setaId As Integer, page As Integer, pageSize As Integer,
+                                                    Optional status As String = Nothing,
+                                                    Optional learnershipCode As String = Nothing,
+                                                    Optional enrollmentYear As Integer = 0,
+                                                    Optional startDate As String = Nothing,
+                                                    Optional endDate As String = Nothing) As Object
+            Dim enrollmentList As New List(Of Object)
+            Dim connectionString As String = ConfigurationManager.ConnectionStrings("SETAConnection").ConnectionString
+            Dim offset = (page - 1) * pageSize
+            Dim totalCount As Integer = 0
+
+            Using conn As New SqlConnection(connectionString)
+                conn.Open()
+
+                ' Build WHERE clause
+                Dim whereConditions As New List(Of String) From {"RegisteredSETAID = @SETAID"}
+
+                If Not String.IsNullOrWhiteSpace(status) Then
+                    whereConditions.Add("Status = @Status")
+                End If
+
+                If Not String.IsNullOrWhiteSpace(learnershipCode) Then
+                    whereConditions.Add("LearnershipCode = @LearnershipCode")
+                End If
+
+                If enrollmentYear > 0 Then
+                    whereConditions.Add("EnrollmentYear = @EnrollmentYear")
+                End If
+
+                If Not String.IsNullOrWhiteSpace(startDate) Then
+                    whereConditions.Add("CAST(RegistrationDate AS DATE) >= CAST(@StartDate AS DATE)")
+                End If
+
+                If Not String.IsNullOrWhiteSpace(endDate) Then
+                    whereConditions.Add("CAST(RegistrationDate AS DATE) <= CAST(@EndDate AS DATE)")
+                End If
+
+                Dim whereClause = String.Join(" AND ", whereConditions)
+
+                ' Get total count
+                Dim countSQL As String = $"SELECT COUNT(*) FROM LearnerRegistry WHERE {whereClause}"
+                Using countCmd As New SqlCommand(countSQL, conn)
+                    countCmd.Parameters.AddWithValue("@SETAID", setaId)
+                    If Not String.IsNullOrWhiteSpace(status) Then
+                        countCmd.Parameters.AddWithValue("@Status", status)
+                    End If
+                    If Not String.IsNullOrWhiteSpace(learnershipCode) Then
+                        countCmd.Parameters.AddWithValue("@LearnershipCode", learnershipCode)
+                    End If
+                    If enrollmentYear > 0 Then
+                        countCmd.Parameters.AddWithValue("@EnrollmentYear", enrollmentYear)
+                    End If
+                    If Not String.IsNullOrWhiteSpace(startDate) Then
+                        countCmd.Parameters.AddWithValue("@StartDate", startDate)
+                    End If
+                    If Not String.IsNullOrWhiteSpace(endDate) Then
+                        countCmd.Parameters.AddWithValue("@EndDate", endDate)
+                    End If
+                    totalCount = CInt(countCmd.ExecuteScalar())
+                End Using
+
+                ' Get paginated results
+                Dim sql As String = $"
+                    SELECT
+                        LearnerID,
+                        IDNumber,
+                        FirstName,
+                        Surname,
+                        DateOfBirth,
+                        Gender,
+                        LearnershipCode,
+                        LearnershipName,
+                        EnrollmentYear,
+                        ProvinceCode,
+                        RegistrationDate,
+                        Status,
+                        EnrollmentID,
+                        CreatedBy
+                    FROM LearnerRegistry
+                    WHERE {whereClause}
+                    ORDER BY RegistrationDate DESC
+                    OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY"
+
+                Using cmd As New SqlCommand(sql, conn)
+                    cmd.Parameters.AddWithValue("@SETAID", setaId)
+                    cmd.Parameters.AddWithValue("@Offset", offset)
+                    cmd.Parameters.AddWithValue("@PageSize", pageSize)
+                    If Not String.IsNullOrWhiteSpace(status) Then
+                        cmd.Parameters.AddWithValue("@Status", status)
+                    End If
+                    If Not String.IsNullOrWhiteSpace(learnershipCode) Then
+                        cmd.Parameters.AddWithValue("@LearnershipCode", learnershipCode)
+                    End If
+                    If enrollmentYear > 0 Then
+                        cmd.Parameters.AddWithValue("@EnrollmentYear", enrollmentYear)
+                    End If
+                    If Not String.IsNullOrWhiteSpace(startDate) Then
+                        cmd.Parameters.AddWithValue("@StartDate", startDate)
+                    End If
+                    If Not String.IsNullOrWhiteSpace(endDate) Then
+                        cmd.Parameters.AddWithValue("@EndDate", endDate)
+                    End If
+
+                    Using reader As SqlDataReader = cmd.ExecuteReader()
+                        While reader.Read()
+                            enrollmentList.Add(New With {
+                                .learnerId = reader.GetInt32(0),
+                                .idNumber = If(reader.IsDBNull(1), "", MaskIdNumber(reader.GetString(1))),
+                                .firstName = If(reader.IsDBNull(2), "", reader.GetString(2)),
+                                .surname = If(reader.IsDBNull(3), "", reader.GetString(3)),
+                                .dateOfBirth = If(reader.IsDBNull(4), Nothing, CType(reader.GetDateTime(4), DateTime?)),
+                                .gender = If(reader.IsDBNull(5), "", reader.GetString(5)),
+                                .learnershipCode = If(reader.IsDBNull(6), "", reader.GetString(6)),
+                                .learnershipName = If(reader.IsDBNull(7), "", reader.GetString(7)),
+                                .enrollmentYear = If(reader.IsDBNull(8), Nothing, CType(reader.GetInt32(8), Integer?)),
+                                .province = If(reader.IsDBNull(9), "", reader.GetString(9)),
+                                .registrationDate = If(reader.IsDBNull(10), DateTime.MinValue, reader.GetDateTime(10)),
+                                .status = If(reader.IsDBNull(11), "", reader.GetString(11)),
+                                .enrollmentId = If(reader.IsDBNull(12), "", reader.GetString(12)),
+                                .createdBy = If(reader.IsDBNull(13), "", reader.GetString(13))
+                            })
+                        End While
+                    End Using
+                End Using
+            End Using
+
+            Return New With {
+                .enrollments = enrollmentList,
+                .page = page,
+                .pageSize = pageSize,
+                .totalCount = totalCount,
+                .totalPages = CInt(Math.Ceiling(totalCount / CDbl(pageSize)))
+            }
         End Function
 
         ''' <summary>
