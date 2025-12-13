@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
 import { NgbModalModule, NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { Subject } from 'rxjs';
+import { PageHeaderComponent } from '../../../../shared/components/page-header/page-header.component';
 
 interface Certificate {
   id: number;
@@ -25,14 +26,13 @@ interface Certificate {
 @Component({
   selector: 'app-my-certificates',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslateModule, NgbModalModule],
+  imports: [CommonModule, FormsModule, TranslateModule, NgbModalModule, PageHeaderComponent],
   template: `
-    <div class="page-header d-flex justify-content-between align-items-center">
-      <div>
-        <h1 class="page-title">{{ 'nav.myCertificates' | translate }}</h1>
-        <p class="page-subtitle">View and download your earned certificates</p>
-      </div>
-    </div>
+    <app-page-header
+      titleKey="nav.myCertificates"
+      subtitle="View and download your earned certificates"
+      icon="award"
+    ></app-page-header>
 
     <!-- Stats Cards -->
     <div class="row mb-4">

@@ -34,7 +34,7 @@ export class PdfExportService {
   private readonly storage = inject(StorageService);
 
   // WRSETA Brand Colors
-  private readonly primaryColor: [number, number, number] = [0, 51, 102]; // #003366
+  private readonly primaryColor: [number, number, number] = [0, 133, 80]; // #008550
   private readonly secondaryColor: [number, number, number] = [0, 102, 51]; // #006633
   private readonly accentColor: [number, number, number] = [218, 165, 32]; // #DAA520
 

@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { TranslateModule } from '@ngx-translate/core';
 import { Subject } from 'rxjs';
 import { AuthService } from '../../../../core/auth/auth.service';
+import { PageHeaderComponent } from '../../../../shared/components/page-header/page-header.component';
 
 interface LearnerProfile {
   idNumber: string;
@@ -55,12 +56,13 @@ interface TimelineEvent {
 @Component({
   selector: 'app-my-status',
   standalone: true,
-  imports: [CommonModule, TranslateModule],
+  imports: [CommonModule, TranslateModule, PageHeaderComponent],
   template: `
-    <div class="page-header">
-      <h1 class="page-title">{{ 'nav.myStatus' | translate }}</h1>
-      <p class="page-subtitle">View your enrollment status and progress</p>
-    </div>
+    <app-page-header
+      titleKey="nav.myStatus"
+      subtitle="View your enrollment status and progress"
+      icon="info"
+    ></app-page-header>
 
     <div class="row" *ngIf="!loading; else loadingTemplate">
       <!-- Welcome Card -->

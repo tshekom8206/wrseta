@@ -21,14 +21,13 @@ import {
   imports: [CommonModule, FormsModule, RouterLink, TranslateModule, PageHeaderComponent],
   template: `
     <div class="learner-list">
-      <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
-        <app-page-header
-          titleKey="learner.list"
-          subtitleKey="learner.subtitle"
-          icon="list"
-        ></app-page-header>
+      <app-page-header
+        titleKey="learner.list"
+        subtitleKey="learner.subtitle"
+        icon="list"
+      >
         <a routerLink="/learners/enroll" class="btn btn-primary">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="me-2">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="me-2">
             <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
             <circle cx="8.5" cy="7" r="4"></circle>
             <line x1="20" y1="8" x2="20" y2="14"></line>
@@ -36,7 +35,7 @@ import {
           </svg>
           {{ 'learner.enroll' | translate }}
         </a>
-      </div>
+      </app-page-header>
 
       <!-- Stats Cards -->
       <div class="row g-3 mb-4">
@@ -391,36 +390,68 @@ import {
     .stat-card {
       display: flex;
       align-items: center;
-      padding: 1.25rem;
+      padding: 1rem 1.25rem;
       border-radius: 0.5rem;
       background: var(--bs-white);
       border: 1px solid var(--bs-border-color);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     }
 
     .stat-icon {
-      width: 48px;
-      height: 48px;
+      width: 40px;
+      height: 40px;
       border-radius: 0.5rem;
       display: flex;
       align-items: center;
       justify-content: center;
       margin-right: 1rem;
+      flex-shrink: 0;
     }
 
-    .stat-card-primary .stat-icon { background: rgba(var(--bs-primary-rgb), 0.1); color: var(--bs-primary); }
-    .stat-card-success .stat-icon { background: rgba(25, 135, 84, 0.1); color: #198754; }
-    .stat-card-info .stat-icon { background: rgba(13, 202, 240, 0.1); color: #0dcaf0; }
-    .stat-card-warning .stat-icon { background: rgba(255, 193, 7, 0.1); color: #ffc107; }
+    .stat-icon svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    .stat-card-primary .stat-icon { 
+      background: rgba(0, 133, 80, 0.1);
+      color: #008550;
+    }
+    .stat-card-success .stat-icon { 
+      background: rgba(25, 135, 84, 0.1);
+      color: #198754;
+    }
+    .stat-card-info .stat-icon { 
+      background: rgba(13, 202, 240, 0.1);
+      color: #0dcaf0;
+    }
+    .stat-card-warning .stat-icon { 
+      background: rgba(255, 193, 7, 0.1);
+      color: #ffc107;
+    }
+
+    .stat-content {
+      flex: 1;
+      min-width: 0;
+    }
 
     .stat-value {
-      font-size: 1.5rem;
+      font-size: 1.375rem;
       font-weight: 700;
       line-height: 1.2;
+      margin-bottom: 0.25rem;
     }
 
     .stat-label {
-      font-size: 0.875rem;
+      font-size: 0.8125rem;
       color: var(--bs-secondary);
+      font-weight: 500;
     }
 
     .card {

@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
 import { Subject, takeUntil } from 'rxjs';
 import { ApiService } from '../../../../core/services/api.service';
+import { PageHeaderComponent } from '../../../../shared/components/page-header/page-header.component';
 
 interface AuditLogEntry {
   id: number;
@@ -44,23 +45,23 @@ interface AuditReportApiResponse {
 @Component({
   selector: 'app-audit-log',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslateModule],
+  imports: [CommonModule, FormsModule, TranslateModule, PageHeaderComponent],
   template: `
     <div class="audit-log">
-      <div class="page-header d-flex justify-content-between align-items-start flex-wrap gap-3">
-        <div>
-          <h1 class="page-title">{{ 'reports.auditLog' | translate }}</h1>
-          <p class="page-subtitle">{{ 'reports.auditLogSubtitle' | translate }}</p>
-        </div>
+      <app-page-header
+        titleKey="reports.auditLog"
+        subtitleKey="reports.auditLogSubtitle"
+        icon="activity"
+      >
         <button class="btn btn-outline-primary" (click)="exportLog()" [disabled]="logs.length === 0">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="me-2">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="me-2">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
             <polyline points="7 10 12 15 17 10"></polyline>
             <line x1="12" y1="15" x2="12" y2="3"></line>
           </svg>
           {{ 'common.export' | translate }}
         </button>
-      </div>
+      </app-page-header>
 
       <!-- Filters -->
       <div class="card mb-4">
@@ -298,7 +299,7 @@ interface AuditReportApiResponse {
     @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
     .card { border: none; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-    .card-header { background: transparent; border-bottom: 1px solid var(--bs-border-color); }
+    .card-header { background: transparent; border-bottom: none; }
     .card-title { font-size: 1rem; font-weight: 600; }
 
     .table th { font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--bs-secondary); }

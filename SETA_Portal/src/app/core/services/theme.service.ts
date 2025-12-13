@@ -35,9 +35,9 @@ export const SETA_THEMES: Record<string, SetaTheme> = {
     name: 'Wholesale & Retail SETA',
     logo: '/assets/images/logos/WRSETA_logo-2.png',
     colors: {
-      primary: '#003366',
-      primaryDark: '#002244',
-      primaryLight: '#004488',
+      primary: '#008550',
+      primaryDark: '#006640',
+      primaryLight: '#00a866',
       secondary: '#666666',
       secondaryDark: '#444444',
       accent: '#00a651',

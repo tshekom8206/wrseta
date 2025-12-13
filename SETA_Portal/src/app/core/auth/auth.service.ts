@@ -151,8 +151,8 @@ export class AuthService {
             name: data.setaName,
             logo: theme?.logo || `assets/images/setas/${credentials.setaCode.toLowerCase()}-logo.png`,
             colors: theme?.colors || {
-              primary: '#003366',
-              primaryDark: '#002244',
+              primary: '#008550',
+              primaryDark: '#006640',
               secondary: '#666666',
               accent: '#00a651'
             }
@@ -211,8 +211,8 @@ export class AuthService {
         name: this.themeService.getTheme(credentials.setaCode)?.name || credentials.setaCode,
         logo: `assets/images/setas/${credentials.setaCode.toLowerCase()}-logo.png`,
         colors: {
-          primary: '#003366',
-          primaryDark: '#002244',
+          primary: '#008550',
+          primaryDark: '#006640',
           secondary: '#666666',
           accent: '#00a651'
         }

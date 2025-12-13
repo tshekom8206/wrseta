@@ -84,7 +84,7 @@
   display: flex;
   align-items: center;
   padding: 0.75rem 1.25rem;
-  color: var(--sidebar-text);
+  color: #fff !important;
   text-decoration: none;
   transition: all var(--transition-fast);
   border-left: 3px solid transparent;
@@ -94,21 +94,42 @@
   text-align: left;
   cursor: pointer;
   font-size: 0.9375rem;
+  font-weight: 400;
+
+  svg {
+    stroke: #fff !important;
+    color: #fff !important;
+  }
 
   &:hover {
     background-color: var(--sidebar-hover);
-    color: #fff;
+    color: #fff !important;
+    
+    svg {
+      stroke: #fff !important;
+    }
   }
 
   &.active {
     background-color: var(--sidebar-hover);
     border-left-color: var(--seta-primary);
-    color: #fff;
+    color: #fff !important;
+    font-weight: 600;
+    
+    svg {
+      stroke: #fff !important;
+    }
   }
 
   &.nav-parent {
+    color: #fff;
+
     &.expanded {
       background-color: rgba(255, 255, 255, 0.05);
+    }
+
+    &.active {
+      font-weight: 600;
     }
   }
 
@@ -123,13 +144,28 @@
       height: 16px;
       margin-right: 0.75rem;
       flex-shrink: 0;
-      opacity: 0.7;
+      opacity: 1;
+      color: #fff !important;
       transition: opacity var(--transition-fast);
+
+      svg {
+        stroke: #fff !important;
+        color: #fff !important;
+      }
     }
 
     &:hover .nav-icon,
     &.active .nav-icon {
       opacity: 1;
+      color: #fff !important;
+      
+      svg {
+        stroke: #fff !important;
+      }
+    }
+
+    &.active {
+      font-weight: 600;
     }
   }
 }
@@ -139,11 +175,30 @@
   height: 18px;
   margin-right: 0.75rem;
   flex-shrink: 0;
-  opacity: 0.8;
+  opacity: 1;
+  color: #fff !important;
 
-  .nav-link:hover &,
+  svg {
+    stroke: #fff !important;
+    color: #fff !important;
+  }
+
+  .nav-link:hover & {
+    opacity: 1;
+    color: #fff !important;
+    
+    svg {
+      stroke: #fff !important;
+    }
+  }
+
   .nav-link.active & {
     opacity: 1;
+    color: #fff !important;
+    
+    svg {
+      stroke: #fff !important;
+    }
   }
 }
 
@@ -155,6 +210,13 @@
 .nav-arrow {
   margin-left: auto;
   transition: transform var(--transition-fast);
+  opacity: 1;
+  color: #fff !important;
+
+  svg {
+    stroke: #fff !important;
+    color: #fff !important;
+  }
 
   &.rotated {
     transform: rotate(180deg);

@@ -194,7 +194,7 @@ import { User } from '../../../../interfaces/user.interface';
     .status-date { font-size: 0.75rem; color: var(--bs-secondary); margin-top: 0.5rem; margin-bottom: 0; }
 
     .card { border: none; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-radius: 0.75rem; }
-    .card-header { background: transparent; border-bottom: 1px solid var(--bs-border-color); padding: 1rem 1.25rem; }
+    .card-header { background: transparent; border-bottom: none; padding: 1rem 1.25rem 1.5rem; }
     .card-title { font-size: 1rem; font-weight: 600; }
     .card-body { padding: 1.25rem; }
 

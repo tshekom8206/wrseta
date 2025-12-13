@@ -15,7 +15,9 @@ import {
 } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { VerificationTrend } from '../../../../interfaces/dashboard.interface';
+import { IconService } from '../../../../core/services/icon.service';
 
 // ApexCharts types
 declare const ApexCharts: any;
@@ -27,9 +29,26 @@ declare const ApexCharts: any;
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="card">
-      <div class="card-header d-flex justify-content-between align-items-center verification-trends-header">
-        <h5 class="card-title mb-0">{{ 'dashboard.verificationTrends' | translate }}</h5>
-        <div class="btn-group btn-group-sm" role="group" aria-label="Time period">
+      <div class="card-header verification-trends-header">
+        <div class="d-flex justify-content-between align-items-center">
+          <h5 class="card-title mb-0">
+            <span class="card-title__icon">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                [innerHTML]="getSafeIcon('bar-chart-2')"
+              ></svg>
+            </span>
+            {{ 'dashboard.verificationTrends' | translate }}
+          </h5>
+          <div class="btn-group btn-group-sm" role="group" aria-label="Time period">
           <button
             type="button"
             class="btn"
@@ -101,6 +120,26 @@ declare const ApexCharts: any;
     .card-title {
       font-size: 1rem;
       font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.625rem;
+
+      &__icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border-radius: 0.5rem;
+        background: rgba(0, 133, 80, 0.1);
+        color: var(--seta-primary, #008550);
+        flex-shrink: 0;
+
+        svg {
+          width: 18px;
+          height: 18px;
+        }
+      }
     }
 
     .chart-container {
@@ -126,6 +165,13 @@ declare const ApexCharts: any;
 export class VerificationChartComponent implements AfterViewInit, OnChanges, OnDestroy {
   private readonly platformId = inject(PLATFORM_ID);
   private readonly translate = inject(TranslateService);
+  private readonly iconService = inject(IconService);
+  private readonly sanitizer = inject(DomSanitizer);
+
+  getSafeIcon(iconName: string): SafeHtml {
+    const iconPath = this.iconService.getIconPath(iconName);
+    return this.sanitizer.bypassSecurityTrustHtml(iconPath);
+  }
 
   @ViewChild('chartContainer') chartContainer!: ElementRef<HTMLDivElement>;
 

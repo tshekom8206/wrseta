@@ -52,15 +52,14 @@ interface VerificationReportResponse {
   imports: [CommonModule, FormsModule, TranslateModule, PageHeaderComponent],
   template: `
     <div class="verification-report">
-      <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
-        <app-page-header
-          titleKey="reports.verificationReport"
-          subtitleKey="reports.verificationReportSubtitle"
-          icon="bar-chart-2"
-        ></app-page-header>
+      <app-page-header
+        titleKey="reports.verificationReport"
+        subtitleKey="reports.verificationReportSubtitle"
+        icon="bar-chart-2"
+      >
         <div class="d-flex gap-2">
           <button class="btn btn-outline-primary" (click)="exportReport('csv')" [disabled]="loading">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="me-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="me-2">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
               <polyline points="7 10 12 15 17 10"></polyline>
               <line x1="12" y1="15" x2="12" y2="3"></line>
@@ -68,14 +67,14 @@ interface VerificationReportResponse {
             CSV
           </button>
           <button class="btn btn-primary" (click)="exportReport('pdf')" [disabled]="loading">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="me-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="me-2">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
               <polyline points="14 2 14 8 20 8"></polyline>
             </svg>
             PDF
           </button>
         </div>
-      </div>
+      </app-page-header>
 
       <!-- Report Parameters -->
       <div class="card mb-4">
@@ -311,7 +310,7 @@ interface VerificationReportResponse {
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
     .card { border: none; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-    .card-header { background: transparent; border-bottom: 1px solid var(--bs-border-color); }
+    .card-header { background: transparent; border-bottom: none; }
     .card-title { font-size: 1rem; font-weight: 600; }
 
     .summary-card { display: flex; align-items: center; padding: 1.25rem; background: white; border-radius: 0.5rem; border: 1px solid var(--bs-border-color); }
@@ -404,7 +403,7 @@ export class VerificationReportComponent implements OnInit, OnDestroy {
           // Set summary from stats
           if (data.stats) {
             this.summary = {
-              period: 'Total',
+      period: 'Total',
               totalVerifications: data.stats.totalVerifications,
               greenCount: data.stats.greenCount,
               amberCount: data.stats.yellowCount,

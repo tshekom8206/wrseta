@@ -6,25 +6,26 @@ import { Subject, interval, takeUntil } from 'rxjs';
 
 import { BatchVerificationService, BatchJobStatus, BatchIdItem, RetryingItemInfo } from '../../../../core/services/batch-verification.service';
 import { NotificationService } from '../../../../core/services/notification.service';
+import { PageHeaderComponent } from '../../../../shared/components/page-header/page-header.component';
 
 @Component({
   selector: 'app-batch-queue',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslateModule],
+  imports: [CommonModule, FormsModule, TranslateModule, PageHeaderComponent],
   template: `
-    <div class="page-header d-flex justify-content-between align-items-center">
-      <div>
-        <h1 class="page-title">Batch Queue</h1>
-        <p class="page-subtitle">Monitor and manage batch verification jobs</p>
-      </div>
+    <app-page-header
+      title="Batch Queue"
+      subtitle="Monitor and manage batch verification jobs"
+      icon="layers"
+    >
       <button class="btn btn-primary" (click)="showSubmitModal = true">
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="me-2">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="me-2">
           <line x1="12" y1="5" x2="12" y2="19"></line>
           <line x1="5" y1="12" x2="19" y2="12"></line>
         </svg>
         New Batch
       </button>
-    </div>
+    </app-page-header>
 
     <!-- Stats Cards -->
     <div class="row g-3 mb-4">

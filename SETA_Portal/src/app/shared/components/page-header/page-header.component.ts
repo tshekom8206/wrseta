@@ -11,44 +11,51 @@ import { AuthService } from '../../../core/auth/auth.service';
   imports: [CommonModule, TranslateModule],
   template: `
     <div class="page-header">
-      <h1 class="page-title">
-        @if (icon) {
-          <span class="page-title__icon">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              [innerHTML]="getSafeIcon(icon)"
-            ></svg>
-          </span>
-        }
-        @if (titleKey) {
-          <span>{{ titleKey | translate }}</span>
-        } @else if (title) {
-          <span>{{ title }}</span>
-        }
-      </h1>
-      @if (subtitleKey || subtitle || showSetaName) {
-        <p class="page-subtitle">
-          @if (subtitleKey) {
-            <span>{{ subtitleKey | translate }}</span>
-          } @else if (subtitle) {
-            <span>{{ subtitle }}</span>
-          }
-          @if (showSetaName && currentUser) {
-            @if (subtitleKey || subtitle) {
-              <span class="subtitle-divider"></span>
+      <div class="page-header__content">
+        <div class="page-header__title-section">
+          <h1 class="page-title">
+            @if (icon) {
+              <span class="page-title__icon">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  [innerHTML]="getSafeIcon(icon)"
+                ></svg>
+              </span>
             }
-            <span>{{ currentUser.setaName }}</span>
+            @if (titleKey) {
+              <span>{{ titleKey | translate }}</span>
+            } @else if (title) {
+              <span>{{ title }}</span>
+            }
+          </h1>
+          @if (subtitleKey || subtitle || showSetaName) {
+            <p class="page-subtitle">
+              @if (subtitleKey) {
+                <span>{{ subtitleKey | translate }}</span>
+              } @else if (subtitle) {
+                <span>{{ subtitle }}</span>
+              }
+              @if (showSetaName && currentUser) {
+                @if (subtitleKey || subtitle) {
+                  <span class="subtitle-divider"></span>
+                }
+                <span>{{ currentUser.setaName }}</span>
+              }
+            </p>
           }
-        </p>
-      }
+        </div>
+        <div class="page-header__actions">
+          <ng-content></ng-content>
+        </div>
+      </div>
     </div>
   `,
   styles: []
