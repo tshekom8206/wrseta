@@ -490,6 +490,82 @@ Namespace SETA.API.Controllers
         End Function
 
         ''' <summary>
+        ''' Get learner registration(s) by ID number
+        ''' Returns all registrations for the specified ID number within the requesting SETA
+        ''' </summary>
+        <Route("by-idnumber")>
+        <HttpGet>
+        Public Function GetLearnerByIdNumber(idNumber As String) As IHttpActionResult
+            ' Validate ID number parameter
+            If String.IsNullOrWhiteSpace(idNumber) Then
+                Return Content(HttpStatusCode.BadRequest,
+                    ApiResponse(Of Object).ErrorResponse("INVALID_REQUEST", "ID number parameter is required"))
+            End If
+
+            Dim apiKeySetaId = CInt(Me.Request.Properties("SetaId"))
+
+            ' Clean ID number
+            Dim cleanIdNumber = idNumber.Replace(" ", "").Replace("-", "")
+
+            ' Validate ID format
+            If cleanIdNumber.Length <> 13 OrElse Not IsAllDigits(cleanIdNumber) Then
+                Return Content(HttpStatusCode.BadRequest,
+                    ApiResponse(Of Object).ErrorResponse("INVALID_ID", "ID number must be exactly 13 digits"))
+            End If
+
+            Dim connectionString As String = ConfigurationManager.ConnectionStrings("SETAConnection").ConnectionString
+            Dim idHash = ComputeSha256HashBytes(cleanIdNumber)
+            Dim learners As New List(Of LearnerInfo)
+
+            Using conn As New SqlConnection(connectionString)
+                conn.Open()
+
+                Dim sql As String = "
+                    SELECT LearnerID, IDNumber, FirstName, Surname, DateOfBirth, Gender,
+                           LearnershipCode, LearnershipName, ProvinceCode, RegistrationDate, Status, EnrollmentYear
+                    FROM LearnerRegistry
+                    WHERE RegisteredSETAID = @SETAID
+                      AND IDNumberHash = @IDHash
+                    ORDER BY RegistrationDate DESC"
+
+                Using cmd As New SqlCommand(sql, conn)
+                    cmd.Parameters.AddWithValue("@SETAID", apiKeySetaId)
+                    cmd.Parameters.AddWithValue("@IDHash", idHash)
+
+                    Using reader = cmd.ExecuteReader()
+                        While reader.Read()
+                            learners.Add(New LearnerInfo With {
+                                .LearnerId = reader.GetInt32(0),
+                                .IdNumberMasked = MaskIdNumber(If(reader.IsDBNull(1), "", reader.GetString(1))),
+                                .FirstName = If(reader.IsDBNull(2), "", reader.GetString(2)),
+                                .Surname = If(reader.IsDBNull(3), "", reader.GetString(3)),
+                                .DateOfBirth = If(reader.IsDBNull(4), Nothing, reader.GetDateTime(4)),
+                                .Gender = If(reader.IsDBNull(5), Nothing, reader.GetString(5)),
+                                .LearnershipCode = If(reader.IsDBNull(6), Nothing, reader.GetString(6)),
+                                .ProgrammeName = If(reader.IsDBNull(7), Nothing, reader.GetString(7)),
+                                .Province = If(reader.IsDBNull(8), Nothing, reader.GetString(8)),
+                                .RegistrationDate = If(reader.IsDBNull(9), DateTime.MinValue, reader.GetDateTime(9)),
+                                .Status = If(reader.IsDBNull(10), "", reader.GetString(10))
+                            })
+                        End While
+                    End Using
+                End Using
+            End Using
+
+            If learners.Count = 0 Then
+                Return Content(HttpStatusCode.NotFound,
+                    ApiResponse(Of Object).ErrorResponse("NOT_FOUND", "No learner registration found for the specified ID number"))
+            End If
+
+            ' If only one registration, return single object; otherwise return list
+            If learners.Count = 1 Then
+                Return Ok(ApiResponse(Of LearnerInfo).SuccessResponse(learners(0)))
+            Else
+                Return Ok(ApiResponse(Of List(Of LearnerInfo)).SuccessResponse(learners))
+            End If
+        End Function
+
+        ''' <summary>
         ''' Check for enrollment duplicates
         ''' </summary>
         Private Function CheckEnrollmentDuplicate(idNumber As String, learnershipCode As String,
