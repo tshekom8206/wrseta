@@ -22,6 +22,11 @@ export const routes: Routes = [
           import('./views/pages/auth/login/login.component').then(m => m.LoginComponent)
       },
       {
+        path: 'signup',
+        loadComponent: () =>
+          import('./views/pages/auth/signup/signup.component').then(m => m.SignupComponent)
+      },
+      {
         path: 'forgot-password',
         loadComponent: () =>
           import('./views/pages/auth/forgot-password/forgot-password.component').then(m => m.ForgotPasswordComponent)

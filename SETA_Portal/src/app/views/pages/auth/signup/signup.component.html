@@ -1,6 +1,6 @@
 <div class="login-wrapper">
   <!-- Skip Link for Accessibility -->
-  <a href="#login-form" class="skip-link">
+  <a href="#signup-form" class="skip-link">
     {{ 'accessibility.skipToContent' | translate }}
   </a>
 
@@ -75,12 +75,12 @@
       </div>
     </div>
 
-    <!-- Right Panel - Login Form -->
+    <!-- Right Panel - Signup Form -->
     <div class="login-form-container">
       <div class="login-form-wrapper">
         <header class="login-header">
-          <h2 id="login-heading">{{ 'auth.signIn' | translate }}</h2>
-          <p class="text-muted">{{ 'auth.pleaseLogin' | translate }}</p>
+          <h2 id="signup-heading">Create Account</h2>
+          <p class="text-muted">Please fill in your details to create an account</p>
         </header>
 
         @if (errorMessage) {
@@ -99,10 +99,10 @@
         }
 
         <form
-          id="login-form"
-          [formGroup]="loginForm"
+          id="signup-form"
+          [formGroup]="signupForm"
           (ngSubmit)="onSubmit()"
-          aria-labelledby="login-heading"
+          aria-labelledby="signup-heading"
         >
           <!-- SETA Selection -->
           <div class="mb-2">
@@ -124,6 +124,36 @@
             @if (isFieldInvalid('setaCode')) {
               <div id="setaCodeError" class="invalid-feedback">
                 {{ getFieldError('setaCode') }}
+              </div>
+            }
+          </div>
+
+          <!-- Email -->
+          <div class="mb-2">
+            <label for="email" class="form-label required">
+              Email Address
+            </label>
+            <div class="input-group">
+              <span class="input-group-text">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                  <polyline points="22,6 12,13 2,6"></polyline>
+                </svg>
+              </span>
+              <input
+                type="email"
+                id="email"
+                formControlName="email"
+                class="form-control"
+                [class.is-invalid]="isFieldInvalid('email')"
+                placeholder="Enter your email address"
+                autocomplete="email"
+                aria-describedby="emailError"
+              >
+            </div>
+            @if (isFieldInvalid('email')) {
+              <div id="emailError" class="invalid-feedback d-block">
+                {{ getFieldError('email') }}
               </div>
             }
           </div>
@@ -158,6 +188,41 @@
             }
           </div>
 
+          <!-- ID Number -->
+          <div class="mb-2">
+            <label for="idNumber" class="form-label required">
+              ID Number
+            </label>
+            <div class="input-group">
+              <span class="input-group-text">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                  <line x1="8" y1="21" x2="16" y2="21"></line>
+                  <line x1="12" y1="17" x2="12" y2="21"></line>
+                </svg>
+              </span>
+              <input
+                type="text"
+                id="idNumber"
+                formControlName="idNumber"
+                class="form-control"
+                [class.is-invalid]="isFieldInvalid('idNumber')"
+                placeholder="Enter your 13-digit ID number"
+                autocomplete="off"
+                maxlength="13"
+                pattern="[0-9]*"
+                inputmode="numeric"
+                (keypress)="$event.charCode >= 48 && $event.charCode <= 57"
+                aria-describedby="idNumberError"
+              >
+            </div>
+            @if (isFieldInvalid('idNumber')) {
+              <div id="idNumberError" class="invalid-feedback d-block">
+                {{ getFieldError('idNumber') }}
+              </div>
+            }
+          </div>
+
           <!-- Password -->
           <div class="mb-2">
             <label for="password" class="form-label required">
@@ -177,7 +242,7 @@
                 class="form-control"
                 [class.is-invalid]="isFieldInvalid('password')"
                 placeholder="Enter your password"
-                autocomplete="current-password"
+                autocomplete="new-password"
                 aria-describedby="passwordError"
               >
               <button
@@ -207,18 +272,64 @@
             }
           </div>
 
-          <!-- Forgot Password -->
-          <div class="text-end mb-2">
-            <a routerLink="/auth/forgot-password" class="forgot-password-link">
-              {{ 'auth.forgotPassword' | translate }}
-            </a>
+          <!-- Confirm Password -->
+          <div class="mb-2">
+            <label for="confirmPassword" class="form-label required">
+              Confirm Password
+            </label>
+            <div class="input-group">
+              <span class="input-group-text">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+              </span>
+              <input
+                [type]="showConfirmPassword ? 'text' : 'password'"
+                id="confirmPassword"
+                formControlName="confirmPassword"
+                class="form-control"
+                [class.is-invalid]="isFieldInvalid('confirmPassword') || signupForm.errors?.['passwordMismatch']"
+                placeholder="Confirm your password"
+                autocomplete="new-password"
+                aria-describedby="confirmPasswordError"
+              >
+              <button
+                type="button"
+                class="btn btn-outline-secondary"
+                (click)="toggleConfirmPassword()"
+                [attr.aria-label]="showConfirmPassword ? 'Hide password' : 'Show password'"
+                [attr.aria-pressed]="showConfirmPassword"
+              >
+                @if (showConfirmPassword) {
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                    <line x1="1" y1="1" x2="23" y2="23"></line>
+                  </svg>
+                } @else {
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                }
+              </button>
+            </div>
+            @if (isFieldInvalid('confirmPassword') || signupForm.errors?.['passwordMismatch']) {
+              <div id="confirmPasswordError" class="invalid-feedback d-block">
+                @if (signupForm.errors?.['passwordMismatch']) {
+                  {{ getPasswordMatchError() }}
+                } @else {
+                  {{ getFieldError('confirmPassword') }}
+                }
+              </div>
+            }
           </div>
 
           <!-- Submit Button -->
           <button
             type="submit"
             class="btn btn-primary w-100"
-            [disabled]="isLoading || loginForm.invalid"
+            [disabled]="isLoading || signupForm.invalid"
           >
             @if (isLoading) {
               <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
@@ -235,28 +346,28 @@
                 stroke-linecap="round"
                 stroke-linejoin="round"
               >
-                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
-                <polyline points="10 17 15 12 10 7"></polyline>
-                <line x1="15" y1="12" x2="3" y2="12"></line>
+                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="8.5" cy="7" r="4"></circle>
+                <line x1="20" y1="8" x2="20" y2="14"></line>
+                <line x1="23" y1="11" x2="17" y2="11"></line>
               </svg>
-              <span>{{ 'auth.signIn' | translate }}</span>
+              <span>Create Account</span>
             }
           </button>
         </form>
 
-        <!-- Sign Up Section -->
+        <!-- Sign In Section -->
         <div class="signup-section">
           <div class="signup-divider">
-            <span class="signup-divider-text">New to the platform?</span>
+            <span class="signup-divider-text">Already have an account?</span>
           </div>
-          <a routerLink="/auth/signup" class="signup-link">
+          <a routerLink="/auth/login" class="signup-link">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-              <circle cx="8.5" cy="7" r="4"></circle>
-              <line x1="20" y1="8" x2="20" y2="14"></line>
-              <line x1="23" y1="11" x2="17" y2="11"></line>
+              <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+              <polyline points="10 17 15 12 10 7"></polyline>
+              <line x1="15" y1="12" x2="3" y2="12"></line>
             </svg>
-            <span>Create an Account</span>
+            <span>Sign In</span>
           </a>
         </div>
 
@@ -269,3 +380,4 @@
     </div>
   </div>
 </div>
+

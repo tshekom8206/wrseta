@@ -1,7 +1,7 @@
 import { Component, inject, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
-import { Router, ActivatedRoute, RouterLink } from '@angular/router';
+import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, AbstractControl, ValidationErrors } from '@angular/forms';
+import { Router, RouterLink } from '@angular/router';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { Subject, takeUntil } from 'rxjs';
@@ -11,21 +11,19 @@ import { ThemeService, SETA_THEMES } from '../../../../core/services/theme.servi
 import { NotificationService } from '../../../../core/services/notification.service';
 import { IconService } from '../../../../core/services/icon.service';
 import { SetaListItem } from '../../../../interfaces/seta.interface';
-import { UserRole } from '../../../../interfaces/user.interface';
 
 @Component({
-  selector: 'app-login',
+  selector: 'app-signup',
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, TranslateModule, RouterLink],
-  templateUrl: './login.component.html',
-  styleUrl: './login.component.scss'
+  templateUrl: './signup.component.html',
+  styleUrl: './signup.component.scss'
 })
-export class LoginComponent implements OnInit, OnDestroy {
+export class SignupComponent implements OnInit, OnDestroy {
   private readonly fb = inject(FormBuilder);
   private readonly authService = inject(AuthService);
   private readonly themeService = inject(ThemeService);
   private readonly router = inject(Router);
-  private readonly route = inject(ActivatedRoute);
   private readonly notification = inject(NotificationService);
   private readonly translate = inject(TranslateService);
   private readonly iconService = inject(IconService);
@@ -33,11 +31,11 @@ export class LoginComponent implements OnInit, OnDestroy {
 
   private destroy$ = new Subject<void>();
 
-  loginForm!: FormGroup;
+  signupForm!: FormGroup;
   isLoading = false;
   showPassword = false;
+  showConfirmPassword = false;
   errorMessage = '';
-  returnUrl = '/dashboard';
 
   // Available SETAs for dropdown
   setas: SetaListItem[] = [];
@@ -48,7 +46,6 @@ export class LoginComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.loadSetas();
     this.initializeForm();
-    this.getReturnUrl();
   }
 
   ngOnDestroy(): void {
@@ -57,20 +54,36 @@ export class LoginComponent implements OnInit, OnDestroy {
   }
 
   private initializeForm(): void {
-    this.loginForm = this.fb.group({
+    this.signupForm = this.fb.group({
       setaCode: ['WRSETA', Validators.required],
+      email: ['', [Validators.required, Validators.email]],
       username: ['', [Validators.required, Validators.minLength(3)]],
+      idNumber: ['', [Validators.required, Validators.pattern(/^\d{13}$/)]],
       password: ['', [Validators.required, Validators.minLength(6)]],
-      rememberMe: [false]
+      confirmPassword: ['', [Validators.required]]
+    }, {
+      validators: this.passwordMatchValidator
     });
 
     // Watch for SETA selection changes
-    this.loginForm.get('setaCode')?.valueChanges
+    this.signupForm.get('setaCode')?.valueChanges
       .pipe(takeUntil(this.destroy$))
       .subscribe(code => this.onSetaChange(code));
 
     // Trigger initial SETA selection for WRSETA
     this.onSetaChange('WRSETA');
+  }
+
+  // Custom validator to check if passwords match
+  private passwordMatchValidator(control: AbstractControl): ValidationErrors | null {
+    const password = control.get('password');
+    const confirmPassword = control.get('confirmPassword');
+    
+    if (!password || !confirmPassword) {
+      return null;
+    }
+    
+    return password.value === confirmPassword.value ? null : { passwordMismatch: true };
   }
 
   private loadSetas(): void {
@@ -82,10 +95,6 @@ export class LoginComponent implements OnInit, OnDestroy {
       logo: theme.logo,
       primaryColor: theme.colors.primary
     })).sort((a, b) => a.name.localeCompare(b.name));
-  }
-
-  private getReturnUrl(): void {
-    this.returnUrl = this.route.snapshot.queryParams['returnUrl'] || '/dashboard';
   }
 
   private onSetaChange(code: string): void {
@@ -106,71 +115,77 @@ export class LoginComponent implements OnInit, OnDestroy {
   }
 
   onSubmit(): void {
-    if (this.loginForm.invalid) {
-      this.loginForm.markAllAsTouched();
+    if (this.signupForm.invalid) {
+      this.signupForm.markAllAsTouched();
       return;
     }
 
     this.isLoading = true;
     this.errorMessage = '';
 
-    const { setaCode, username, password } = this.loginForm.value;
+    const { setaCode, email, username, idNumber, password } = this.signupForm.value;
 
-    this.authService.login({ setaCode, username, password, setaId: 0 })
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (response) => {
-          this.isLoading = false;
-          if (response.success) {
-            this.notification.success(
-              this.translate.instant('auth.welcomeBack'),
-              response.user.fullName
-            );
-            // Redirect based on user role
-            if (response.user.role === UserRole.Learner) {
-              this.router.navigateByUrl('/app/my-portal/status');
-            } else {
-              this.router.navigateByUrl(this.returnUrl || '/app/dashboard');
-            }
-          }
-        },
-        error: (error) => {
-          this.isLoading = false;
-          // Extract error message from API response
-          const apiError = error?.error?.error || error?.error || error;
-          this.errorMessage = apiError?.message ||
-            error?.message ||
-            this.translate.instant('auth.invalidCredentials');
-          this.notification.error(this.errorMessage);
-        }
+    // TODO: Implement actual signup API call when backend is ready
+    // For now, we'll simulate a signup process
+    setTimeout(() => {
+      this.isLoading = false;
+      this.notification.success(
+        'Account created successfully!',
+        'Please check your email to verify your account.'
+      );
+      // Redirect to login page
+      this.router.navigate(['/auth/login'], {
+        queryParams: { email }
       });
+    }, 1500);
   }
 
   togglePassword(): void {
     this.showPassword = !this.showPassword;
   }
 
+  toggleConfirmPassword(): void {
+    this.showConfirmPassword = !this.showConfirmPassword;
+  }
+
   // Form getters for template
   get f() {
-    return this.loginForm.controls;
+    return this.signupForm.controls;
   }
 
   isFieldInvalid(fieldName: string): boolean {
-    const field = this.loginForm.get(fieldName);
+    const field = this.signupForm.get(fieldName);
     return field ? field.invalid && (field.dirty || field.touched) : false;
   }
 
   getFieldError(fieldName: string): string {
-    const field = this.loginForm.get(fieldName);
+    const field = this.signupForm.get(fieldName);
     if (!field || !field.errors) return '';
 
     if (field.errors['required']) {
       return this.translate.instant('validation.required');
     }
+    if (field.errors['email']) {
+      return this.translate.instant('validation.email');
+    }
     if (field.errors['minlength']) {
       return this.translate.instant('validation.minLength', {
         min: field.errors['minlength'].requiredLength
       });
+    }
+    if (field.errors['pattern']) {
+      if (fieldName === 'idNumber') {
+        return 'ID number must be exactly 13 digits';
+      }
+      return this.translate.instant('validation.pattern');
+    }
+    return '';
+  }
+
+  getPasswordMatchError(): string {
+    if (this.signupForm.errors?.['passwordMismatch'] && 
+        this.signupForm.get('confirmPassword')?.touched) {
+      return 'Passwords do not match';
     }
     return '';
   }
@@ -193,3 +208,4 @@ export class LoginComponent implements OnInit, OnDestroy {
     }
   }
 }
+

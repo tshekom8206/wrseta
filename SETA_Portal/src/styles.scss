@@ -8,6 +8,12 @@
 // Custom Variables (must come before Bootstrap)
 @import 'styles/variables';
 
+// Override Bootstrap primary color globally
+:root {
+  --bs-primary: var(--seta-primary, #008550);
+  --bs-primary-rgb: 0, 133, 80;
+}
+
 // Bootstrap 5
 @import 'bootstrap/scss/bootstrap';
 
@@ -54,11 +60,15 @@ h1, h2, h3, h4, h5, h6 {
 // Button Styles
 // =============================================
 
-// Ensure primary buttons always have white text
+// Ensure primary buttons always use green theme color and have white text
 .btn-primary {
+  background-color: var(--seta-primary, #008550) !important;
+  border-color: var(--seta-primary, #008550) !important;
   color: #fff !important;
 
   &:hover, &:focus, &:active {
+    background-color: var(--seta-primary-dark, #006640) !important;
+    border-color: var(--seta-primary-dark, #006640) !important;
     color: #fff !important;
   }
 
@@ -501,7 +511,7 @@ p {
 
   &:focus {
     border-color: var(--seta-primary);
-    box-shadow: 0 0 0 3px rgba(0, 51, 102, 0.1);
+    box-shadow: 0 0 0 3px rgba(0, 133, 80, 0.1);
   }
 
   &::placeholder {
