@@ -126,12 +126,21 @@ export class LoginComponent implements OnInit, OnDestroy {
               this.translate.instant('auth.welcomeBack'),
               response.user.fullName
             );
-            // Redirect based on user role
-            if (response.user.role === UserRole.Learner) {
-              this.router.navigateByUrl('/app/my-portal/status');
-            } else {
-              this.router.navigateByUrl(this.returnUrl || '/app/dashboard');
-            }
+            // Small delay to ensure auth state is fully set before redirect
+            setTimeout(() => {
+              // Redirect based on user role
+              if (response.user.role === UserRole.Learner) {
+                this.router.navigate(['/app/my-portal/status'], { replaceUrl: true });
+              } else if (response.user.role === UserRole.Admin || response.user.role === UserRole.Staff) {
+                const targetUrl = this.returnUrl && this.returnUrl.startsWith('/app/')
+                  ? this.returnUrl
+                  : '/app/dashboard';
+                this.router.navigate([targetUrl], { replaceUrl: true });
+              } else {
+                // Fallback to dashboard for any other role
+                this.router.navigate(['/app/dashboard'], { replaceUrl: true });
+              }
+            }, 100);
           }
         },
         error: (error) => {

@@ -13,12 +13,24 @@ export class RoleRedirectComponent implements OnInit {
   private readonly router = inject(Router);
 
   ngOnInit(): void {
-    const user = this.authService.currentUser;
-    if (user?.role === UserRole.Learner) {
-      this.router.navigate(['/app/my-portal/status']);
-    } else {
-      this.router.navigate(['/app/dashboard']);
-    }
+    // Use setTimeout to ensure auth state is fully initialized
+    setTimeout(() => {
+      const user = this.authService.currentUser;
+      if (!user) {
+        // If no user, redirect to login
+        this.router.navigate(['/auth/login']);
+        return;
+      }
+
+      if (user.role === UserRole.Learner) {
+        this.router.navigate(['/app/my-portal/status'], { replaceUrl: true });
+      } else if (user.role === UserRole.Admin || user.role === UserRole.Staff) {
+        this.router.navigate(['/app/dashboard'], { replaceUrl: true });
+      } else {
+        // Fallback to dashboard for any other role
+        this.router.navigate(['/app/dashboard'], { replaceUrl: true });
+      }
+    }, 0);
   }
 }
 

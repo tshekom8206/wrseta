@@ -122,6 +122,7 @@ export class AuthService {
 
         // Determine role from userType or username prefix
         const role = this.getRoleFromUserType(data.userType) || this.getRoleFromUsername(credentials.username);
+        console.log('[Auth] Login - userType:', data.userType, 'mapped to role:', role);
 
         const loginResponse: LoginResponse = {
           success: apiResponse.success !== false,
@@ -395,14 +396,15 @@ export class AuthService {
   // Determine user role from userType field
   private getRoleFromUserType(userType: string | null | undefined): UserRole | null {
     if (!userType) return null;
-    const lowerType = userType.toLowerCase();
-    if (lowerType.includes('admin') || lowerType === 'admin') {
+    const lowerType = userType.toLowerCase().trim();
+    if (lowerType === 'admin' || lowerType.includes('admin')) {
       return UserRole.Admin;
-    } else if (lowerType.includes('staff') || lowerType === 'staff' || lowerType === 'clerk') {
+    } else if (lowerType === 'staff' || lowerType.includes('staff') || lowerType === 'clerk') {
       return UserRole.Staff;
-    } else if (lowerType.includes('learner') || lowerType === 'learner') {
+    } else if (lowerType === 'learner' || lowerType.includes('learner')) {
       return UserRole.Learner;
     }
+    console.warn('[Auth] Unknown userType:', userType);
     return null;
   }
 

@@ -14,7 +14,7 @@ import { TranslateModule } from '@ngx-translate/core';
         <h2 class="error-title">{{ 'error.' + errorCode + '.title' | translate }}</h2>
         <p class="error-message text-muted">{{ 'error.' + errorCode + '.message' | translate }}</p>
         <div class="error-actions">
-          <a routerLink="/dashboard" class="btn btn-primary me-2">
+          <a routerLink="/app/dashboard" class="btn btn-primary me-2">
             {{ 'error.goHome' | translate }}
           </a>
           <button class="btn btn-outline-secondary" (click)="goBack()">
