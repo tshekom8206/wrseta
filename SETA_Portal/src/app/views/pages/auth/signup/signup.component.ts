@@ -5,12 +5,14 @@ import { Router, RouterLink } from '@angular/router';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { Subject, takeUntil } from 'rxjs';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 
 import { AuthService } from '../../../../core/auth/auth.service';
-import { ThemeService, SETA_THEMES } from '../../../../core/services/theme.service';
+import { ThemeService, SETA_THEMES, SETA_IDS } from '../../../../core/services/theme.service';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { IconService } from '../../../../core/services/icon.service';
 import { SetaListItem } from '../../../../interfaces/seta.interface';
+import { environment } from '../../../../../environments/environment';
 
 @Component({
   selector: 'app-signup',
@@ -28,8 +30,10 @@ export class SignupComponent implements OnInit, OnDestroy {
   private readonly translate = inject(TranslateService);
   private readonly iconService = inject(IconService);
   private readonly sanitizer = inject(DomSanitizer);
+  private readonly http = inject(HttpClient);
 
   private destroy$ = new Subject<void>();
+  private readonly apiUrl = environment.apiUrl;
 
   signupForm!: FormGroup;
   isLoading = false;
@@ -56,6 +60,8 @@ export class SignupComponent implements OnInit, OnDestroy {
   private initializeForm(): void {
     this.signupForm = this.fb.group({
       setaCode: ['WRSETA', Validators.required],
+      name: ['', [Validators.required]],
+      surname: ['', [Validators.required]],
       email: ['', [Validators.required, Validators.email]],
       username: ['', [Validators.required, Validators.minLength(3)]],
       idNumber: ['', [Validators.required, Validators.pattern(/^\d{13}$/)]],
@@ -78,11 +84,11 @@ export class SignupComponent implements OnInit, OnDestroy {
   private passwordMatchValidator(control: AbstractControl): ValidationErrors | null {
     const password = control.get('password');
     const confirmPassword = control.get('confirmPassword');
-    
+
     if (!password || !confirmPassword) {
       return null;
     }
-    
+
     return password.value === confirmPassword.value ? null : { passwordMismatch: true };
   }
 
@@ -100,7 +106,7 @@ export class SignupComponent implements OnInit, OnDestroy {
   private onSetaChange(code: string): void {
     // Reset logo error state when SETA changes
     this.logoError = false;
-    
+
     if (code) {
       const seta = this.setas.find(s => s.code === code);
       if (seta) {
@@ -123,21 +129,59 @@ export class SignupComponent implements OnInit, OnDestroy {
     this.isLoading = true;
     this.errorMessage = '';
 
-    const { setaCode, email, username, idNumber, password } = this.signupForm.value;
+    const { setaCode, name, surname, email, username, idNumber, password } = this.signupForm.value;
 
-    // TODO: Implement actual signup API call when backend is ready
-    // For now, we'll simulate a signup process
-    setTimeout(() => {
-      this.isLoading = false;
-      this.notification.success(
-        'Account created successfully!',
-        'Please check your email to verify your account.'
-      );
-      // Redirect to login page
-      this.router.navigate(['/auth/login'], {
-        queryParams: { email }
+    // Map setaCode to setaId
+    const setaId = SETA_IDS[setaCode] || 1;
+
+    // Prepare registration request body
+    const registrationData = {
+      username: username,
+      password: password,
+      name: name,
+      surname: surname,
+      email: email,
+      setaId: setaId,
+      userType: 'Learner',
+      idNumber: idNumber,
+      learnerId: null
+    };
+
+    // Prepare headers with API key
+    const headers = new HttpHeaders({
+      'accept': 'application/json',
+      'Content-Type': 'application/json',
+      'X-API-Key': 'wrseta-lms-key-2025'
+    });
+
+    // Make API call
+    this.http.post<any>(`${this.apiUrl}/auth/register`, registrationData, { headers })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          this.isLoading = false;
+          if (response.success) {
+            this.notification.success(
+              'Account created successfully!',
+              response.data?.message || 'You can now login with your credentials.'
+            );
+            // Redirect to login page
+            this.router.navigate(['/auth/login'], {
+              queryParams: { email }
+            });
+          } else {
+            this.errorMessage = response.message || 'Registration failed. Please try again.';
+          }
+        },
+        error: (error) => {
+          this.isLoading = false;
+          console.error('Registration error:', error);
+          this.errorMessage = error.error?.message || error.message || 'Registration failed. Please try again.';
+          if (error.error?.errors && Array.isArray(error.error.errors)) {
+            this.errorMessage = error.error.errors.join(', ');
+          }
+        }
       });
-    }, 1500);
   }
 
   togglePassword(): void {
@@ -183,8 +227,8 @@ export class SignupComponent implements OnInit, OnDestroy {
   }
 
   getPasswordMatchError(): string {
-    if (this.signupForm.errors?.['passwordMismatch'] && 
-        this.signupForm.get('confirmPassword')?.touched) {
+    if (this.signupForm.errors?.['passwordMismatch'] &&
+      this.signupForm.get('confirmPassword')?.touched) {
       return 'Passwords do not match';
     }
     return '';
@@ -196,8 +240,8 @@ export class SignupComponent implements OnInit, OnDestroy {
   }
 
   getLogoSrc(seta: SetaListItem): string {
-    return seta.code === 'WRSETA' 
-      ? '/assets/images/logos/WRSETA_logo-2.png' 
+    return seta.code === 'WRSETA'
+      ? '/assets/images/logos/WRSETA_logo-2.png'
       : seta.logo;
   }
 
